@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { InstallPromptBanner } from '@/features/pwa/components/install-prompt-banner'
+import { RegisterPWA } from '@/features/pwa/components/register-pwa'
 import { Providers } from './providers'
 import './globals.css'
 
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="min-h-screen antialiased text-on-surface">
+        <RegisterPWA />
         <Providers>{children}</Providers>
         <InstallPromptBanner />
       </body>
