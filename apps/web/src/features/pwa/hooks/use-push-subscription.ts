@@ -23,40 +23,59 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
  * - `subscribe()` dispara el prompt de permisos, registra con pushManager y
  *   envía el endpoint al backend (POST /api/v1/push/subscribe).
  * - `unsubscribe()` invierte el proceso.
+ *
+ * UX: tras subscribe/unsubscribe SIEMPRE se revalida el estado real contra
+ * PushManager (fuente de verdad) — esto hace que el toggle reaccione al
+ * instante sin necesidad de cambiar de pestaña. Además se escucha el evento
+ * `visibilitychange` para re-sincronizar cuando el user vuelve a la tab
+ * (puede haber cambiado permisos desde settings del browser).
  */
 export function usePushSubscription() {
   const [status, setStatus] = useState<Status>('default')
   const [loading, setLoading] = useState(false)
 
-  const checkStatus = useCallback(async () => {
-    if (typeof window === 'undefined') return
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+  const checkStatus = useCallback(async (): Promise<Status> => {
+    if (typeof window === 'undefined') return 'default'
+    if (
+      !('Notification' in window) ||
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window)
+    ) {
       setStatus('unsupported')
-      return
+      return 'unsupported'
     }
 
     if (Notification.permission === 'denied') {
       setStatus('denied')
-      return
+      return 'denied'
     }
 
     if (Notification.permission === 'default') {
       setStatus('default')
-      return
+      return 'default'
     }
 
     // granted → revisar si hay subscription activa
     try {
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.getSubscription()
-      setStatus(sub ? 'subscribed' : 'granted')
+      const next: Status = sub ? 'subscribed' : 'granted'
+      setStatus(next)
+      return next
     } catch {
       setStatus('granted')
+      return 'granted'
     }
   }, [])
 
   useEffect(() => {
     checkStatus()
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') checkStatus()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [checkStatus])
 
   const subscribe = useCallback(async () => {
@@ -68,7 +87,7 @@ export function usePushSubscription() {
     try {
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
-        setStatus(permission === 'denied' ? 'denied' : 'default')
+        await checkStatus()
         return false
       }
 
@@ -89,15 +108,17 @@ export function usePushSubscription() {
         userAgent: navigator.userAgent,
       })
 
-      setStatus('subscribed')
+      // Fuente de verdad = PushManager real (no optimistic)
+      await checkStatus()
       return true
     } catch (err) {
       console.error('[push] subscribe failed', err)
+      await checkStatus()
       return false
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [checkStatus])
 
   const unsubscribe = useCallback(async () => {
     setLoading(true)
@@ -108,13 +129,14 @@ export function usePushSubscription() {
         await api.post<void>('push/unsubscribe', { endpoint: sub.endpoint }).catch(() => null)
         await sub.unsubscribe()
       }
-      setStatus('granted')
+      await checkStatus()
     } catch (err) {
       console.error('[push] unsubscribe failed', err)
+      await checkStatus()
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [checkStatus])
 
   return { status, loading, subscribe, unsubscribe, refresh: checkStatus }
 }

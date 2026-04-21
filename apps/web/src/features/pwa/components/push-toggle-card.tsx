@@ -91,6 +91,7 @@ export function PushToggleCard() {
           >
             <span
               aria-hidden="true"
+              className="flex items-center justify-center"
               style={{
                 position: 'absolute',
                 top: '3px',
@@ -102,7 +103,21 @@ export function PushToggleCard() {
                 boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
                 transition: 'left 260ms cubic-bezier(0.22, 1, 0.36, 1)',
               }}
-            />
+            >
+              {loading && (
+                <span
+                  aria-hidden="true"
+                  style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    border: '2px solid rgba(171, 53, 0, 0.2)',
+                    borderTopColor: '#AB3500',
+                    animation: 'spin 700ms linear infinite',
+                  }}
+                />
+              )}
+            </span>
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 'use client'
 import { EmptyState, OrderCard, Skeleton, cn } from '@tindivo/ui'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useRestaurantProfile } from '@/features/restaurante/perfil/hooks/use-restaurant-profile'
 import { useRestaurantHistory } from '../hooks/use-restaurant-history'
@@ -27,6 +28,7 @@ function paymentLabel(status: string): string {
 }
 
 export function RestaurantHistory() {
+  const router = useRouter()
   const [filter, setFilter] = useState<Filter>('all')
   const profile = useRestaurantProfile()
   const { data, isLoading } = useRestaurantHistory(filter === 'all' ? undefined : filter)
@@ -86,6 +88,7 @@ export function RestaurantHistory() {
                 paymentLabel={paymentLabel(order.payment_status)}
                 prepTimeMinutes={PREP_MINS[order.prep_time_option]}
                 driverName={order.drivers?.full_name ?? null}
+                onClick={() => router.push(`/restaurante/pedidos/${order.id}`)}
               />
             </li>
           ))}

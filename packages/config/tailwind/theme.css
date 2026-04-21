@@ -297,6 +297,41 @@
   }
 }
 
+/* Glow pulsante para OrderCards en estado overdue (rojo) */
+.tindivo-overdue-glow {
+  animation: tindivo-overdue-glow 1.8s ease-in-out infinite;
+}
+@keyframes tindivo-overdue-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.45), 0 8px 28px -8px rgba(186, 26, 26, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(186, 26, 26, 0), 0 12px 32px -6px rgba(186, 26, 26, 0.45);
+  }
+}
+
+/* Heartbeat suave para pedidos amarillos */
+.tindivo-pending-pulse {
+  animation: tindivo-pending-pulse 2.4s ease-in-out infinite;
+}
+@keyframes tindivo-pending-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.78;
+  }
+}
+
+/* Spinner simple (Tailwind v4 no expone keyframe 'spin' built-in aquí) */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 html,
 body {
   font-family: var(--font-sans);
