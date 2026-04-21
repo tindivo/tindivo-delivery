@@ -101,11 +101,16 @@ export function usePushSubscription() {
       }
 
       const json = sub.toJSON()
+      if (!json.keys?.p256dh || !json.keys?.auth) {
+        throw new Error('PushSubscription incompleto (faltan keys)')
+      }
       await api.post<void>('push/subscribe', {
         endpoint: sub.endpoint,
-        p256dh: json.keys?.p256dh,
-        auth: json.keys?.auth,
-        userAgent: navigator.userAgent,
+        keys: {
+          p256dh: json.keys.p256dh,
+          auth: json.keys.auth,
+        },
+        userAgent: navigator.userAgent.slice(0, 300),
       })
 
       // Fuente de verdad = PushManager real (no optimistic)
@@ -130,9 +135,11 @@ export function usePushSubscription() {
         await sub.unsubscribe()
       }
       await checkStatus()
+      return true
     } catch (err) {
       console.error('[push] unsubscribe failed', err)
       await checkStatus()
+      return false
     } finally {
       setLoading(false)
     }

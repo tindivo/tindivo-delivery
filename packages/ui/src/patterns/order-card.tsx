@@ -78,10 +78,13 @@ export function OrderCard({
   now,
   disabled = false,
 }: Props) {
-  const money = new Intl.NumberFormat('es-PE', {
-    style: 'currency',
-    currency: 'PEN',
-  }).format(orderAmount)
+  const noCharge = orderAmount === 0
+  const money = noCharge
+    ? 'No cobrar'
+    : new Intl.NumberFormat('es-PE', {
+        style: 'currency',
+        currency: 'PEN',
+      }).format(orderAmount)
 
   const showUrgency = estimatedReadyAt && status === 'waiting_driver'
   const tier: UrgencyTier | null = showUrgency
@@ -146,8 +149,15 @@ export function OrderCard({
 
       <div className="flex items-end justify-between pl-2">
         <div>
-          <div className="bleed-text text-2xl font-black text-on-surface">{money}</div>
-          <div className="text-xs text-on-surface-variant mt-1">{paymentLabel}</div>
+          <div
+            className="bleed-text text-2xl font-black"
+            style={{ color: noCharge ? '#059669' : undefined }}
+          >
+            {money}
+          </div>
+          <div className="text-xs text-on-surface-variant mt-1">
+            {noCharge ? 'Solo entregar' : paymentLabel}
+          </div>
         </div>
         <div className="flex flex-col items-end gap-1.5 text-xs">
           {showUrgency && estimatedReadyAt ? (

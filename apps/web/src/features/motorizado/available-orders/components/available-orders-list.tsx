@@ -11,7 +11,6 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 import { useNow } from '@/shared/hooks/use-now'
-import { useAcceptOrder } from '../hooks/use-accept-order'
 import { useAvailableOrders } from '../hooks/use-available-orders'
 import { OverdueBanner } from './overdue-banner'
 
@@ -20,7 +19,6 @@ const PREP_MINS: Record<string, number> = { fast: 10, normal: 15, slow: 20 }
 export function AvailableOrdersList() {
   const router = useRouter()
   const { data, isLoading } = useAvailableOrders()
-  const accept = useAcceptOrder()
   const now = useNow(15_000)
 
   const items = (data?.items ?? []) as any[]
@@ -91,15 +89,7 @@ export function AvailableOrdersList() {
                   estimatedReadyAt={order.estimated_ready_at}
                   now={now}
                   disabled={isLocked}
-                  onClick={() => {
-                    if (accept.isPending) return
-                    accept.mutate(order.id, {
-                      onSuccess: () => {
-                        router.push(`/motorizado/pedidos/${order.id}`)
-                      },
-                    })
-                  }}
-                  highlight={accept.variables === order.id && accept.isPending}
+                  onClick={() => router.push(`/motorizado/pedidos/${order.id}/preview`)}
                 />
               </motion.li>
             )

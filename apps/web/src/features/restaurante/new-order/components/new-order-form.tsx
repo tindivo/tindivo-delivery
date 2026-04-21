@@ -18,6 +18,13 @@ type Payment = 'prepaid' | 'pending_yape' | 'pending_cash'
 const PREP_MINUTES = [10, 20, 30, 40, 50, 60] as const
 type PrepMinutes = (typeof PREP_MINUTES)[number]
 
+function parseMoney(raw: string): number {
+  if (!raw) return 0
+  const normalized = raw.replace(',', '.').replace(/[^0-9.]/g, '')
+  const n = Number.parseFloat(normalized)
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0
+}
+
 function prepOption(minutes: PrepMinutes): 'fast' | 'normal' | 'slow' {
   if (minutes <= 10) return 'fast'
   if (minutes >= 40) return 'slow'
@@ -65,8 +72,8 @@ export function NewOrderForm() {
 
   const carouselRef = useRef<HTMLDivElement>(null)
 
-  const amountNum = Number(amount) || 0
-  const paysWithNum = Number(paysWith) || 0
+  const amountNum = parseMoney(amount)
+  const paysWithNum = parseMoney(paysWith)
   const change = useMemo(() => {
     if (payment !== 'pending_cash') return 0
     return Math.max(paysWithNum - amountNum, 0)
@@ -310,7 +317,7 @@ export function NewOrderForm() {
               id="amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="45.00"
+              placeholder="Monto a cobrar"
               required
             />
           </section>
@@ -329,7 +336,7 @@ export function NewOrderForm() {
               id="paysWith"
               value={paysWith}
               onChange={(e) => setPaysWith(e.target.value)}
-              placeholder="50.00"
+              placeholder="Billete del cliente"
               required
             />
             {change > 0 && (

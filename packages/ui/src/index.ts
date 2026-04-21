@@ -31,12 +31,15 @@ export { HeroBadge } from './patterns/hero-badge'
 export { SolarCTA } from './patterns/solar-cta'
 export { BottomActionBar } from './patterns/bottom-action-bar'
 export { UrgencyBadge } from './patterns/urgency-badge'
+export { ElapsedTimer } from './patterns/elapsed-timer'
 
 // Urgency helpers (compartidos frontend + backend)
 export {
   computeUrgencyTier,
   formatRemaining,
   remainingLabel,
+  formatElapsed,
+  elapsedLabel,
   URGENCY_THRESHOLD_MIN,
   type UrgencyTier,
 } from './lib/urgency'

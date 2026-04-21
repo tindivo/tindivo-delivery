@@ -3,6 +3,7 @@ import {
   BottomActionBar,
   Button,
   ColorDot,
+  ElapsedTimer,
   GlassTopBar,
   Icon,
   IconButton,
@@ -26,7 +27,7 @@ type Props = { orderId: string }
 export function RestaurantOrderDetail({ orderId }: Props) {
   const router = useRouter()
   const { data, isLoading } = useRestaurantOrderDetail(orderId)
-  const now = useNow(15_000)
+  const now = useNow(1_000)
   const cancel = useCancelRestaurantOrder(orderId)
   const extend = useRequestExtension(orderId)
   const readyEarly = useMarkReadyEarly(orderId)
@@ -139,22 +140,46 @@ export function RestaurantOrderDetail({ orderId }: Props) {
             <StatusChip status={status} />
           </div>
           <div className="mt-4 flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1.5 text-on-surface-variant">
-              <Icon name="payments" size={16} />
-              <span className="font-semibold text-on-surface">
-                S/ {Number(order.order_amount).toFixed(2)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-on-surface-variant">
-              <Icon name="receipt" size={16} />
-              <span>{paymentLabel(order.payment_status)}</span>
-            </div>
+            {Number(order.order_amount) === 0 ? (
+              <div
+                className="flex items-center gap-1.5 font-bold"
+                style={{ color: '#059669' }}
+              >
+                <Icon name="verified" size={16} filled />
+                <span>No cobrar · Solo entregar</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5 text-on-surface-variant">
+                  <Icon name="payments" size={16} />
+                  <span className="font-semibold text-on-surface">
+                    S/ {Number(order.order_amount).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-on-surface-variant">
+                  <Icon name="receipt" size={16} />
+                  <span>{paymentLabel(order.payment_status)}</span>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
-        {/* Urgencia cuando está esperando driver */}
-        {showUrgency && (
-          <UrgencyBadge estimatedReadyAt={order.estimated_ready_at} now={now} variant="hero" />
+        {/* Cronómetros: tiempo en cola + countdown si aplica */}
+        {!['delivered', 'cancelled'].includes(status) && (
+          <section className="flex items-stretch gap-2">
+            {order.created_at && (
+              <ElapsedTimer createdAt={order.created_at} now={now} withLabel className="flex-1" />
+            )}
+            {showUrgency && (
+              <UrgencyBadge
+                estimatedReadyAt={order.estimated_ready_at}
+                now={now}
+                variant="hero"
+                className="flex-1"
+              />
+            )}
+          </section>
         )}
 
         {/* Timeline */}

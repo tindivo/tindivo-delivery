@@ -56,3 +56,43 @@ export function remainingLabel(
   if (deltaMin === -1) return 'Vencido 1 min'
   return `Vencido ${Math.abs(deltaMin)} min`
 }
+
+/**
+ * Cronómetro de tiempo transcurrido desde `createdAt` (positivo y creciente).
+ * Formato: `HH:MM:SS` si >= 1 hora, `MM:SS` si < 1 hora.
+ * Útil para mostrar "el pedido lleva 12:34 desde que se creó".
+ */
+export function formatElapsed(
+  createdAt: Date | string,
+  now: Date = new Date(),
+): string {
+  const created =
+    typeof createdAt === 'string' ? new Date(createdAt) : createdAt
+  const deltaSec = Math.max(0, Math.floor((now.getTime() - created.getTime()) / 1000))
+  const hours = Math.floor(deltaSec / 3600)
+  const minutes = Math.floor((deltaSec % 3600) / 60)
+  const seconds = deltaSec % 60
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+/**
+ * "Hace 5 min", "Hace 1 h 20 min", "Hace unos segundos".
+ */
+export function elapsedLabel(
+  createdAt: Date | string,
+  now: Date = new Date(),
+): string {
+  const created =
+    typeof createdAt === 'string' ? new Date(createdAt) : createdAt
+  const deltaSec = Math.max(0, Math.floor((now.getTime() - created.getTime()) / 1000))
+  if (deltaSec < 45) return 'Hace unos segundos'
+  const min = Math.floor(deltaSec / 60)
+  if (min < 60) return `Hace ${min} min`
+  const h = Math.floor(min / 60)
+  const rem = min % 60
+  if (rem === 0) return `Hace ${h} h`
+  return `Hace ${h} h ${rem} min`
+}

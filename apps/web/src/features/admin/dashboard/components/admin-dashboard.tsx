@@ -51,7 +51,7 @@ export function AdminDashboard() {
         ) : (
           <div className="grid grid-cols-3 gap-3">
             {items.map((order: any) => (
-              <Link key={order.id} href={`/orders/${order.id}`}>
+              <Link key={order.id} href={`/admin/orders/${order.id}`}>
                 <OrderCard
                   shortId={order.short_id}
                   restaurantName={order.restaurants?.name ?? 'Restaurante'}

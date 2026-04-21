@@ -12,11 +12,11 @@ export const MoneyInput = forwardRef<HTMLInputElement, Props>(({ className, ...p
       </span>
       <Input
         ref={ref}
-        type="number"
+        type="text"
         inputMode="decimal"
-        step="0.10"
-        min={0}
-        className={cn('pl-10 text-lg font-semibold', className)}
+        pattern="[0-9]*[.,]?[0-9]*"
+        autoComplete="off"
+        className={cn('pl-10 text-lg font-semibold placeholder:text-sm placeholder:font-medium', className)}
         {...props}
       />
     </div>

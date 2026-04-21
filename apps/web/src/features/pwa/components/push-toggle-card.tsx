@@ -1,5 +1,6 @@
 'use client'
 import { Icon } from '@tindivo/ui'
+import { useState } from 'react'
 import { usePushSubscription } from '../hooks/use-push-subscription'
 
 /**
@@ -8,10 +9,23 @@ import { usePushSubscription } from '../hooks/use-push-subscription'
  */
 export function PushToggleCard() {
   const { status, loading, subscribe, unsubscribe } = usePushSubscription()
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   if (status === 'unsupported') return null
 
   const isOn = status === 'subscribed'
+
+  async function handleToggle() {
+    setErrorMsg(null)
+    const ok = isOn ? await unsubscribe() : await subscribe()
+    if (!ok && !isOn) {
+      if (status === 'denied') {
+        setErrorMsg('Permisos bloqueados. Permítelas en los ajustes del navegador.')
+      } else {
+        setErrorMsg('No pudimos activarlas. Intenta de nuevo.')
+      }
+    }
+  }
 
   return (
     <section
@@ -75,7 +89,7 @@ export function PushToggleCard() {
 
           <button
             type="button"
-            onClick={isOn ? unsubscribe : subscribe}
+            onClick={handleToggle}
             disabled={loading || status === 'denied'}
             aria-label={isOn ? 'Desactivar notificaciones' : 'Activar notificaciones'}
             className="relative shrink-0 transition-transform active:scale-95 disabled:opacity-50"
@@ -120,6 +134,20 @@ export function PushToggleCard() {
             </span>
           </button>
         </div>
+
+        {errorMsg && (
+          <div
+            role="alert"
+            className="mt-3 text-[11px] font-semibold rounded-xl px-3 py-2"
+            style={{
+              background: 'rgba(186, 26, 26, 0.14)',
+              color: '#991B1B',
+              border: '1px solid rgba(186, 26, 26, 0.3)',
+            }}
+          >
+            {errorMsg}
+          </div>
+        )}
       </div>
     </section>
   )

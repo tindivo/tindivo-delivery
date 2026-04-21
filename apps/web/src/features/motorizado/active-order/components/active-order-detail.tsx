@@ -3,16 +3,19 @@ import {
   BottomActionBar,
   Button,
   ColorDot,
+  ElapsedTimer,
   GlassTopBar,
   Icon,
   IconButton,
   StatusChip,
   Timeline,
+  UrgencyBadge,
   type TimelineStep,
 } from '@tindivo/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
+import { useNow } from '@/shared/hooks/use-now'
 import { useOrderDetail } from '../hooks/use-order-detail'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
 import { useMarkDelivered } from '../hooks/use-mark-delivered'
@@ -24,6 +27,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const { data: order, isLoading } = useOrderDetail(orderId)
   const arrived = useMarkArrived(orderId)
   const delivered = useMarkDelivered(orderId)
+  const now = useNow(1_000)
 
   const steps = useMemo<TimelineStep[]>(() => {
     if (!order) return []
@@ -103,17 +107,44 @@ export function ActiveOrderDetail({ orderId }: Props) {
             <StatusChip status={status as never} />
           </div>
           <div className="mt-4 flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1.5 text-on-surface-variant">
-              <Icon name="payments" size={16} />
-              <span className="font-semibold text-on-surface">
-                S/ {Number(raw.order_amount).toFixed(2)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-on-surface-variant">
-              <Icon name="receipt" size={16} />
-              <span>{paymentLabel(raw.payment_status)}</span>
-            </div>
+            {Number(raw.order_amount) === 0 ? (
+              <div
+                className="flex items-center gap-1.5 font-bold"
+                style={{ color: '#059669' }}
+              >
+                <Icon name="verified" size={16} filled />
+                <span>No cobrar · Solo entregar</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5 text-on-surface-variant">
+                  <Icon name="payments" size={16} />
+                  <span className="font-semibold text-on-surface">
+                    S/ {Number(raw.order_amount).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-on-surface-variant">
+                  <Icon name="receipt" size={16} />
+                  <span>{paymentLabel(raw.payment_status)}</span>
+                </div>
+              </>
+            )}
           </div>
+        </section>
+
+        {/* Cronómetros: tiempo en cola + countdown si aplica */}
+        <section className="flex items-stretch gap-2">
+          {raw.created_at && (
+            <ElapsedTimer createdAt={raw.created_at} now={now} withLabel className="flex-1" />
+          )}
+          {raw.estimated_ready_at && ['heading_to_restaurant', 'waiting_at_restaurant'].includes(status) && (
+            <UrgencyBadge
+              estimatedReadyAt={raw.estimated_ready_at}
+              now={now}
+              variant="hero"
+              className="flex-1"
+            />
+          )}
         </section>
 
         {/* Timeline */}
