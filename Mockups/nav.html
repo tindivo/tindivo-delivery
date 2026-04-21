@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-dim": "#dadad7",
+                    "surface": "#f9f9f6",
+                    "error-container": "#ffdad6",
+                    "inverse-primary": "#ffb59d",
+                    "on-tertiary-fixed": "#331200",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#e5e2e1",
+                    "secondary": "#5f5e5e",
+                    "on-surface-variant": "#594139",
+                    "on-background": "#1a1c1b",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#ffdbd0",
+                    "surface-variant": "#e2e3e0",
+                    "surface-bright": "#f9f9f6",
+                    "on-secondary-container": "#636262",
+                    "on-primary-fixed": "#390c00",
+                    "surface-container-highest": "#e2e3e0",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "inverse-surface": "#2f312f",
+                    "surface-container-low": "#f4f4f1",
+                    "on-primary-fixed-variant": "#832600",
+                    "tertiary-container": "#ea7c33",
+                    "on-error-container": "#93000a",
+                    "primary-container": "#ff6b35",
+                    "on-secondary-fixed-variant": "#474746",
+                    "on-secondary": "#ffffff",
+                    "outline": "#8d7168",
+                    "on-tertiary-fixed-variant": "#763300",
+                    "on-surface": "#1a1c1b",
+                    "inverse-on-surface": "#f1f1ee",
+                    "secondary-fixed-dim": "#c8c6c5",
+                    "surface-container": "#eeeeeb",
+                    "on-primary-container": "#5f1900",
+                    "surface-tint": "#ab3500",
+                    "surface-container-high": "#e8e8e5",
+                    "on-error": "#ffffff",
+                    "secondary-container": "#e2dfde",
+                    "primary-fixed-dim": "#ffb59d",
+                    "primary": "#ab3500",
+                    "background": "#f9f9f6",
+                    "tertiary-fixed": "#ffdbc9",
+                    "surface-container-lowest": "#ffffff",
+                    "outline-variant": "#e1bfb5",
+                    "tertiary-fixed-dim": "#ffb68d",
+                    "on-tertiary-container": "#552300",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#9b4500"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .solar-glow {
+            box-shadow: 0px 8px 15px rgba(255, 107, 53, 0.3);
+        }
+        .bleed-text {
+            line-height: 0.8;
+            letter-spacing: -0.05em;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .status-pulse {
+            box-shadow: 0 0 0 4px rgba(234, 124, 51, 0.2);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container selection:text-white overflow-x-hidden pb-32">
+
+</div>
+</main>
+<!-- Bottom Navigation Shell -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-2xl rounded-t-[32px] shadow-[0px_-4px_20px_rgba(171,53,0,0.04)]">
+<a class="flex flex-col items-center justify-center bg-gradient-to-br from-[#FF6B35] to-[#FF8C42] text-white rounded-[24px] px-5 py-2 shadow-[0_8px_15px_rgba(255,107,53,0.3)] transition-transform active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-[0.05em] uppercase mt-1">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-400 p-2 hover:text-zinc-600 transition-transform active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-[0.05em] uppercase mt-1">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-400 p-2 hover:text-zinc-600 transition-transform active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="local_shipping">local_shipping</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-[0.05em] uppercase mt-1">Drivers</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-400 p-2 hover:text-zinc-600 transition-transform active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-[0.05em] uppercase mt-1">Account</span>
+</a>
+</nav>
+</body></html>

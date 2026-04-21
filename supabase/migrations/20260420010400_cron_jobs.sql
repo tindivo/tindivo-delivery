@@ -1,0 +1,55 @@
+-- ═══════════════════════════════════════════════════════════════════
+-- 20260420_104 — pg_cron jobs
+-- ═══════════════════════════════════════════════════════════════════
+-- NOTA: reemplazar '<PROJECT_REF>' con el ref real del proyecto Supabase
+-- y configurar la variable app.settings.edge_functions_key con el
+-- SUPABASE_SERVICE_ROLE_KEY desde el panel de Supabase.
+
+-- Cada 30 segundos: chequear pedidos sin aceptar por > 90s
+-- select cron.schedule(
+--   'check-unaccepted-orders',
+--   '*/30 * * * * *',
+--   $$
+--     select net.http_post(
+--       url := 'https://<PROJECT_REF>.functions.supabase.co/check-unaccepted-orders',
+--       headers := jsonb_build_object(
+--         'Content-Type', 'application/json',
+--         'Authorization', 'Bearer ' || current_setting('app.settings.edge_functions_key', true)
+--       )
+--     );
+--   $$
+-- );
+
+-- Lunes 10:00 AM: generar liquidaciones semanales
+-- select cron.schedule(
+--   'generate-weekly-settlements',
+--   '0 10 * * 1',
+--   $$
+--     select net.http_post(
+--       url := 'https://<PROJECT_REF>.functions.supabase.co/generate-weekly-settlements',
+--       headers := jsonb_build_object(
+--         'Content-Type', 'application/json',
+--         'Authorization', 'Bearer ' || current_setting('app.settings.edge_functions_key', true)
+--       )
+--     );
+--   $$
+-- );
+
+-- Cada minuto: procesar outbox de domain_events para push notifications
+-- select cron.schedule(
+--   'process-domain-events-outbox',
+--   '* * * * *',
+--   $$
+--     select net.http_post(
+--       url := 'https://<PROJECT_REF>.functions.supabase.co/send-push',
+--       headers := jsonb_build_object(
+--         'Content-Type', 'application/json',
+--         'Authorization', 'Bearer ' || current_setting('app.settings.edge_functions_key', true)
+--       ),
+--       body := jsonb_build_object('trigger', 'cron')
+--     );
+--   $$
+-- );
+
+-- Las invocaciones están comentadas para evitar fallos antes de desplegar
+-- las Edge Functions. Descomentar tras el primer deploy.

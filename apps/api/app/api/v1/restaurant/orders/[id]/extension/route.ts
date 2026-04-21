@@ -1,0 +1,24 @@
+import { Orders } from '@tindivo/contracts'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
+import { buildRequestExtensionUseCase } from '@/lib/core/container'
+import { problem } from '@/lib/http/problem'
+import { requireAuth } from '@/lib/http/require-auth'
+import { parseJson } from '@/lib/http/validate'
+
+export const dynamic = 'force-dynamic'
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAuth(req, ['restaurant'])
+  if (!auth.ok) return auth.response
+
+  const { id } = await params
+  const body = await parseJson(req, Orders.RequestExtensionRequest)
+  if (!body.ok) return body.response
+
+  const useCase = buildRequestExtensionUseCase(auth.auth.supabase)
+  const result = await useCase.execute({ orderId: id, additionalMinutes: body.data.additionalMinutes })
+
+  if (result.isFailure) return problem(result.error)
+  return NextResponse.json(result.value)
+}

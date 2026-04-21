@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ethereal Table - Pedido Enviado</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface": "#f9f9f6",
+                    "primary-fixed-dim": "#ffb59d",
+                    "tertiary": "#9b4500",
+                    "tertiary-fixed-dim": "#ffb68d",
+                    "on-primary-container": "#5f1900",
+                    "on-background": "#1a1c1b",
+                    "inverse-surface": "#2f312f",
+                    "secondary-fixed-dim": "#c8c6c5",
+                    "on-secondary": "#ffffff",
+                    "surface-container-highest": "#e2e3e0",
+                    "primary-container": "#ff6b35",
+                    "surface-container-low": "#f4f4f1",
+                    "inverse-primary": "#ffb59d",
+                    "on-secondary-container": "#636262",
+                    "on-primary-fixed": "#390c00",
+                    "tertiary-fixed": "#ffdbc9",
+                    "inverse-on-surface": "#f1f1ee",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed-variant": "#832600",
+                    "surface-dim": "#dadad7",
+                    "surface-tint": "#ab3500",
+                    "on-tertiary-container": "#552300",
+                    "on-error-container": "#93000a",
+                    "on-surface": "#1a1c1b",
+                    "on-primary": "#ffffff",
+                    "primary-fixed": "#ffdbd0",
+                    "error": "#ba1a1a",
+                    "secondary-container": "#e2dfde",
+                    "primary": "#ab3500",
+                    "secondary-fixed": "#e5e2e1",
+                    "on-tertiary-fixed": "#331200",
+                    "surface-container": "#eeeeeb",
+                    "outline": "#8d7168",
+                    "on-error": "#ffffff",
+                    "on-surface-variant": "#594139",
+                    "on-tertiary-fixed-variant": "#763300",
+                    "surface-variant": "#e2e3e0",
+                    "outline-variant": "#e1bfb5",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "background": "#f9f9f6",
+                    "error-container": "#ffdad6",
+                    "secondary": "#5f5e5e",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-container": "#ea7c33",
+                    "surface-container-high": "#e8e8e5",
+                    "surface-bright": "#f9f9f6",
+                    "on-secondary-fixed-variant": "#474746"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: theme('colors.surface');
+            /* Custom subtle green ambiental wash for success state */
+            background-image: radial-gradient(circle at 50% 40%, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col antialiased text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl border-b border-orange-500/10 dark:border-orange-500/5 shadow-[0_4px_20px_rgba(171,53,0,0.04)]">
+<div class="flex justify-between items-center px-6 h-20 w-full max-w-full mx-auto">
+<button class="text-zinc-500 dark:text-zinc-400 hover:bg-orange-50/50 dark:hover:bg-zinc-800/50 transition-colors active:scale-95 duration-200 ease-out p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<div class="font-inter font-black tracking-[-0.04em] uppercase text-lg text-xl font-black text-zinc-900 dark:text-zinc-50 tracking-tighter text-orange-600 dark:text-orange-500">
+                ETHEREAL TABLE
+            </div>
+<div class="w-10"></div> <!-- Placeholder for balance -->
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-grow flex flex-col items-center justify-center pt-20 px-6 pb-24">
+<div class="max-w-md w-full flex flex-col items-center text-center space-y-8">
+<!-- Hero Icon -->
+<div class="relative flex items-center justify-center w-32 h-32">
+<!-- Ambient Glow -->
+<div class="absolute inset-0 bg-emerald-400/20 rounded-full blur-2xl"></div>
+<!-- Elevated Surface -->
+<div class="relative w-24 h-24 bg-surface-container-lowest rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(16,185,129,0.1),0_10px_40px_rgba(0,0,0,0.06)] border border-outline-variant/15">
+<span class="material-symbols-outlined text-[4rem] text-emerald-500" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+<!-- Text Content -->
+<div class="space-y-4">
+<h1 class="font-headline font-black text-4xl tracking-tight text-on-surface">
+                    Listo. El motorizado ya fue notificado.
+                </h1>
+</div>
+<!-- Subtext Chip -->
+<div class="inline-flex items-center gap-2 px-6 py-3 bg-surface-container-lowest rounded-full shadow-[0_4px_20px_rgba(171,53,0,0.04)] border border-outline-variant/15 text-on-surface-variant font-label font-medium tracking-wide">
+<span class="material-symbols-outlined text-xl" data-icon="receipt_long">receipt_long</span>
+<span>Pedido #4 · Estará listo en 10 min</span>
+</div>
+<!-- Action Area (Optional return home) -->
+<div class="w-full pt-8">
+<button class="w-full flex items-center justify-center gap-2 py-4 px-8 bg-surface-container-lowest text-on-surface rounded-xl font-bold tracking-wide shadow-[0_4px_20px_rgba(171,53,0,0.04)] hover:shadow-[0_10px_40px_rgba(0,0,0,0.06)] border border-outline-variant/15 transition-all duration-300">
+                    Volver al inicio
+                </button>
+</div>
+</div>
+</main>
+</body></html>

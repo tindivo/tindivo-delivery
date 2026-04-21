@@ -1,0 +1,36 @@
+{
+  "name": "@tindivo/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./shared": "./src/shared/index.ts",
+    "./modules/orders": "./src/modules/orders/index.ts",
+    "./modules/orders/domain": "./src/modules/orders/domain/index.ts",
+    "./modules/orders/application": "./src/modules/orders/application/index.ts",
+    "./modules/orders/infrastructure": "./src/modules/orders/infrastructure/index.ts",
+    "./modules/restaurants": "./src/modules/restaurants/index.ts",
+    "./modules/drivers": "./src/modules/drivers/index.ts",
+    "./modules/cash-settlements": "./src/modules/cash-settlements/index.ts",
+    "./modules/settlements": "./src/modules/settlements/index.ts",
+    "./modules/notifications": "./src/modules/notifications/index.ts",
+    "./modules/users": "./src/modules/users/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@tindivo/supabase": "workspace:*"
+  },
+  "devDependencies": {
+    "@tindivo/config": "workspace:*",
+    "@types/node": "^22.10.1",
+    "typescript": "^5.8.2",
+    "vitest": "^2.1.8"
+  }
+}

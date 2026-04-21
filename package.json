@@ -1,0 +1,42 @@
+{
+  "name": "tindivo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Ecosistema Tindivo — 3 PWAs + REST API + tracking público para delivery en pueblos",
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "type-check": "turbo run type-check",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:types": "supabase gen types typescript --linked > packages/supabase/src/types.gen.ts",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "turbo": "^2.3.3",
+    "typescript": "^5.8.2"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "react-leaflet>react": "^19.0.0",
+        "react-leaflet>react-dom": "^19.0.0",
+        "@react-leaflet/core>react": "^19.0.0",
+        "@react-leaflet/core>react-dom": "^19.0.0"
+      }
+    }
+  }
+}

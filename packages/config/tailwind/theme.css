@@ -1,0 +1,331 @@
+@import "tailwindcss";
+
+/* Tailwind v4 auto-detection no siempre sigue symlinks/workspace — asegurar scan explícito */
+@source "../../../apps/web/src/**/*.{ts,tsx}";
+@source "../../../packages/ui/src/**/*.{ts,tsx}";
+
+@theme {
+  /* ───────────────────────────────────────────────────────────
+     TOKENS Material 3 personalizados (extraídos del mockup)
+     ─────────────────────────────────────────────────────────── */
+
+  /* Surfaces */
+  --color-surface: #f9f9f6;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f4f4f1;
+  --color-surface-container: #eeeeeb;
+  --color-surface-container-high: #e8e8e5;
+  --color-surface-container-highest: #e2e3e0;
+  --color-surface-dim: #dadad7;
+  --color-surface-bright: #f9f9f6;
+  --color-inverse-surface: #2f312f;
+  --color-inverse-on-surface: #f1f1ee;
+  --color-background: #f9f9f6;
+
+  /* Primary (naranja Tindivo) */
+  --color-primary: #ab3500;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #ff6b35;
+  --color-on-primary-container: #5f1900;
+  --color-primary-fixed: #ffdbd0;
+  --color-primary-fixed-dim: #ffb59d;
+  --color-on-primary-fixed: #390c00;
+  --color-on-primary-fixed-variant: #832600;
+  --color-inverse-primary: #ffb59d;
+
+  /* Secondary */
+  --color-secondary: #5f5e5e;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #e2dfde;
+  --color-on-secondary-container: #636262;
+  --color-secondary-fixed: #e5e2e1;
+  --color-secondary-fixed-dim: #c8c6c5;
+
+  /* Tertiary */
+  --color-tertiary: #9b4500;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #ea7c33;
+  --color-on-tertiary-container: #552300;
+  --color-tertiary-fixed: #ffdbc9;
+  --color-tertiary-fixed-dim: #ffb68d;
+
+  /* Error */
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* On-surface */
+  --color-on-surface: #1a1c1b;
+  --color-on-surface-variant: #594139;
+  --color-on-background: #1a1c1b;
+
+  /* Outlines */
+  --color-outline: #8d7168;
+  --color-outline-variant: #e1bfb5;
+
+  /* Estados semáforo del pedido (para badges y washes) */
+  --color-state-red: #ba1a1a;
+  --color-state-yellow: #eab308;
+  --color-state-orange: #ff6b35;
+  --color-state-dark-yellow: #b45309;
+  --color-state-green: #059669;
+  --color-state-emerald: #10b981;
+
+  /* Tipografía */
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-headline: "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-label: "Inter", system-ui, sans-serif;
+
+  /* Radios */
+  --radius-sm: 0.5rem;
+  --radius-default: 1rem;
+  --radius-md: 1.5rem;
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+  --radius-full: 9999px;
+
+  /* Sombras tintadas (nunca grises puros) */
+  --shadow-elevation-0: 0 0 0 0 transparent;
+  --shadow-elevation-1: 0 4px 20px rgba(171, 53, 0, 0.04);
+  --shadow-elevation-2: 0 10px 40px rgba(0, 0, 0, 0.06);
+  --shadow-elevation-3: 0 20px 60px rgba(0, 0, 0, 0.08);
+  --shadow-success: 0 4px 20px rgba(16, 185, 129, 0.1), 0 10px 40px rgba(0, 0, 0, 0.06);
+  --shadow-warning: 0 4px 20px rgba(234, 179, 8, 0.1), 0 10px 40px rgba(0, 0, 0, 0.06);
+  --shadow-danger: 0 4px 20px rgba(186, 26, 26, 0.1), 0 10px 40px rgba(0, 0, 0, 0.06);
+
+  /* Glass */
+  --glass-background: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(255, 107, 53, 0.1);
+
+  /* Motion */
+  --motion-short: 200ms;
+  --motion-medium: 300ms;
+  --motion-long: 500ms;
+  --motion-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Material Symbols (icon font variable) — el display=block viene del link
+   de Google Fonts en apps/web/src/app/layout.tsx. */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.material-symbols-outlined.filled {
+  font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+
+/* Utilities de wash ambiental por estado */
+.wash-success {
+  background-image: radial-gradient(
+    circle at 50% 40%,
+    rgba(16, 185, 129, 0.08) 0%,
+    transparent 60%
+  );
+}
+.wash-warning {
+  background-image: radial-gradient(
+    circle at 50% 40%,
+    rgba(234, 179, 8, 0.08) 0%,
+    transparent 60%
+  );
+}
+.wash-danger {
+  background-image: radial-gradient(
+    circle at 50% 40%,
+    rgba(186, 26, 26, 0.08) 0%,
+    transparent 60%
+  );
+}
+.wash-active {
+  background-image: radial-gradient(
+    circle at 50% 40%,
+    rgba(255, 107, 53, 0.08) 0%,
+    transparent 60%
+  );
+}
+.wash-info {
+  background-image: radial-gradient(
+    circle at 50% 40%,
+    rgba(59, 130, 246, 0.08) 0%,
+    transparent 60%
+  );
+}
+
+/* Glass primitive */
+.glass-panel {
+  background-color: var(--glass-background);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-elevation-1);
+}
+
+/* Variantes de glass por intensidad — usadas por top-bar (soft)
+   y bottom-nav (strong). */
+.glass-soft {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+.glass-strong {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+
+/* Glow solar naranja — pill activa del bottom-nav y CTAs hero */
+.solar-glow {
+  box-shadow: 0 8px 15px rgba(255, 107, 53, 0.3);
+}
+.solar-glow-lg {
+  box-shadow:
+    0 10px 40px rgba(255, 107, 53, 0.35),
+    0 4px 12px rgba(171, 53, 0, 0.15);
+}
+.solar-glow-xl {
+  box-shadow:
+    0 20px 60px rgba(255, 107, 53, 0.4),
+    0 8px 20px rgba(171, 53, 0, 0.2);
+}
+
+/* Tipografía de impacto: títulos muy grandes sin aire entre caracteres */
+.bleed-text {
+  line-height: 0.85;
+  letter-spacing: -0.045em;
+}
+
+/* Ring pulsante (usado en avatars / status / badges) */
+.status-pulse {
+  box-shadow: 0 0 0 4px rgba(234, 124, 51, 0.2);
+  animation: tindivo-status-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes tindivo-status-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(234, 124, 51, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(234, 124, 51, 0);
+  }
+}
+
+/* Gradient naranja estándar (usado en pills y CTAs) */
+.bg-solar-gradient {
+  background-image: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+}
+
+/* Feedback táctil universal */
+.tap-feedback {
+  transition: transform var(--motion-short) var(--motion-ease-out);
+}
+.tap-feedback:active {
+  transform: scale(0.96);
+}
+
+/* Animación de entrada fade + slide up (para reveals condicionales) */
+.tindivo-reveal {
+  animation: tindivo-reveal 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes tindivo-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Zoom-in para el chip de vuelto */
+.tindivo-pop {
+  animation: tindivo-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes tindivo-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Shimmer sutil para elementos selected — brillo que barre */
+.tindivo-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.tindivo-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: tindivo-shimmer 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes tindivo-shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  60%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+html,
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  min-height: 100dvh;
+}
+
+body {
+  min-height: max(884px, 100dvh);
+}
+
+/* Scrollbar elegante */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-outline-variant) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 9999px;
+}
+
+/* Focus visible (accesibilidad) */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}

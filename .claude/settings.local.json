@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(cut -c1-30000 /c/Users/mauri/.claude/projects/C--Users-mauri-Documents-Tindivo/5589f5f4-f5de-4dc8-a8ce-5553821cf6a2/tool-results/toolu_01UmayYbTBdibciDrgADbUWx.json)",
+      "Bash(cut -c30001-60000 /c/Users/mauri/.claude/projects/C--Users-mauri-Documents-Tindivo/5589f5f4-f5de-4dc8-a8ce-5553821cf6a2/tool-results/toolu_01UmayYbTBdibciDrgADbUWx.json)",
+      "Bash(cut -c60001-90000 /c/Users/mauri/.claude/projects/C--Users-mauri-Documents-Tindivo/5589f5f4-f5de-4dc8-a8ce-5553821cf6a2/tool-results/toolu_01UmayYbTBdibciDrgADbUWx.json)",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(set -e)",
+      "Bash(mkdir -p /c/Users/mauri/Documents/Tindivo/apps/web/src/features/admin)",
+      "Bash(cp -r /c/Users/mauri/Documents/Tindivo/apps/admin/src/features/dashboard /c/Users/mauri/Documents/Tindivo/apps/web/src/features/admin/)",
+      "Bash(cp -r /c/Users/mauri/Documents/Tindivo/apps/admin/src/features/order-detail /c/Users/mauri/Documents/Tindivo/apps/web/src/features/admin/)",
+      "Bash(mkdir -p /c/Users/mauri/Documents/Tindivo/apps/web/src/features/restaurante)",
+      "Bash(cp /c/Users/mauri/Documents/Tindivo/.env.local /c/Users/mauri/Documents/Tindivo/apps/web/.env.local)",
+      "Bash(cp /c/Users/mauri/Documents/Tindivo/.env.local /c/Users/mauri/Documents/Tindivo/apps/api/.env.local)",
+      "Bash(pnpm install *)",
+      "Bash(rm -rf apps/*/.next)",
+      "Bash(pnpm dev *)",
+      "Bash(curl -sL -o /dev/null -w \"status=%{http_code} final_url=%{url_effective}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -sL -o /dev/null -w \"status=%{http_code}\\\\n\" http://localhost:3000/login)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code} location=%{redirect_url}\\\\n\" http://localhost:3000/admin)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code} location=%{redirect_url}\\\\n\" http://localhost:3000/restaurante)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code} location=%{redirect_url}\\\\n\" http://localhost:3000/motorizado)",
+      "Bash(curl -s -I http://localhost:3000/admin)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code} location=%{redirect_url}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" http://localhost:3000/login)",
+      "Bash(curl -s -o /dev/null -w \"status=%{http_code}\\\\n\" http://localhost:3000/pedidos/ABCDEFGH)",
+      "Bash(curl -s -o /dev/null -w \"admin_status=%{http_code} location=%{redirect_url}\\\\n\" http://localhost:3000/admin)",
+      "Bash(netstat -ano)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_type",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "mcp__plugin_playwright_playwright__browser_console_messages",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_close"
+    ]
+  }
+}
