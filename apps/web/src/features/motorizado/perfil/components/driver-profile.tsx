@@ -1,6 +1,7 @@
 'use client'
 import { Button, Icon, Skeleton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
+import { PushToggleCard } from '@/features/pwa/components/push-toggle-card'
 import { supabase } from '@/lib/supabase/client'
 import { useDriverProfile } from '../hooks/use-driver-profile'
 import { useToggleAvailability } from '../hooks/use-toggle-availability'
@@ -182,6 +183,8 @@ export function DriverProfileView() {
           {data.shiftStart.slice(0, 5)} — {data.shiftEnd.slice(0, 5)}
         </div>
       </section>
+
+      <PushToggleCard />
 
       {/* Logout */}
       <Button variant="secondary" size="lg" className="w-full" onClick={handleLogout}>

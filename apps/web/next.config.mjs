@@ -1,3 +1,14 @@
+import withSerwistInit from '@serwist/next'
+
+const withSerwist = withSerwistInit({
+  swSrc: 'src/sw.ts',
+  swDest: 'public/sw.js',
+  cacheOnNavigation: true,
+  reloadOnOnline: true,
+  // En dev, queremos testear el SW también (push notifications)
+  disable: false,
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Desactivado por incompatibilidad conocida de react-leaflet con el doble-mount de
@@ -13,4 +24,5 @@ const nextConfig = {
     '@tindivo/api-client',
   ],
 }
-export default nextConfig
+
+export default withSerwist(nextConfig)

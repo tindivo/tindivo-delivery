@@ -46,8 +46,8 @@ test-results/
 .playwright-mcp/
 *.jpeg
 *.png
-!public/**/*.png
-!public/**/*.jpeg
+!**/public/**/*.png
+!**/public/**/*.jpeg
 !Mockups/**/*.png
 !Mockups/**/*.jpeg
 

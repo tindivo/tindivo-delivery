@@ -1,6 +1,7 @@
 'use client'
 import { Button, Icon, Skeleton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
+import { PushToggleCard } from '@/features/pwa/components/push-toggle-card'
 import { supabase } from '@/lib/supabase/client'
 import { useRestaurantProfile } from '../hooks/use-restaurant-profile'
 
@@ -102,6 +103,8 @@ export function RestaurantProfileView() {
           </div>
         </section>
       )}
+
+      <PushToggleCard />
 
       {/* Logout */}
       <Button variant="secondary" size="lg" className="w-full" onClick={handleLogout}>
