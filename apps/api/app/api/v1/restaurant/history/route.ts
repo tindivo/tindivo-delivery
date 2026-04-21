@@ -5,6 +5,23 @@ import { requireAuth } from '@/lib/http/require-auth'
 
 export const dynamic = 'force-dynamic'
 
+type OrderStatus =
+  | 'waiting_driver'
+  | 'heading_to_restaurant'
+  | 'waiting_at_restaurant'
+  | 'picked_up'
+  | 'delivered'
+  | 'cancelled'
+
+const VALID_STATUSES: OrderStatus[] = [
+  'waiting_driver',
+  'heading_to_restaurant',
+  'waiting_at_restaurant',
+  'picked_up',
+  'delivered',
+  'cancelled',
+]
+
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req, ['restaurant'])
   if (!auth.ok) return auth.response
@@ -12,7 +29,10 @@ export async function GET(req: NextRequest) {
 
   const url = new URL(req.url)
   const statusParam = url.searchParams.get('status')
-  const statuses = statusParam ? statusParam.split(',') : ['delivered', 'cancelled']
+  const requested = statusParam
+    ? statusParam.split(',').filter((s): s is OrderStatus => (VALID_STATUSES as string[]).includes(s))
+    : (['delivered', 'cancelled'] as OrderStatus[])
+  const statuses = requested.length > 0 ? requested : (['delivered', 'cancelled'] as OrderStatus[])
 
   const since = new Date()
   since.setHours(0, 0, 0, 0)

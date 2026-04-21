@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     .from('orders')
     .select('*, restaurants!inner(name, accent_color)')
     .eq('driver_id', auth.auth.driverId)
-    .in('status', ['delivered', 'cancelled'])
+    .in('status', ['delivered', 'cancelled'] as const)
     .gte('created_at', since.toISOString())
     .order('created_at', { ascending: false })
     .limit(50)
