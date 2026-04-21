@@ -2,6 +2,8 @@ import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types.gen'
 
+export type ServerClient = SupabaseClient<Database>
+
 type CookieStore = {
   get: (name: string) => { value: string } | undefined
   set: (name: string, value: string, options?: Record<string, unknown>) => void
@@ -20,7 +22,7 @@ type CookieStore = {
  * const sb = createServerClient(cookieStore)
  * ```
  */
-export function createServerClient(cookieStore: CookieStore): SupabaseClient<Database> {
+export function createServerClient(cookieStore: CookieStore): ServerClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -34,7 +36,7 @@ export function createServerClient(cookieStore: CookieStore): SupabaseClient<Dat
         // @ts-expect-error Next.js cookies API
         return cookieStore.getAll?.() ?? []
       },
-      setAll(cookies) {
+      setAll(cookies: { name: string; value: string; options?: Record<string, unknown> }[]) {
         try {
           for (const { name, value, options } of cookies) {
             cookieStore.set(name, value, options)
@@ -44,14 +46,14 @@ export function createServerClient(cookieStore: CookieStore): SupabaseClient<Dat
         }
       },
     },
-  })
+  }) as unknown as ServerClient
 }
 
 /**
  * Cliente Supabase usando un JWT directo (para API Routes que reciben Bearer token).
  * Respeta RLS del usuario.
  */
-export function createClientFromJwt(jwt: string): SupabaseClient<Database> {
+export function createClientFromJwt(jwt: string): ServerClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -64,5 +66,5 @@ export function createClientFromJwt(jwt: string): SupabaseClient<Database> {
     global: {
       headers: { Authorization: `Bearer ${jwt}` },
     },
-  })
+  }) as unknown as ServerClient
 }

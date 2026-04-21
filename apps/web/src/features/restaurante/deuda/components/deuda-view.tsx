@@ -140,7 +140,12 @@ export function DeudaView() {
         ) : (
           <ul className="flex flex-col gap-3">
             {items.map((s) => {
-              const cfg = statusConfig[s.status] ?? statusConfig.pending
+              const cfg = (statusConfig[s.status] ?? statusConfig.pending) as {
+                label: string
+                bg: string
+                color: string
+                border: string
+              }
               return (
                 <li
                   key={s.id}

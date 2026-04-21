@@ -1,5 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@tindivo/supabase'
+import type { ServerClient } from '@tindivo/supabase'
 import { PersistenceError } from '../../../shared/errors/domain-error'
 import type { DomainEvent } from '../../../shared/kernel/domain-event'
 import type { EventPublisher } from '../application/ports/event-publisher'
@@ -9,7 +8,7 @@ import type { EventPublisher } from '../application/ports/event-publisher'
  * El relay (trigger Postgres + Edge Function) los publica a Push/Realtime.
  */
 export class SupabaseEventPublisher implements EventPublisher {
-  constructor(private readonly sb: SupabaseClient<Database>) {}
+  constructor(private readonly sb: ServerClient) {}
 
   async publish(event: DomainEvent): Promise<void> {
     await this.publishAll([event])

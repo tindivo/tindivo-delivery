@@ -21,7 +21,7 @@ export class ShortId extends ValueObject<Props> {
     return this.props.value
   }
 
-  toString(): string {
+  override toString(): string {
     return this.props.value
   }
 }

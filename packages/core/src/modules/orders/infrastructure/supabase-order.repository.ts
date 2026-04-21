@@ -1,5 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@tindivo/supabase'
+import type { ServerClient } from '@tindivo/supabase'
 import { PersistenceError } from '../../../shared/errors/domain-error'
 import { RaceCondition } from '../domain/errors/order-errors'
 import type { Order } from '../domain/entities/order'
@@ -17,7 +16,7 @@ const ACTIVE_STATUSES = [
 ] as const
 
 export class SupabaseOrderRepository implements OrderRepository {
-  constructor(private readonly sb: SupabaseClient<Database>) {}
+  constructor(private readonly sb: ServerClient) {}
 
   async findById(id: OrderId): Promise<Order | null> {
     const { data, error } = await this.sb

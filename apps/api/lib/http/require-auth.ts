@@ -1,6 +1,4 @@
-import { createClientFromJwt, createAdminClient } from '@tindivo/supabase'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@tindivo/supabase'
+import { createClientFromJwt, createAdminClient, type ServerClient } from '@tindivo/supabase'
 import type { NextRequest } from 'next/server'
 import { problemCode } from './problem'
 
@@ -10,7 +8,7 @@ export type AuthContext = {
   role: 'admin' | 'restaurant' | 'driver'
   restaurantId: string | null
   driverId: string | null
-  supabase: SupabaseClient<Database>
+  supabase: ServerClient
 }
 
 type Role = AuthContext['role']

@@ -45,7 +45,7 @@ export class Money extends ValueObject<Props> {
     return toMinorUnits(this.amount) > 0
   }
 
-  toString(): string {
+  override toString(): string {
     return `${this.amount.toFixed(2)} ${this.currency}`
   }
 }

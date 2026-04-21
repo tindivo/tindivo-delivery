@@ -5,7 +5,7 @@ import { useDriverActiveOrders } from '../hooks/use-driver-active-orders'
 
 export function ActiveOrderBanner() {
   const { data } = useDriverActiveOrders()
-  const active = data?.items?.[0]
+  const active = data?.items?.[0] as any
   if (!active) return null
 
   return (

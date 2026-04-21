@@ -8,7 +8,6 @@ import {
   IconButton,
   StatusChip,
   Timeline,
-  buildGoogleMapsDirectionsUrl,
   type TimelineStep,
 } from '@tindivo/ui'
 import Link from 'next/link'
@@ -74,8 +73,9 @@ export function ActiveOrderDetail({ orderId }: Props) {
     )
   }
 
-  const status = order.status as string
-  const restaurant = order.restaurants ?? {}
+  const raw = order as any
+  const status = raw.status as string
+  const restaurant = raw.restaurants ?? {}
 
   return (
     <div className="min-h-screen" style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
@@ -98,7 +98,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 <ColorDot color={restaurant.accent_color ?? 'ab3500'} />
                 <h1 className="font-black text-lg text-on-surface">{restaurant.name}</h1>
               </div>
-              <p className="text-xs text-on-surface-variant font-mono">#{order.short_id}</p>
+              <p className="text-xs text-on-surface-variant font-mono">#{raw.short_id}</p>
             </div>
             <StatusChip status={status as never} />
           </div>
@@ -106,12 +106,12 @@ export function ActiveOrderDetail({ orderId }: Props) {
             <div className="flex items-center gap-1.5 text-on-surface-variant">
               <Icon name="payments" size={16} />
               <span className="font-semibold text-on-surface">
-                S/ {Number(order.order_amount).toFixed(2)}
+                S/ {Number(raw.order_amount).toFixed(2)}
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-on-surface-variant">
               <Icon name="receipt" size={16} />
-              <span>{paymentLabel(order.payment_status)}</span>
+              <span>{paymentLabel(raw.payment_status)}</span>
             </div>
           </div>
         </section>
@@ -141,18 +141,18 @@ export function ActiveOrderDetail({ orderId }: Props) {
         )}
 
         {/* Cliente: dirección + navegar */}
-        {status === 'picked_up' && order.delivery_maps_url && (
+        {status === 'picked_up' && raw.delivery_maps_url && (
           <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
             <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
               Entregar al cliente
             </h3>
-            {order.client_phone && (
+            {raw.client_phone && (
               <a
-                href={`tel:+51${order.client_phone}`}
+                href={`tel:+51${raw.client_phone}`}
                 className="inline-flex items-center gap-2 text-primary-container font-semibold"
               >
                 <Icon name="call" size={18} />
-                Llamar: +51 {order.client_phone}
+                Llamar: +51 {raw.client_phone}
               </a>
             )}
           </section>
@@ -192,10 +192,10 @@ export function ActiveOrderDetail({ orderId }: Props) {
             </Link>
           )}
 
-          {status === 'picked_up' && order.delivery_maps_url && (
+          {status === 'picked_up' && raw.delivery_maps_url && (
             <>
               <a
-                href={order.delivery_maps_url}
+                href={raw.delivery_maps_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"

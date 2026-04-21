@@ -25,6 +25,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.3",
     "@tindivo/supabase": "workspace:*"
   },
   "devDependencies": {

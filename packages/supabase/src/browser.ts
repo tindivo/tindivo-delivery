@@ -24,7 +24,7 @@ export function createBrowserClient(): SupabaseClient<Database> {
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
-  })
+  }) as unknown as SupabaseClient<Database>
 
   return clientSingleton
 }

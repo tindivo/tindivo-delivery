@@ -14,7 +14,7 @@ export class DriverId extends ValueObject<Props> {
   get value(): string {
     return this.props.value
   }
-  toString(): string {
+  override toString(): string {
     return this.props.value
   }
 }

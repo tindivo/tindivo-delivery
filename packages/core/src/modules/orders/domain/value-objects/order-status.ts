@@ -42,7 +42,7 @@ export class OrderStatus extends ValueObject<Props> {
     return !this.isFinal()
   }
 
-  toString(): string {
+  override toString(): string {
     return this.props.value
   }
 }

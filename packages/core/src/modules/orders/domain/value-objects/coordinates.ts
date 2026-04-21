@@ -25,7 +25,7 @@ export class Coordinates extends ValueObject<Props> {
     return { lat: this.props.lat, lng: this.props.lng }
   }
 
-  toString(): string {
+  override toString(): string {
     return `${this.props.lat},${this.props.lng}`
   }
 }
