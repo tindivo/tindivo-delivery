@@ -93,6 +93,15 @@ export function ActiveOrderDetail({ orderId }: Props) {
             <Icon name="arrow_back" />
           </IconButton>
         }
+        right={
+          <IconButton
+            variant="ghost"
+            onClick={() => router.push('/motorizado')}
+            aria-label="Ir al inicio"
+          >
+            <Icon name="home" />
+          </IconButton>
+        }
       />
 
       <main className="pt-24 px-4 max-w-md mx-auto space-y-5">
@@ -133,6 +142,16 @@ export function ActiveOrderDetail({ orderId }: Props) {
             )}
           </div>
         </section>
+
+        {/* Breakdown de cobro — qué pagar, con qué paga el cliente y vuelto a dar */}
+        {Number(raw.order_amount) > 0 && (
+          <PaymentBreakdown
+            amount={Number(raw.order_amount)}
+            paymentStatus={raw.payment_status}
+            clientPaysWith={raw.client_pays_with != null ? Number(raw.client_pays_with) : null}
+            changeToGive={raw.change_to_give != null ? Number(raw.change_to_give) : null}
+          />
+        )}
 
         {/* Cronómetros: tiempo en cola + countdown si aplica */}
         <section className="flex items-stretch gap-2">
@@ -281,4 +300,185 @@ function paymentLabel(status: string): string {
 function buildRestaurantNavUrl(restaurant: { address?: string }): string {
   if (!restaurant.address) return '#'
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(restaurant.address)}&travelmode=driving`
+}
+
+type PaymentBreakdownProps = {
+  amount: number
+  paymentStatus: string
+  clientPaysWith: number | null
+  changeToGive: number | null
+}
+
+/**
+ * Desglose de cobro — HU-D-015: el driver necesita saber rápidamente
+ * cuánto cobrar, con qué billete pagará el cliente, y cuánto vuelto debe
+ * dar. El dato de "vuelto" se destaca porque es la información operativa
+ * crítica (el driver debe llevar el cambio ya en la bolsa).
+ */
+function PaymentBreakdown({
+  amount,
+  paymentStatus,
+  clientPaysWith,
+  changeToGive,
+}: PaymentBreakdownProps) {
+  if (paymentStatus === 'prepaid') {
+    return (
+      <section
+        className="rounded-[24px] p-5 border border-emerald-200/60"
+        style={{ background: 'rgba(16, 185, 129, 0.08)' }}
+      >
+        <div className="flex items-center gap-3">
+          <span
+            className="inline-flex items-center justify-center w-11 h-11 rounded-xl"
+            style={{
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              color: '#ffffff',
+            }}
+          >
+            <Icon name="verified" size={22} filled />
+          </span>
+          <div>
+            <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-emerald-800">
+              Ya pagó
+            </div>
+            <div className="font-bold text-emerald-900">
+              No cobres nada al cliente — solo entregar.
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (paymentStatus === 'pending_yape') {
+    return (
+      <section className="rounded-[24px] p-5 bg-surface-container-lowest border border-outline-variant/15">
+        <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-on-surface-variant mb-3">
+          Cobro al cliente
+        </div>
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="bleed-text text-3xl font-black text-on-surface">
+              S/ {amount.toFixed(2)}
+            </div>
+            <div className="text-xs text-on-surface-variant mt-1">
+              Cobrar por Yape — el cliente escanea el QR abajo
+            </div>
+          </div>
+          <Icon name="qr_code_2" size={28} className="text-on-surface-variant/40" filled />
+        </div>
+      </section>
+    )
+  }
+
+  // pending_cash: desglose completo con vuelto
+  const hasChange = clientPaysWith != null && changeToGive != null && changeToGive > 0
+
+  return (
+    <section className="rounded-[24px] p-5 bg-surface-container-lowest border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
+      <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-on-surface-variant">
+        Cobro en efectivo
+      </div>
+
+      {/* Grid: monto pedido · paga con */}
+      <div className="grid grid-cols-2 gap-3">
+        <div
+          className="rounded-2xl p-4"
+          style={{ background: 'rgba(255, 107, 53, 0.08)' }}
+        >
+          <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+            Precio
+          </div>
+          <div className="bleed-text text-2xl font-black mt-1 text-on-surface font-mono tabular-nums">
+            S/ {amount.toFixed(2)}
+          </div>
+          <div className="text-[10px] text-on-surface-variant mt-0.5">lo que debe pagar</div>
+        </div>
+        {clientPaysWith != null ? (
+          <div
+            className="rounded-2xl p-4"
+            style={{ background: 'rgba(59, 130, 246, 0.08)' }}
+          >
+            <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+              Paga con
+            </div>
+            <div
+              className="bleed-text text-2xl font-black mt-1 font-mono tabular-nums"
+              style={{ color: '#1E40AF' }}
+            >
+              S/ {clientPaysWith.toFixed(2)}
+            </div>
+            <div className="text-[10px] text-on-surface-variant mt-0.5">el billete del cliente</div>
+          </div>
+        ) : (
+          <div className="rounded-2xl p-4 bg-surface-container">
+            <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+              Paga con
+            </div>
+            <div className="font-bold text-sm mt-2 text-on-surface-variant">—</div>
+            <div className="text-[10px] text-on-surface-variant/70 mt-0.5">
+              no se especificó
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Vuelto destacado */}
+      {hasChange ? (
+        <div
+          className="relative overflow-hidden rounded-2xl p-4"
+          style={{
+            background: 'linear-gradient(135deg, #065F46 0%, #10B981 100%)',
+            color: '#ffffff',
+            boxShadow: '0 12px 28px -10px rgba(5, 150, 105, 0.45)',
+          }}
+        >
+          <div
+            aria-hidden="true"
+            className="absolute -top-8 -right-8 w-28 h-28 rounded-full pointer-events-none"
+            style={{
+              background: 'radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 60%)',
+            }}
+          />
+          <div className="relative flex items-center gap-3">
+            <span
+              className="inline-flex items-center justify-center w-11 h-11 rounded-xl"
+              style={{ background: 'rgba(255, 255, 255, 0.2)' }}
+            >
+              <Icon name="shopping_bag" size={22} filled />
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85">
+                Vuelto a dar
+              </div>
+              <div
+                className="bleed-text text-3xl font-black font-mono tabular-nums leading-tight"
+                style={{ letterSpacing: '-0.02em' }}
+              >
+                S/ {changeToGive.toFixed(2)}
+              </div>
+              <div className="text-[11px] opacity-90 mt-0.5">
+                debe ir ya en la bolsa
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : clientPaysWith != null && changeToGive != null ? (
+        <div
+          className="rounded-2xl p-3 text-center text-sm font-semibold"
+          style={{
+            background: 'rgba(16, 185, 129, 0.1)',
+            color: '#065F46',
+            border: '1px solid rgba(16, 185, 129, 0.25)',
+          }}
+        >
+          Sin vuelto · paga justo S/ {amount.toFixed(2)}
+        </div>
+      ) : (
+        <div className="text-xs text-on-surface-variant text-center">
+          Confirma con el cliente cuánto pagará al recibir.
+        </div>
+      )}
+    </section>
+  )
 }
