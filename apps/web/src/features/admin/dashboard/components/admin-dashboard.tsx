@@ -33,7 +33,14 @@ export function AdminDashboard() {
         <MetricCard label="Esperando motorizado" value={metrics.waiting} icon="hourglass_top" variant="danger" />
         <MetricCard label="En camino al local" value={metrics.headingToRestaurant} icon="two_wheeler" variant="warning" />
         <MetricCard label="En entrega" value={metrics.inDelivery} icon="delivery_dining" variant="info" />
-        <MetricCard label="Por enviar tracking" value={metrics.pendingTracking} icon="chat" variant="primary" />
+        <Link href="/admin/tracking" className="block">
+          <MetricCard
+            label="Por enviar tracking"
+            value={metrics.pendingTracking}
+            icon="chat"
+            variant="primary"
+          />
+        </Link>
       </div>
 
       <section>

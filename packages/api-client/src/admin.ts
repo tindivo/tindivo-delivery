@@ -51,8 +51,24 @@ export type ResolveCashPayload = {
   notes: string
 }
 
+export type TrackingPendingRow = {
+  id: string
+  short_id: string
+  status: string
+  client_phone: string
+  delivery_address: string | null
+  order_amount: number
+  picked_up_at: string | null
+  tracking_link_sent_at: string | null
+  created_at: string
+  restaurants: { name: string; accent_color: string } | null
+  drivers: { full_name: string; phone: string; vehicle_type: string } | null
+}
+
 export function adminApi(client: ApiClient) {
   return {
+    listTrackingPending: () =>
+      client.get<{ items: TrackingPendingRow[] }>('admin/orders/tracking-pending'),
     listRestaurants: () =>
       client.get<{ items: RestaurantRow[] }>('admin/restaurants'),
     getRestaurant: (id: string) =>
