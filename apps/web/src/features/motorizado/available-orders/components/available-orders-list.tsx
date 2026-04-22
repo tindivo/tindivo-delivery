@@ -21,6 +21,7 @@ export function AvailableOrdersList() {
   const { data, isLoading } = useAvailableOrders()
   const now = useNow(15_000)
 
+  // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
   const items = (data?.items ?? []) as any[]
 
   // Clasifica pedidos por tier para aplicar priorización overdue-first

@@ -11,7 +11,6 @@ import {
   StatusChip,
   Timeline,
   UrgencyBadge,
-  computeUrgencyTier,
   type TimelineStep,
 } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
@@ -33,6 +32,7 @@ export function RestaurantOrderDetail({ orderId }: Props) {
   const readyEarly = useMarkReadyEarly(orderId)
   const [showExtension, setShowExtension] = useState(false)
 
+  // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
   const order = data as any
   const status = (order?.status ?? 'waiting_driver') as
     | 'waiting_driver'

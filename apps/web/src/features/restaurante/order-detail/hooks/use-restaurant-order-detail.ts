@@ -1,8 +1,7 @@
 'use client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
 import { orders } from '@/lib/api/client'
-import { supabase } from '@/lib/supabase/client'
+import { useRealtimeChannel } from '@/lib/supabase/use-realtime-channel'
 
 /**
  * Detalle del pedido visto desde el restaurante.
@@ -15,32 +14,19 @@ export function useRestaurantOrderDetail(orderId: string) {
 
   const query = useQuery({
     queryKey: ['restaurant', 'order', orderId],
+    // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
     queryFn: () => orders.getRestaurantOrder(orderId) as Promise<any>,
     refetchInterval: 30_000,
   })
 
-  useEffect(() => {
-    if (!orderId) return
-    const channel = supabase
-      .channel(`restaurant:order:${orderId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${orderId}`,
-        },
-        () => {
-          qc.invalidateQueries({ queryKey: ['restaurant', 'order', orderId] })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [orderId, qc])
+  useRealtimeChannel({
+    channelName: `restaurant:order:${orderId}`,
+    changes: [{ event: 'UPDATE', table: 'orders', filter: `id=eq.${orderId}` }],
+    onEvent: () => {
+      qc.invalidateQueries({ queryKey: ['restaurant', 'order', orderId] })
+    },
+    enabled: Boolean(orderId),
+  })
 
   return query
 }

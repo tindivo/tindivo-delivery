@@ -5,6 +5,7 @@ import { useAdminActiveOrders } from '@/features/admin/dashboard/hooks/use-admin
 
 export default function AdminOrdersListPage() {
   const { data, isLoading } = useAdminActiveOrders()
+  // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas (restaurants, drivers)
   const items = (data?.items ?? []) as any[]
 
   return (

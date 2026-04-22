@@ -7,6 +7,7 @@ export function useOrderDetail(orderId: string) {
     queryKey: ['driver', 'orders', orderId],
     queryFn: async () => {
       const list = await orders.listDriverOrders()
+      // biome-ignore lint/suspicious/noExplicitAny: items dinámicos del backend
       return list.items?.find((o: any) => o.id === orderId)
     },
     refetchInterval: 15_000,

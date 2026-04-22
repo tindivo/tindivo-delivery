@@ -1,19 +1,15 @@
-import { redirect } from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { getClaimsFromSession, homePathForRole } from '@/lib/supabase/jwt-claims'
-
 export const dynamic = 'force-dynamic'
 
 /**
- * Entry point. Si hay sesión activa redirige al dashboard del rol;
- * si no, al login. El middleware también hace esto, pero tener la lógica
- * aquí evita un flash de página blanca en el caso happy-path.
+ * Entry point. En producción el middleware atrapa `/` antes de llegar aquí:
+ * si hay sesión hace `rewrite` al home del rol, si no hay sesión hace
+ * `redirect` a `/login`. Este componente es un fallback defensivo.
+ *
+ * IMPORTANTE: no emitir `redirect()` server-side aquí porque resultaría en
+ * un 3xx que el Service Worker cachearía, y Safari iOS en PWA standalone
+ * rechaza responses con `redirected: true` ("Response served by service
+ * worker has redirections").
  */
-export default async function HomePage() {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  const claims = getClaimsFromSession(session)
-  redirect(claims.user_role ? homePathForRole(claims.user_role) : '/login')
+export default function HomePage() {
+  return null
 }

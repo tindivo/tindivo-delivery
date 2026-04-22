@@ -9,7 +9,7 @@ import {
   type TimelineStep,
 } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'motion/react'
 import { useRealtimeTracking } from '../hooks/use-realtime-tracking'
 

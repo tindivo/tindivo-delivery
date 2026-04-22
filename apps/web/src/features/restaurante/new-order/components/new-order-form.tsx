@@ -150,9 +150,9 @@ export function NewOrderForm() {
         {/* Prep time carousel */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <label className="text-sm font-semibold text-on-surface">
+            <span className="text-sm font-semibold text-on-surface">
               Tiempo de preparación
-            </label>
+            </span>
             <span className="text-xs font-mono text-on-surface-variant">
               {prepMinutes} min
             </span>
@@ -230,7 +230,7 @@ export function NewOrderForm() {
         {/* Payment method */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <label className="text-sm font-semibold text-on-surface">Método de pago</label>
+            <span className="text-sm font-semibold text-on-surface">Método de pago</span>
           </div>
           <div className="space-y-2.5">
             {paymentOptions.map((opt) => {

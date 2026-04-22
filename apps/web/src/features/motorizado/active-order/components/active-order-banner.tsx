@@ -5,6 +5,7 @@ import { useDriverActiveOrders } from '../hooks/use-driver-active-orders'
 
 export function ActiveOrderBanner() {
   const { data } = useDriverActiveOrders()
+  // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas de orders
   const active = data?.items?.[0] as any
   if (!active) return null
 

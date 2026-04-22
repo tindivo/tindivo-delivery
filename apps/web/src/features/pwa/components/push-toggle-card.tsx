@@ -17,14 +17,49 @@ export function PushToggleCard() {
 
   async function handleToggle() {
     setErrorMsg(null)
-    const ok = isOn ? await unsubscribe() : await subscribe()
-    if (!ok && !isOn) {
-      if (status === 'denied') {
-        setErrorMsg('Permisos bloqueados. Permítelas en los ajustes del navegador.')
-      } else {
-        setErrorMsg('No pudimos activarlas. Intenta de nuevo.')
-      }
+
+    if (isOn) {
+      const ok = await unsubscribe()
+      if (!ok) setErrorMsg('No pudimos desactivarlas. Intenta de nuevo.')
+      return
     }
+
+    // iOS Safari PWA: `Notification.requestPermission()` debe correr como
+    // primera operación síncrona del user-gesture handler. Si React agenda
+    // un render (setState) antes, Safari rompe el contexto de gesto y la
+    // Promise queda colgada indefinidamente → spinner infinito.
+    // Timeout defensivo de 10s para que el UI no se atasque si iOS falla.
+    let permission: NotificationPermission
+    try {
+      if (typeof Notification === 'undefined') {
+        setErrorMsg('Tu dispositivo no soporta notificaciones.')
+        return
+      }
+      permission = await Promise.race([
+        Notification.requestPermission(),
+        new Promise<NotificationPermission>((_, reject) =>
+          setTimeout(() => reject(new Error('permission-timeout')), 10_000),
+        ),
+      ])
+    } catch (err) {
+      console.error('[push] requestPermission failed', err)
+      setErrorMsg(
+        'No pudimos pedir el permiso. Si la app está instalada, activa las notificaciones desde Ajustes iOS > Safari > Notificaciones.',
+      )
+      return
+    }
+
+    if (permission === 'denied') {
+      setErrorMsg('Permisos bloqueados. Actívalas en ajustes del navegador.')
+      return
+    }
+    if (permission !== 'granted') {
+      setErrorMsg('Permiso no concedido.')
+      return
+    }
+
+    const ok = await subscribe()
+    if (!ok) setErrorMsg('No pudimos activarlas. Intenta de nuevo.')
   }
 
   return (

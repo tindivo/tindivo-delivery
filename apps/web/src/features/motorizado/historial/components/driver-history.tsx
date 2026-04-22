@@ -43,6 +43,7 @@ export function DriverHistory() {
 
   return (
     <ul className="flex flex-col gap-3">
+      {/* biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas */}
       {items.map((order: any) => (
         <li key={order.id}>
           <OrderCard

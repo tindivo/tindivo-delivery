@@ -77,6 +77,7 @@ export function RestaurantHistory() {
         />
       ) : (
         <ul className="flex flex-col gap-3">
+          {/* biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas */}
           {(data?.items ?? []).map((order: any) => (
             <li key={order.id}>
               <OrderCard

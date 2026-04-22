@@ -52,6 +52,7 @@ export function InstallPromptBanner() {
   if (!canInstall && !ios) return null // Chrome no ha disparado el evento y no es iOS
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: usamos div porque <dialog> requiere showModal() y no encaja con este banner no-modal fijado en viewport
     <div
       role="dialog"
       aria-label="Instalar Tindivo"

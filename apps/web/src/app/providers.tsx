@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
+import { RealtimeAuthBridge } from '@/features/auth/components/realtime-auth-bridge'
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -12,5 +13,10 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }),
   )
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={client}>
+      <RealtimeAuthBridge />
+      {children}
+    </QueryClientProvider>
+  )
 }

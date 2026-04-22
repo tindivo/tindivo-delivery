@@ -183,7 +183,7 @@ export function OrderDetail({ orderId }: Props) {
                 <a
                   href={order.delivery_maps_url}
                   target="_blank"
-                  rel="noopener"
+                  rel="noreferrer noopener"
                   className="inline-flex items-center gap-2 text-sm font-semibold text-primary-container"
                 >
                   <Icon name="navigation" size={16} />

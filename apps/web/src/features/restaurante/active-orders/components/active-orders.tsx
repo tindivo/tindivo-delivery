@@ -19,6 +19,7 @@ export function ActiveOrders() {
   }
 
   const items = (data?.items ?? []).filter(
+    // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con status
     (o: any) => o.status !== 'delivered' && o.status !== 'cancelled',
   )
 
@@ -34,6 +35,7 @@ export function ActiveOrders() {
 
   return (
     <ul className="space-y-3">
+      {/* biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas */}
       {items.map((order: any) => (
         <li key={order.id}>
           <OrderCard

@@ -53,59 +53,61 @@ type RedirectContext = {
 }
 
 /**
- * Política de enrutamiento: decide si la request actual debe ser redirigida
+ * Acción de enrutamiento. `rewrite` es resolución interna (sin 3xx); `redirect`
+ * emite 307/308. Se usa `rewrite` para `/` autenticado porque Serwist cachea
+ * navegaciones y iOS Safari rechaza Responses con `redirected: true` en PWA
+ * modo standalone ("Response served by service worker has redirections").
+ */
+type RouteAction =
+  | { kind: 'redirect'; path: string }
+  | { kind: 'rewrite'; path: string }
+  | null
+
+/**
+ * Política de enrutamiento: decide si la request actual debe ser desviada
  * antes de tocar el controlador de la página.
  *
- * Retorna el path destino, o `null` si la request puede continuar.
- *
  * Reglas (aplicadas en este orden):
- *   1. Sin sesión + ruta privada → `/login`
- *   2. Sesión inválida (sin `user_role`) → forzar a pasar por `/login`
- *   3. Usuario deshabilitado (`is_active = false`) → `/login?suspended=1`
- *   4. Usuario autenticado y sano visitando `/login` o `/` →
- *      rebota al home del rol (evita el flash del login).
- *   5. Usuario autenticado entrando al área de OTRO rol →
- *      rebota a su propia home (bloquea cross-role, no 403).
- *   6. En cualquier otro caso → null (continuar).
+ *   1. Sin sesión + ruta privada → redirect `/login`
+ *   2. Sesión inválida (sin `user_role`) → redirect `/login`
+ *   3. Usuario deshabilitado (`is_active = false`) → redirect `/login?suspended=1`
+ *   4. Autenticado visitando `/` → **rewrite** al home del rol (sin 3xx, por iOS PWA)
+ *   5. Autenticado visitando `/login` → redirect al home del rol
+ *   6. Autenticado entrando a área de OTRO rol → redirect a su propia home
+ *   7. Cualquier otro caso → null (continuar).
  */
-function resolveRedirect(ctx: RedirectContext): string | null {
+function resolveRedirect(ctx: RedirectContext): RouteAction {
   const { pathname, role, isActive, hasSession } = ctx
 
-  // (1) No autenticado → solo puede ver rutas públicas.
   if (!hasSession) {
-    return isPublicPath(pathname) ? null : '/login'
+    return isPublicPath(pathname) ? null : { kind: 'redirect', path: '/login' }
   }
 
-  // Autenticado a partir de aquí.
-
-  // (2) Sesión sin rol: el JWT existe pero el usuario no tiene perfil
-  //     en `public.users` (o el hook aún no corre). No debería pasar en
-  //     producción; lo forzamos al login para que el LoginForm haga signOut.
   if (!role) {
-    return pathname === '/login' ? null : '/login'
+    return pathname === '/login' ? null : { kind: 'redirect', path: '/login' }
   }
 
-  // (3) Usuario deshabilitado. Solo puede ver `/login` (con query flag para
-  //     que el LoginForm muestre un mensaje), y tracking público.
   if (!isActive) {
     if (pathname === '/login' || isPublicPath(pathname)) return null
-    return '/login?suspended=1'
+    return { kind: 'redirect', path: '/login?suspended=1' }
   }
 
-  // (4) Si ya está autenticado, ver el login o la raíz no tiene sentido —
-  //     rebota a su dashboard.
-  if (pathname === '/login' || pathname === '/') {
-    return homePathForRole(role)
+  // `/` autenticado: rewrite interno. Safari iOS en PWA standalone rechaza
+  // responses servidas por el SW con `redirected: true`, y Serwist cachea
+  // navegaciones. Con rewrite no hay 3xx que cachear.
+  if (pathname === '/') {
+    return { kind: 'rewrite', path: homePathForRole(role) }
   }
 
-  // (5) Cross-role: el path pertenece a un área de rol, pero no al rol del
-  //     usuario. Lo mandamos a su propia home.
+  if (pathname === '/login') {
+    return { kind: 'redirect', path: homePathForRole(role) }
+  }
+
   const owner = ownerRoleOfPath(pathname)
   if (owner && owner !== role) {
-    return homePathForRole(role)
+    return { kind: 'redirect', path: homePathForRole(role) }
   }
 
-  // (6) Todo en orden: deja pasar.
   return null
 }
 
@@ -152,19 +154,24 @@ export async function middleware(request: NextRequest) {
     hasSession: Boolean(session),
   }
 
-  const redirectTo = resolveRedirect(ctx)
+  const action = resolveRedirect(ctx)
 
-  if (redirectTo && redirectTo !== pathname) {
+  if (action && action.path !== pathname) {
     const url = request.nextUrl.clone()
-    url.pathname = redirectTo
-    // Conservamos `?suspended=1` si el redirect lo trae embebido.
-    if (redirectTo.includes('?')) {
-      const [path, qs] = redirectTo.split('?')
-      url.pathname = path as string
-      url.search = qs ? `?${qs}` : ''
-    } else {
-      url.search = ''
+    const [path, qs] = action.path.split('?')
+    url.pathname = path as string
+    url.search = qs ? `?${qs}` : ''
+
+    if (action.kind === 'rewrite') {
+      // Preservar cookies acumuladas por Supabase en `response` (token refresh),
+      // sino se pierden al construir el rewrite desde cero.
+      const rewriteResponse = NextResponse.rewrite(url, { request })
+      for (const cookie of response.cookies.getAll()) {
+        rewriteResponse.cookies.set(cookie)
+      }
+      return rewriteResponse
     }
+
     return NextResponse.redirect(url)
   }
 

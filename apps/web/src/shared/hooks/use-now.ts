@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
  * es granularidad suficiente para que un pedido cruce de amarillo a rojo
  * sin necesidad de refetch.
  */
-export function useNow(intervalMs: number = 30_000): Date {
+export function useNow(intervalMs = 30_000): Date {
   const [now, setNow] = useState<Date>(() => new Date())
 
   useEffect(() => {

@@ -77,6 +77,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
     )
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas (restaurants, payment, etc.)
   const raw = order as any
   const status = raw.status as string
   const restaurant = raw.restaurants ?? {}

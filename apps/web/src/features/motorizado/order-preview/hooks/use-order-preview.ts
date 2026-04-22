@@ -11,7 +11,9 @@ export function useOrderPreview(orderId: string) {
   return useQuery({
     queryKey: ['driver', 'preview', orderId],
     queryFn: async () => {
+      // biome-ignore lint/suspicious/noExplicitAny: respuesta dinámica del API
       const list = (await orders.listAvailable()) as { items: any[] }
+      // biome-ignore lint/suspicious/noExplicitAny: items con columnas dinámicas
       return list.items?.find((o: any) => o.id === orderId) ?? null
     },
     // No refetch agresivo — es info estática hasta que se acepte

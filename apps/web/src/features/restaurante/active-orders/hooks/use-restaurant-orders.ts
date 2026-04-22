@@ -1,11 +1,29 @@
 'use client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
 import { orders } from '@/lib/api/client'
 import { supabase } from '@/lib/supabase/client'
+import { useRealtimeChannel } from '@/lib/supabase/use-realtime-channel'
+
+function useMyRestaurantId() {
+  return useQuery({
+    queryKey: ['me', 'restaurant-id'],
+    staleTime: Number.POSITIVE_INFINITY,
+    queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser()
+      if (!userData.user) return null
+      const { data } = await supabase
+        .from('restaurants')
+        .select('id')
+        .eq('user_id', userData.user.id)
+        .maybeSingle()
+      return data?.id ?? null
+    },
+  })
+}
 
 export function useRestaurantOrders() {
   const qc = useQueryClient()
+  const { data: restaurantId } = useMyRestaurantId()
 
   const query = useQuery({
     queryKey: ['restaurant', 'orders'],
@@ -13,29 +31,20 @@ export function useRestaurantOrders() {
     refetchInterval: 30_000,
   })
 
-  useEffect(() => {
-    let sub: ReturnType<typeof supabase.channel> | null = null
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return
-      const { data: r } = await supabase
-        .from('restaurants')
-        .select('id')
-        .eq('user_id', data.user.id)
-        .maybeSingle()
-      if (!r) return
-      sub = supabase
-        .channel(`restaurant:${r.id}:orders`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${r.id}` },
-          () => qc.invalidateQueries({ queryKey: ['restaurant', 'orders'] }),
-        )
-        .subscribe()
-    })
-    return () => {
-      if (sub) supabase.removeChannel(sub)
-    }
-  }, [qc])
+  useRealtimeChannel({
+    channelName: `restaurant:${restaurantId ?? 'pending'}:orders`,
+    changes: [
+      {
+        event: '*',
+        table: 'orders',
+        filter: restaurantId ? `restaurant_id=eq.${restaurantId}` : undefined,
+      },
+    ],
+    onEvent: () => {
+      qc.invalidateQueries({ queryKey: ['restaurant', 'orders'] })
+    },
+    enabled: Boolean(restaurantId),
+  })
 
   return query
 }

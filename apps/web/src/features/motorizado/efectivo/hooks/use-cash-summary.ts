@@ -1,8 +1,7 @@
 'use client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
 import { driver } from '@/lib/api/client'
-import { supabase } from '@/lib/supabase/client'
+import { useRealtimeChannel } from '@/lib/supabase/use-realtime-channel'
 
 export function useCashSummary(driverId: string | null | undefined) {
   const qc = useQueryClient()
@@ -12,28 +11,20 @@ export function useCashSummary(driverId: string | null | undefined) {
     queryFn: () => driver.getCashSummary(),
   })
 
-  useEffect(() => {
-    if (!driverId) return
-    const channel = supabase
-      .channel(`driver:${driverId}:cash-settlements`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'cash_settlements',
-          filter: `driver_id=eq.${driverId}`,
-        },
-        () => {
-          qc.invalidateQueries({ queryKey: ['driver', 'cash-summary'] })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [driverId, qc])
+  useRealtimeChannel({
+    channelName: `driver:${driverId ?? 'pending'}:cash-settlements`,
+    changes: [
+      {
+        event: '*',
+        table: 'cash_settlements',
+        filter: driverId ? `driver_id=eq.${driverId}` : undefined,
+      },
+    ],
+    onEvent: () => {
+      qc.invalidateQueries({ queryKey: ['driver', 'cash-summary'] })
+    },
+    enabled: Boolean(driverId),
+  })
 
   return query
 }

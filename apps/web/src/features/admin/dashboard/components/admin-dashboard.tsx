@@ -50,6 +50,7 @@ export function AdminDashboard() {
           <Card className="p-8 text-center text-on-surface-variant">No hay pedidos activos.</Card>
         ) : (
           <div className="grid grid-cols-3 gap-3">
+            {/* biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas */}
             {items.map((order: any) => (
               <Link key={order.id} href={`/admin/orders/${order.id}`}>
                 <OrderCard
@@ -118,6 +119,7 @@ function paymentLabel(status: string): string {
   }
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas de orders
 function computeMetrics(items: any[]) {
   return {
     waiting: items.filter((o) => o.status === 'waiting_driver').length,

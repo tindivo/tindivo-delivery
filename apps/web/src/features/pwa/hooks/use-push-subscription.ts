@@ -78,19 +78,26 @@ export function usePushSubscription() {
     return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [checkStatus])
 
+  /**
+   * Registra PushManager y postea el endpoint al backend.
+   *
+   * ASUME que el permiso ya es `granted`. El caller (PushToggleCard) debe
+   * llamar `Notification.requestPermission()` directamente en el user-gesture
+   * handler antes de invocar este método, porque iOS Safari rompe el contexto
+   * de gesto si hay setState/render intermedios.
+   */
   const subscribe = useCallback(async () => {
     if (!VAPID_PUBLIC_KEY) {
       console.error('[push] NEXT_PUBLIC_VAPID_PUBLIC_KEY no configurada')
       return false
     }
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+      console.warn('[push] subscribe called without granted permission')
+      await checkStatus()
+      return false
+    }
     setLoading(true)
     try {
-      const permission = await Notification.requestPermission()
-      if (permission !== 'granted') {
-        await checkStatus()
-        return false
-      }
-
       const reg = await navigator.serviceWorker.ready
       let sub = await reg.pushManager.getSubscription()
       if (!sub) {
