@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client'
 
 const navItems: BottomNavItem[] = [
   { href: '/restaurante', label: 'Inicio', icon: 'home' },
+  { href: '/restaurante/efectivo', label: 'Efectivo', icon: 'payments' },
   { href: '/restaurante/historial', label: 'Historial', icon: 'history' },
   { href: '/restaurante/deuda', label: 'Deuda', icon: 'account_balance_wallet' },
   { href: '/restaurante/perfil', label: 'Perfil', icon: 'person' },

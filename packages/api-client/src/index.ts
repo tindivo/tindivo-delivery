@@ -6,5 +6,6 @@ export {
   type RestaurantProfile,
   type Settlement,
   type RestaurantSettlementsResponse,
+  type RestaurantCashSettlementRow,
 } from './restaurant'
 export { adminApi, type RestaurantRow } from './admin'
