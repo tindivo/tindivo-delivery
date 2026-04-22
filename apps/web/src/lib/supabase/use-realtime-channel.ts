@@ -13,44 +13,110 @@ type PostgresChangesConfig = {
 }
 
 type RealtimePayload = RealtimePostgresChangesPayload<Record<string, unknown>>
+type Listener = (payload: RealtimePayload) => void
+
+type RegistryEntry = {
+  channel: RealtimeChannel
+  listeners: Map<symbol, Listener>
+}
+
+/**
+ * Registry singleton de canales. Permite que múltiples componentes se
+ * suscriban al mismo channel name sin chocar en supabase-js (que rechaza
+ * `.on()` después de `.subscribe()`). El primero crea el canal físico;
+ * subsiguientes solo agregan listeners al fan-out. Al desuscribirse el
+ * último, se destruye el canal.
+ */
+const registry = new Map<string, RegistryEntry>()
+
+function subscribeToChannel(
+  channelName: string,
+  changes: PostgresChangesConfig[],
+  listener: Listener,
+): () => void {
+  let entry = registry.get(channelName)
+
+  if (!entry) {
+    // Nonce en el topic físico para evitar que Supabase/HMR reciclen un
+    // channel ya subscribed (en cuyo caso `.on()` tiraría). El registry key
+    // sigue siendo el lógico `channelName` para dedup entre hooks.
+    const physicalTopic = `${channelName}#${Math.random().toString(36).slice(2, 10)}`
+    const channel = supabase.channel(physicalTopic)
+    entry = { channel, listeners: new Map() }
+
+    try {
+      for (const cfg of changes) {
+        // biome-ignore lint/suspicious/noExplicitAny: supabase-js .on overload no inferable aquí
+        const onMethod = channel.on as any
+        onMethod.call(
+          channel,
+          'postgres_changes',
+          { schema: 'public', ...cfg },
+          (payload: RealtimePayload) => {
+            entry?.listeners.forEach((l) => l(payload))
+          },
+        )
+      }
+
+      channel.subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[realtime]', channelName, status)
+        }
+      })
+
+      registry.set(channelName, entry)
+    } catch (err) {
+      // Puede ocurrir en dev con HMR cuando supabase-js recicla channels
+      // internamente. No crashea la app; el next render recrea el canal.
+      console.warn('[realtime] channel init failed for', channelName, err)
+      try {
+        supabase.removeChannel(channel)
+      } catch {
+        /* noop */
+      }
+      // Devolver noop — el próximo render (post HMR) lo reintentará.
+      return () => {
+        /* noop */
+      }
+    }
+  }
+
+  const id = Symbol('listener')
+  entry.listeners.set(id, listener)
+
+  return () => {
+    const current = registry.get(channelName)
+    if (!current) return
+    current.listeners.delete(id)
+    if (current.listeners.size === 0) {
+      supabase.removeChannel(current.channel)
+      registry.delete(channelName)
+    }
+  }
+}
 
 type Options = {
   /**
-   * Nombre único del canal. Incluir algún identificador relevante (user id,
-   * entity id) para evitar colisiones entre componentes que subscriben a la
-   * misma tabla.
+   * Nombre único del canal. Múltiples hooks con el mismo nombre comparten un
+   * canal físico (fan-out) — deben declarar los mismos `changes`.
    */
   channelName: string
-  /**
-   * Configs de postgres_changes a registrar en el canal. Se permiten múltiples
-   * en un solo canal (p.ej. escuchar orders + driver_availability juntos).
-   */
+  /** Configs de postgres_changes a registrar. */
   changes: PostgresChangesConfig[]
   /** Callback por evento. */
   onEvent: (payload: RealtimePayload) => void
   /**
-   * Si `false`, el canal no se monta. Útil cuando depende de un id async
-   * (p.ej. `restaurant_id` que se resuelve con un query).
+   * Si `false`, no se monta. Útil cuando el nombre depende de un id async.
    */
   enabled?: boolean
 }
 
 /**
- * Wrapper sobre `supabase.channel(...)` con manejo correcto del ciclo de vida
- * en PWAs (especialmente iOS).
- *
- * Garantiza:
- *  - Suscripción síncrona al montar (sin `.then()` en useEffect → sin race
- *    conditions de cleanup).
- *  - Re-subscribe al volver del background en iOS PWA (`visibilitychange`).
- *    iOS suspende agresivamente el JS y el WebSocket de Supabase Realtime
- *    muere. Sin este reconnect, los eventos se pierden hasta el próximo
- *    refresh.
- *  - Re-subscribe + `realtime.setAuth()` cuando Supabase refresca el JWT
- *    (`TOKEN_REFRESHED`). Sin esto, las RLS policies empiezan a filtrar los
- *    eventos porque el canal sigue usando el token viejo.
- *  - Cleanup correcto con `removeChannel`.
- *  - Callback guardado en ref: actualizar `onEvent` no re-crea el canal.
+ * Wrapper de supabase realtime para PWAs con:
+ *  - Registry singleton por channel name → múltiples hooks pueden co-existir.
+ *  - Reconexión al volver del background en iOS PWA via `realtime.connect()`.
+ *  - Propagación de JWT fresh via `realtime.setAuth()` en TOKEN_REFRESHED.
+ *  - Callback por ref — actualizar `onEvent` no re-suscribe.
  */
 export function useRealtimeChannel({
   channelName,
@@ -61,81 +127,42 @@ export function useRealtimeChannel({
   const callbackRef = useRef(onEvent)
   callbackRef.current = onEvent
 
-  // Serializamos `changes` para que el effect sea estable frente a nuevos
-  // arrays con el mismo contenido.
   const changesKey = JSON.stringify(changes)
 
   useEffect(() => {
     if (!enabled) return
 
-    let channel: RealtimeChannel | null = null
-    let cancelled = false
+    const parsed: PostgresChangesConfig[] = JSON.parse(changesKey)
+    const unsubscribe = subscribeToChannel(channelName, parsed, (payload) => {
+      callbackRef.current(payload)
+    })
 
-    const subscribe = () => {
-      if (cancelled) return
-      if (channel) {
-        supabase.removeChannel(channel)
-        channel = null
-      }
-
-      const parsedChanges: PostgresChangesConfig[] = JSON.parse(changesKey)
-      channel = supabase.channel(channelName)
-
-      for (const cfg of parsedChanges) {
-        // supabase-js no narrowea el overload de `.on()` al pasar cfg como
-        // spread, así que forzamos el tipo. El payload sí conserva tipado.
-        // biome-ignore lint/suspicious/noExplicitAny: supabase-js .on overload no inferable aquí
-        const onMethod = channel.on as any
-        onMethod.call(
-          channel,
-          'postgres_changes',
-          { schema: 'public', ...cfg },
-          (payload: RealtimePayload) => callbackRef.current(payload),
-        )
-      }
-
-      channel.subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[realtime]', channelName, status)
-        }
-      })
-    }
-
-    subscribe()
-
+    // iOS PWA: al volver del background, el WebSocket puede estar muerto.
+    // `connect()` es idempotente; revive el transport y los channels
+    // existentes auto-resubscriben.
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
-        // iOS PWA: al volver del background, el WebSocket puede estar muerto.
-        // Forzar reconexión antes de re-subscribir.
         try {
           supabase.realtime.connect()
         } catch {
-          /* no-op: ya conectado o no disponible */
+          /* noop */
         }
-        subscribe()
       }
     }
     document.addEventListener('visibilitychange', onVisibility)
-    // `pageshow` es más fiable que visibilitychange cuando iOS restaura
-    // desde bfcache.
     window.addEventListener('pageshow', onVisibility)
 
     const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'TOKEN_REFRESHED' && session?.access_token) {
+      if (session?.access_token && (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN')) {
         supabase.realtime.setAuth(session.access_token)
-      }
-      if (event === 'SIGNED_IN') {
-        if (session?.access_token) supabase.realtime.setAuth(session.access_token)
-        subscribe()
       }
     })
 
     return () => {
-      cancelled = true
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pageshow', onVisibility)
       authSub.subscription.unsubscribe()
-      if (channel) supabase.removeChannel(channel)
+      unsubscribe()
     }
   }, [channelName, changesKey, enabled])
 }

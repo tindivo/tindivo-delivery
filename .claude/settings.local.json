@@ -39,7 +39,9 @@
       "mcp__plugin_playwright_playwright__browser_close",
       "Bash(pnpm --filter @tindivo/web build)",
       "Bash(git add *)",
-      "Bash(git commit -m 'fix\\(pwa\\): register Service Worker explicitly so Chrome detects PWA as installable *)"
+      "Bash(git commit -m 'fix\\(pwa\\): register Service Worker explicitly so Chrome detects PWA as installable *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Get-NetTCPConnection *)"
     ]
   }
 }

@@ -182,7 +182,13 @@ export async function middleware(request: NextRequest) {
  * matcher: corre middleware en todo salvo assets estáticos.
  */
 export const config = {
+  // Excluimos rutas que NO deben pasar por auth/redirect:
+  //  - _next/static, _next/image: assets de Next
+  //  - favicon, manifest.webmanifest: assets PWA
+  //  - sw.js + workbox-*.js: Service Worker (el browser rechaza registrar un
+  //    SW detrás de cualquier redirect, incluido uno del middleware)
+  //  - icon-*, apple-touch-icon*: íconos del manifest cargados sin sesión
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|icon-.*|apple-touch-icon.*).*)',
   ],
 }

@@ -1,6 +1,7 @@
 'use client'
 import { cn } from '@tindivo/ui'
 import { useEffect, useState } from 'react'
+import { useDriverActiveOrdersRealtime } from '@/features/motorizado/active-order/hooks/use-driver-active-orders'
 import { useDriverCapacity } from '@/features/motorizado/active-order/hooks/use-driver-capacity'
 import { MyActiveOrdersList } from '@/features/motorizado/active-order/components/my-active-orders-list'
 import { AvailableOrdersList } from '@/features/motorizado/available-orders/components/available-orders-list'
@@ -19,6 +20,9 @@ type Tab = 'available' | 'active'
  * HU-D-026 sin duplicar navegación.
  */
 export function HomeTabs() {
+  // Montar el realtime sync de driver/orders UNA SOLA VEZ aquí; múltiples
+  // componentes leen los datos vía useDriverActiveOrders (TanStack cache).
+  useDriverActiveOrdersRealtime()
   const { activeCount } = useDriverCapacity()
   const [tab, setTab] = useState<Tab>('available')
 
