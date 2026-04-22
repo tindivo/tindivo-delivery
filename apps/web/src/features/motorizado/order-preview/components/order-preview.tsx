@@ -1,4 +1,5 @@
 'use client'
+import { ApiError } from '@tindivo/api-client'
 import {
   BottomActionBar,
   Button,
@@ -12,8 +13,10 @@ import {
   computeUrgencyTier,
 } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
-import { useNow } from '@/shared/hooks/use-now'
+import { useState } from 'react'
+import { useDriverCapacity } from '@/features/motorizado/active-order/hooks/use-driver-capacity'
 import { useAcceptOrder } from '@/features/motorizado/available-orders/hooks/use-accept-order'
+import { useNow } from '@/shared/hooks/use-now'
 import { useOrderPreview } from '../hooks/use-order-preview'
 
 type Props = { orderId: string }
@@ -46,7 +49,26 @@ export function OrderPreview({ orderId }: Props) {
   const router = useRouter()
   const { data, isLoading } = useOrderPreview(orderId)
   const accept = useAcceptOrder()
+  const { activeCount, max, isFull } = useDriverCapacity()
   const now = useNow(1_000)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  function handleAccept() {
+    if (!data) return
+    setErrorMsg(null)
+    accept.mutate(data.id, {
+      onSuccess: () => router.replace(`/motorizado/pedidos/${data.id}`),
+      onError: (err) => {
+        if (err instanceof ApiError && err.problem.code === 'DRIVER_CAPACITY_EXCEEDED') {
+          setErrorMsg(`Estás al límite (${max}/${max}). Completa una entrega para recibir nuevos.`)
+        } else if (err instanceof ApiError && err.problem.code === 'ORDER_ALREADY_ACCEPTED') {
+          setErrorMsg('Este pedido ya fue tomado por otro motorizado.')
+        } else {
+          setErrorMsg('No pudimos aceptar el pedido. Intenta de nuevo.')
+        }
+      },
+    })
+  }
 
   if (isLoading || !data) {
     return (
@@ -240,6 +262,47 @@ export function OrderPreview({ orderId }: Props) {
             </div>
           </div>
         )}
+
+        {isFull && (
+          <div
+            role="alert"
+            className="rounded-[20px] p-4"
+            style={{
+              background: 'rgba(186, 26, 26, 0.14)',
+              color: '#991B1B',
+              border: '1px solid rgba(186, 26, 26, 0.35)',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <Icon name="block" size={22} filled />
+              <div>
+                <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85">
+                  Capacidad llena
+                </div>
+                <div className="font-bold text-sm">
+                  Tienes {activeCount}/{max} pedidos activos. Completa una entrega para recibir nuevos.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {errorMsg && (
+          <div
+            role="alert"
+            className="rounded-[20px] p-4"
+            style={{
+              background: 'rgba(186, 26, 26, 0.14)',
+              color: '#991B1B',
+              border: '1px solid rgba(186, 26, 26, 0.35)',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <Icon name="error" size={22} filled />
+              <div className="font-semibold text-sm">{errorMsg}</div>
+            </div>
+          </div>
+        )}
       </main>
 
       <BottomActionBar>
@@ -247,15 +310,15 @@ export function OrderPreview({ orderId }: Props) {
           <Button
             size="lg"
             className="w-full"
-            disabled={accept.isPending}
-            onClick={() =>
-              accept.mutate(order.id, {
-                onSuccess: () => router.replace(`/motorizado/pedidos/${order.id}`),
-              })
-            }
+            disabled={accept.isPending || isFull}
+            onClick={handleAccept}
           >
-            <Icon name="check_circle" filled />
-            {accept.isPending ? 'Aceptando...' : 'Aceptar pedido'}
+            <Icon name={isFull ? 'block' : 'check_circle'} filled />
+            {isFull
+              ? `Al límite (${max}/${max})`
+              : accept.isPending
+                ? 'Aceptando...'
+                : 'Aceptar pedido'}
           </Button>
           <Button
             variant="secondary"
