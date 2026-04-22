@@ -11,10 +11,9 @@ export const dynamic = 'force-dynamic'
 /**
  * POST /api/v1/restaurant/cash-settlements/[id]/dispute
  *
- * El restaurante reporta una diferencia en el monto recibido. Solo se permite
- * desde estado 'delivered'. Se genera una fila en admin_alerts para que el
- * admin resuelva. HU-R-027 + HU-A-012.
- *
+ * El cajero reporta diferencia en el monto recibido (HU-R-027). Genera
+ * admin_alert para que Tindivo resuelva (HU-A-012). Emite domain event
+ * con push al driver para que sepa que está "en revisión".
  * "No discutas en el local" — la app hace de intermediario.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -42,13 +41,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     )
   }
 
+  const now = new Date().toISOString()
   const { data, error } = await auth.auth.supabase
     .from('cash_settlements')
     .update({
       status: 'disputed',
       reported_amount: body.data.reportedAmount,
       dispute_note: body.data.note,
-      updated_at: new Date().toISOString(),
+      disputed_at: now,
+      updated_at: now,
     })
     .eq('id', id)
     .select('id, status')
@@ -56,16 +57,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) return problemCode('INTERNAL_ERROR', 500, error.message)
 
-  // Alerta para el admin (HU-A-012). Usamos admin client porque la RLS de
-  // admin_alerts solo permite al rol admin escribir; el restaurante levanta
-  // la alerta y el service-role la persiste.
-  const adminClient = createAdminClient()
-  await adminClient.from('admin_alerts').insert({
+  const admin = createAdminClient()
+
+  // Alerta admin (RLS admin_alerts es admin-only → service-role)
+  await admin.from('admin_alerts').insert({
     type: 'cash_settlement.disputed',
     payload: {
       settlement_id: id,
       restaurant_id: current.restaurant_id,
       driver_id: current.driver_id,
+      delivered_amount: current.delivered_amount,
+      reported_amount: body.data.reportedAmount,
+      note: body.data.note,
+    },
+  })
+
+  // Push al driver (HU-D-040 comunicación desde la app)
+  await admin.from('domain_events').insert({
+    aggregate_type: 'CashSettlement',
+    aggregate_id: id,
+    event_type: 'CashSettlementDisputed',
+    payload: {
+      driver_id: current.driver_id,
+      restaurant_id: current.restaurant_id,
       delivered_amount: current.delivered_amount,
       reported_amount: body.data.reportedAmount,
       note: body.data.note,

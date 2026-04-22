@@ -45,15 +45,20 @@ export type Database = {
       cash_settlements: {
         Row: {
           confirmed_amount: number | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           delivered_amount: number | null
           dispute_note: string | null
+          disputed_at: string | null
           driver_id: string
           id: string
           order_count: number
           reported_amount: number | null
           resolution_note: string | null
           resolved_amount: number | null
+          resolved_at: string | null
+          resolved_by: string | null
           restaurant_id: string
           settlement_date: string
           status: Database['public']['Enums']['cash_settlement_status']
@@ -62,15 +67,20 @@ export type Database = {
         }
         Insert: {
           confirmed_amount?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           delivered_amount?: number | null
           dispute_note?: string | null
+          disputed_at?: string | null
           driver_id: string
           id?: string
           order_count?: number
           reported_amount?: number | null
           resolution_note?: string | null
           resolved_amount?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           restaurant_id: string
           settlement_date: string
           status?: Database['public']['Enums']['cash_settlement_status']
@@ -79,15 +89,20 @@ export type Database = {
         }
         Update: {
           confirmed_amount?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           delivered_amount?: number | null
           dispute_note?: string | null
+          disputed_at?: string | null
           driver_id?: string
           id?: string
           order_count?: number
           reported_amount?: number | null
           resolution_note?: string | null
           resolved_amount?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           restaurant_id?: string
           settlement_date?: string
           status?: Database['public']['Enums']['cash_settlement_status']
@@ -238,6 +253,7 @@ export type Database = {
           cancel_reason: string | null
           cancel_reason_code: string | null
           cancelled_at: string | null
+          cash_settlement_id: string | null
           change_to_give: number | null
           client_pays_with: number | null
           client_phone: string | null
@@ -273,6 +289,7 @@ export type Database = {
           cancel_reason?: string | null
           cancel_reason_code?: string | null
           cancelled_at?: string | null
+          cash_settlement_id?: string | null
           change_to_give?: number | null
           client_pays_with?: number | null
           client_phone?: string | null
@@ -295,7 +312,7 @@ export type Database = {
           ready_early_used?: boolean
           restaurant_coordinates_cache?: unknown
           restaurant_id: string
-          short_id?: string
+          short_id: string
           status?: Database['public']['Enums']['order_status']
           tracking_link_sent_at?: string | null
           tracking_link_sent_by?: string | null
@@ -308,6 +325,7 @@ export type Database = {
           cancel_reason?: string | null
           cancel_reason_code?: string | null
           cancelled_at?: string | null
+          cash_settlement_id?: string | null
           change_to_give?: number | null
           client_pays_with?: number | null
           client_phone?: string | null
@@ -505,19 +523,25 @@ export type Database = {
         Relationships: []
       }
     }
-    Views: { [_ in never]: never }
+    Views: Record<string, never>
     Functions: {
-      current_driver_id: { Args: Record<string, never>; Returns: string }
-      current_restaurant_id: { Args: Record<string, never>; Returns: string }
+      current_driver_id: { Args: never; Returns: string }
+      current_restaurant_id: { Args: never; Returns: string }
       current_user_role: {
-        Args: Record<string, never>
+        Args: never
         Returns: Database['public']['Enums']['user_role']
       }
-      generate_short_id: { Args: Record<string, never>; Returns: string }
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      generate_short_id: { Args: never; Returns: string }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
     }
     Enums: {
-      cash_settlement_status: 'pending' | 'delivered' | 'confirmed' | 'disputed' | 'resolved'
+      cash_settlement_status:
+        | 'pending'
+        | 'delivered'
+        | 'confirmed'
+        | 'disputed'
+        | 'resolved'
       domain_event_status: 'pending' | 'published' | 'failed'
       order_status:
         | 'waiting_driver'
@@ -532,15 +556,75 @@ export type Database = {
       user_role: 'admin' | 'restaurant' | 'driver'
       vehicle_type: 'moto' | 'bicicleta' | 'pie' | 'auto'
     }
-    CompositeTypes: { [_ in never]: never }
+    CompositeTypes: Record<string, never>
   }
 }
 
-export type Tables<T extends keyof Database['public']['Tables']> =
-  Database['public']['Tables'][T]['Row']
-export type TablesInsert<T extends keyof Database['public']['Tables']> =
-  Database['public']['Tables'][T]['Insert']
-export type TablesUpdate<T extends keyof Database['public']['Tables']> =
-  Database['public']['Tables'][T]['Update']
-export type Enums<T extends keyof Database['public']['Enums']> =
-  Database['public']['Enums'][T]
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+
+export type Tables<
+  Name extends
+    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends Name extends { schema: keyof DatabaseWithoutInternals }
+    ? keyof (DatabaseWithoutInternals[Name['schema']]['Tables'] &
+        DatabaseWithoutInternals[Name['schema']]['Views'])
+    : never = never,
+> = Name extends { schema: keyof DatabaseWithoutInternals }
+  ? (DatabaseWithoutInternals[Name['schema']]['Tables'] &
+      DatabaseWithoutInternals[Name['schema']]['Views'])[TableName] extends { Row: infer R }
+    ? R
+    : never
+  : Name extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[Name] extends { Row: infer R }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  Name extends
+    | keyof DefaultSchema['Tables']
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends Name extends { schema: keyof DatabaseWithoutInternals }
+    ? keyof DatabaseWithoutInternals[Name['schema']]['Tables']
+    : never = never,
+> = Name extends { schema: keyof DatabaseWithoutInternals }
+  ? DatabaseWithoutInternals[Name['schema']]['Tables'][TableName] extends { Insert: infer I }
+    ? I
+    : never
+  : Name extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][Name] extends { Insert: infer I }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  Name extends
+    | keyof DefaultSchema['Tables']
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends Name extends { schema: keyof DatabaseWithoutInternals }
+    ? keyof DatabaseWithoutInternals[Name['schema']]['Tables']
+    : never = never,
+> = Name extends { schema: keyof DatabaseWithoutInternals }
+  ? DatabaseWithoutInternals[Name['schema']]['Tables'][TableName] extends { Update: infer U }
+    ? U
+    : never
+  : Name extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][Name] extends { Update: infer U }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  Name extends
+    | keyof DefaultSchema['Enums']
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends Name extends { schema: keyof DatabaseWithoutInternals }
+    ? keyof DatabaseWithoutInternals[Name['schema']]['Enums']
+    : never = never,
+> = Name extends { schema: keyof DatabaseWithoutInternals }
+  ? DatabaseWithoutInternals[Name['schema']]['Enums'][EnumName]
+  : Name extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][Name]
+    : never

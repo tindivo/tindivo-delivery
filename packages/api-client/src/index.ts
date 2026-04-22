@@ -8,4 +8,9 @@ export {
   type RestaurantSettlementsResponse,
   type RestaurantCashSettlementRow,
 } from './restaurant'
-export { adminApi, type RestaurantRow } from './admin'
+export {
+  adminApi,
+  type RestaurantRow,
+  type AdminCashSettlementRow,
+  type ResolveCashPayload,
+} from './admin'

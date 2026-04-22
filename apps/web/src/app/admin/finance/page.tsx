@@ -1,11 +1,5 @@
-import { ComingSoon } from '@/features/admin/placeholder/components/coming-soon'
+import { DisputesList } from '@/features/admin/cash-settlements/components/disputes-list'
 
 export default function AdminFinancePage() {
-  return (
-    <ComingSoon
-      icon="account_balance"
-      title="Finanzas"
-      description="Liquidaciones semanales, reconciliación de efectivo y estado de deudas."
-    />
-  )
+  return <DisputesList />
 }
