@@ -235,14 +235,56 @@ export function RestaurantOrderDetail({ orderId }: Props) {
           </div>
         )}
         {status === 'delivered' && (
-          <div className="rounded-[20px] p-4 bg-emerald-50/80 border border-emerald-200/60">
-            <div className="flex gap-3">
-              <Icon name="check_circle" size={20} className="shrink-0 text-emerald-700" filled />
-              <div className="text-xs text-emerald-900 leading-snug">
-                Pedido entregado correctamente. ¡Gracias!
+          <section
+            className="relative overflow-hidden rounded-[24px] p-5"
+            style={{
+              background: 'linear-gradient(135deg, #065F46 0%, #10B981 100%)',
+              color: '#ffffff',
+              boxShadow: '0 12px 32px -10px rgba(5, 150, 105, 0.45)',
+            }}
+          >
+            <div
+              aria-hidden="true"
+              className="absolute -top-10 -right-10 w-40 h-40 rounded-full pointer-events-none"
+              style={{
+                background: 'radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 60%)',
+              }}
+            />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-2">
+                <Icon name="check_circle" size={22} filled />
+                <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85">
+                  Entregado al cliente
+                </div>
               </div>
+              {order.delivered_at && (
+                <>
+                  <div
+                    className="font-black text-2xl font-mono tabular-nums leading-tight"
+                    style={{ letterSpacing: '-0.02em' }}
+                  >
+                    {formatDeliveryTime(order.delivered_at)}
+                  </div>
+                  <div className="text-xs opacity-85 mt-1">
+                    {formatDeliveryDate(order.delivered_at)}
+                  </div>
+                </>
+              )}
+              {order.payment_status === 'pending_yape' && (
+                <div
+                  className="mt-3 rounded-xl px-3 py-2 text-xs font-semibold"
+                  style={{ background: 'rgba(255, 255, 255, 0.18)' }}
+                >
+                  <div className="flex items-start gap-2">
+                    <Icon name="qr_code_2" size={16} filled />
+                    <span>
+                      Pago por Yape: corrobora en tu app que el abono llegó cerca de esta hora.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          </section>
         )}
         {status === 'cancelled' && (
           <div className="rounded-[20px] p-4 bg-red-50/80 border border-red-200/60">
@@ -347,6 +389,24 @@ function paymentLabel(status: string): string {
     default:
       return status
   }
+}
+
+function formatDeliveryTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-PE', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+}
+
+function formatDeliveryDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-PE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
 }
 
 function vehicleIcon(type?: string): string {

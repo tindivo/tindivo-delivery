@@ -7,3 +7,4 @@ export {
   type Settlement,
   type RestaurantSettlementsResponse,
 } from './restaurant'
+export { adminApi, type RestaurantRow } from './admin'

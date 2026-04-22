@@ -12,6 +12,9 @@ export const CreateRestaurantRequest = z.object({
   phone: PhonePeSchema,
   address: z.string().min(5).max(200),
   yapeNumber: PhonePeSchema.optional(),
+  // URL pública de Supabase Storage del QR Yape/Plin. El upload se hace
+  // desde el cliente directamente a Storage; solo se persiste la URL.
+  qrUrl: z.string().url().optional(),
   accentColor: AccentColorSchema,
   ownerEmail: z.string().email(),
   ownerPassword: z.string().min(8).max(80),
@@ -23,6 +26,7 @@ export const UpdateRestaurantRequest = z.object({
   phone: PhonePeSchema.optional(),
   address: z.string().min(5).max(200).optional(),
   yapeNumber: PhonePeSchema.optional(),
+  qrUrl: z.string().url().nullable().optional(),
   accentColor: AccentColorSchema.optional(),
 })
 export type UpdateRestaurantRequest = z.infer<typeof UpdateRestaurantRequest>

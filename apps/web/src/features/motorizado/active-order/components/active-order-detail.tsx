@@ -19,6 +19,7 @@ import { useNow } from '@/shared/hooks/use-now'
 import { useOrderDetail } from '../hooks/use-order-detail'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
 import { useMarkDelivered } from '../hooks/use-mark-delivered'
+import { YapeQrCard } from './yape-qr-card'
 
 type Props = { orderId: string }
 
@@ -188,6 +189,16 @@ export function ActiveOrderDetail({ orderId }: Props) {
               </a>
             )}
           </section>
+        )}
+
+        {/* QR Yape — mostrar al cliente cuando se va a entregar y el pago es Yape pendiente */}
+        {status === 'picked_up' && raw.payment_status === 'pending_yape' && (
+          <YapeQrCard
+            qrUrl={restaurant.qr_url ?? null}
+            yapeNumber={restaurant.yape_number ?? null}
+            amount={Number(raw.order_amount)}
+            restaurantName={restaurant.name ?? 'Restaurante'}
+          />
         )}
       </main>
 
