@@ -1,10 +1,10 @@
 'use client'
-import { cn } from '@tindivo/ui'
-import { useEffect, useState } from 'react'
+import { MyActiveOrdersList } from '@/features/motorizado/active-order/components/my-active-orders-list'
 import { useDriverActiveOrdersRealtime } from '@/features/motorizado/active-order/hooks/use-driver-active-orders'
 import { useDriverCapacity } from '@/features/motorizado/active-order/hooks/use-driver-capacity'
-import { MyActiveOrdersList } from '@/features/motorizado/active-order/components/my-active-orders-list'
 import { AvailableOrdersList } from '@/features/motorizado/available-orders/components/available-orders-list'
+import { cn } from '@tindivo/ui'
+import { useEffect, useState } from 'react'
 
 type Tab = 'available' | 'active'
 

@@ -1,6 +1,6 @@
 'use client'
-import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { useState } from 'react'
 
 const BUCKET = 'restaurant-qr-codes'
 const MAX_BYTES = 2 * 1024 * 1024

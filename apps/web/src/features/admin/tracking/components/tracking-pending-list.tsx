@@ -1,9 +1,9 @@
 'use client'
+import { orders } from '@/lib/api/client'
+import { useMutation } from '@tanstack/react-query'
 import type { TrackingPendingRow } from '@tindivo/api-client'
 import { normalizeToE164Pe } from '@tindivo/core'
 import { EmptyState, Icon, Skeleton, WaLinkButton } from '@tindivo/ui'
-import { useMutation } from '@tanstack/react-query'
-import { orders } from '@/lib/api/client'
 import { useTrackingPending } from '../hooks/use-tracking-pending'
 
 function elapsedMinutes(iso: string): number {
@@ -47,9 +47,9 @@ export function TrackingPendingList() {
       <header>
         <h1 className="bleed-text font-black text-3xl text-on-surface">Envío de tracking</h1>
         <p className="text-on-surface-variant text-sm mt-1 max-w-2xl">
-          Pedidos en camino al cliente sin link de tracking enviado. Toca <strong>Enviar por
-          WhatsApp</strong> — abre el chat con el mensaje pre-rellenado. Al enviar desde WhatsApp
-          queda registrado quién y cuándo lo envió.
+          Pedidos en camino al cliente sin link de tracking enviado. Toca{' '}
+          <strong>Enviar por WhatsApp</strong> — abre el chat con el mensaje pre-rellenado. Al
+          enviar desde WhatsApp queda registrado quién y cuándo lo envió.
         </p>
       </header>
 
@@ -89,7 +89,7 @@ function TrackingCard({ row }: { row: TrackingPendingRow }) {
   const host =
     typeof window !== 'undefined'
       ? window.location.origin
-      : process.env.NEXT_PUBLIC_APP_URL ?? 'https://tindivo-beta.vercel.app'
+      : (process.env.NEXT_PUBLIC_APP_URL ?? 'https://tindivo-beta.vercel.app')
   const trackingUrl = `${host}/pedidos/${row.short_id}`
 
   const restaurantName = row.restaurants?.name ?? 'tu restaurante'

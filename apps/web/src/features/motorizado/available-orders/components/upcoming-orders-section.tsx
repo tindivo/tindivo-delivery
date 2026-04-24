@@ -58,19 +58,13 @@ export function UpcomingOrdersSection({ items, now }: Props) {
           <div className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant">
             Próximos pedidos
           </div>
-          <div className="font-bold text-sm text-on-surface">
-            {items.length} esperando
-          </div>
+          <div className="font-bold text-sm text-on-surface">{items.length} esperando</div>
         </div>
         <span
           className="inline-flex transition-transform duration-200"
           style={{ transform: open ? 'rotate(180deg)' : 'none' }}
         >
-          <Icon
-            name="expand_more"
-            size={22}
-            className="text-on-surface-variant"
-          />
+          <Icon name="expand_more" size={22} className="text-on-surface-variant" />
         </span>
       </button>
 
@@ -114,9 +108,7 @@ export function UpcomingOrdersSection({ items, now }: Props) {
                     <Icon name="schedule" size={12} filled />
                     En {mins} min
                   </span>
-                  <div className="text-[10px] text-on-surface-variant mt-1">
-                    No aceptable aún
-                  </div>
+                  <div className="text-[10px] text-on-surface-variant mt-1">No aceptable aún</div>
                 </div>
               </li>
             )

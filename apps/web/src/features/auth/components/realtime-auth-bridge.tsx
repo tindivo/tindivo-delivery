@@ -1,6 +1,6 @@
 'use client'
-import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { useEffect } from 'react'
 
 /**
  * Sincroniza el JWT del usuario con el cliente de Supabase Realtime.

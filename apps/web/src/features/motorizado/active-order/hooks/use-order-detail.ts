@@ -1,6 +1,6 @@
 'use client'
-import { useQuery } from '@tanstack/react-query'
 import { orders } from '@/lib/api/client'
+import { useQuery } from '@tanstack/react-query'
 
 export function useOrderDetail(orderId: string) {
   return useQuery({

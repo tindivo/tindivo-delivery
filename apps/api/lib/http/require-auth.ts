@@ -1,4 +1,4 @@
-import { createClientFromJwt, createAdminClient, type ServerClient } from '@tindivo/supabase'
+import { type ServerClient, createAdminClient, createClientFromJwt } from '@tindivo/supabase'
 import type { NextRequest } from 'next/server'
 import { problemCode } from './problem'
 
@@ -13,23 +13,21 @@ export type AuthContext = {
 
 type Role = AuthContext['role']
 
-type AuthResult =
-  | { ok: true; auth: AuthContext }
-  | { ok: false; response: Response }
+type AuthResult = { ok: true; auth: AuthContext } | { ok: false; response: Response }
 
 /**
  * Extrae el JWT del header Authorization Bearer y valida el usuario contra Supabase.
  * Si `allowedRoles` está definido, valida que el rol del usuario esté permitido.
  */
-export async function requireAuth(
-  req: NextRequest,
-  allowedRoles?: Role[],
-): Promise<AuthResult> {
+export async function requireAuth(req: NextRequest, allowedRoles?: Role[]): Promise<AuthResult> {
   const header = req.headers.get('authorization') ?? ''
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : null
 
   if (!token) {
-    return { ok: false, response: problemCode('UNAUTHENTICATED', 401, 'Falta el header Authorization Bearer') }
+    return {
+      ok: false,
+      response: problemCode('UNAUTHENTICATED', 401, 'Falta el header Authorization Bearer'),
+    }
   }
 
   // 1. Valida el JWT y obtiene el auth.user (service_role + jwt)
@@ -55,7 +53,10 @@ export async function requireAuth(
   }
 
   if (allowedRoles && !allowedRoles.includes(profile.role)) {
-    return { ok: false, response: problemCode('FORBIDDEN', 403, `Rol requerido: ${allowedRoles.join(', ')}`) }
+    return {
+      ok: false,
+      response: problemCode('FORBIDDEN', 403, `Rol requerido: ${allowedRoles.join(', ')}`),
+    }
   }
 
   // 3. Obtiene restaurantId/driverId según rol
@@ -63,7 +64,11 @@ export async function requireAuth(
   let driverId: string | null = null
 
   if (profile.role === 'restaurant') {
-    const { data } = await admin.from('restaurants').select('id').eq('user_id', user.id).maybeSingle()
+    const { data } = await admin
+      .from('restaurants')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
     restaurantId = data?.id ?? null
   } else if (profile.role === 'driver') {
     const { data } = await admin.from('drivers').select('id').eq('user_id', user.id).maybeSingle()

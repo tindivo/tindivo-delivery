@@ -1,8 +1,8 @@
 'use client'
+import { useRestaurantProfile } from '@/features/restaurante/perfil/hooks/use-restaurant-profile'
 import { EmptyState, OrderCard, Skeleton, cn } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { useRestaurantProfile } from '@/features/restaurante/perfil/hooks/use-restaurant-profile'
 import { useRestaurantHistory } from '../hooks/use-restaurant-history'
 
 const PREP_MINS: Record<string, number> = { fast: 10, normal: 15, slow: 20 }

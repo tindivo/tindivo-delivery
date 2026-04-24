@@ -1,5 +1,13 @@
 'use client'
-import { BottomActionBar, Button, GlassTopBar, Icon, IconButton, Label, PhoneInputPe } from '@tindivo/ui'
+import {
+  BottomActionBar,
+  Button,
+  GlassTopBar,
+  Icon,
+  IconButton,
+  Label,
+  PhoneInputPe,
+} from '@tindivo/ui'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -68,7 +76,10 @@ export function PickupForm({ orderId }: Props) {
   }
 
   return (
-    <div className="min-h-screen" style={{ paddingBottom: 'calc(120px + env(safe-area-inset-bottom))' }}>
+    <div
+      className="min-h-screen"
+      style={{ paddingBottom: 'calc(120px + env(safe-area-inset-bottom))' }}
+    >
       <GlassTopBar
         title="DATOS DEL CLIENTE"
         subtitle="Motorizado"
@@ -79,7 +90,11 @@ export function PickupForm({ orderId }: Props) {
         }
       />
 
-      <form id="pickup-form" onSubmit={handleSubmit} className="pt-24 px-4 max-w-md mx-auto space-y-5">
+      <form
+        id="pickup-form"
+        onSubmit={handleSubmit}
+        className="pt-24 px-4 max-w-md mx-auto space-y-5"
+      >
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
           <Icon name="tips_and_updates" className="text-amber-600 shrink-0" />
           <div className="text-sm text-amber-900">
@@ -122,7 +137,6 @@ export function PickupForm({ orderId }: Props) {
             </p>
           )}
         </div>
-
       </form>
 
       <BottomActionBar>

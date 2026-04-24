@@ -2,10 +2,24 @@
 import { ApiError } from '@tindivo/api-client'
 import type { Restaurants } from '@tindivo/contracts'
 import { Button, Icon, Input, Label } from '@tindivo/ui'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useCreateRestaurant, useUpdateRestaurant } from '../hooks/use-admin-restaurants'
 import { QrUploader } from './qr-uploader'
+
+// Leaflet toca `window` en su top-level: cargar solo en cliente.
+const InteractiveMap = dynamic(
+  () => import('@tindivo/ui/patterns/interactive-map').then((m) => m.InteractiveMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[360px] w-full rounded-xl bg-surface-container animate-pulse" />
+    ),
+  },
+)
+
+type Coords = { lat: number; lng: number }
 
 type Props = {
   mode: 'create' | 'edit'
@@ -17,6 +31,8 @@ type Props = {
     yape_number: string | null
     qr_url: string | null
     accent_color: string
+    coordinates_lat: number | null
+    coordinates_lng: number | null
   }
 }
 
@@ -31,6 +47,11 @@ export function RestaurantForm({ mode, initial }: Props) {
   const [yapeNumber, setYapeNumber] = useState(initial?.yape_number ?? '')
   const [accentColor, setAccentColor] = useState(initial?.accent_color ?? 'FF6B35')
   const [qrUrl, setQrUrl] = useState<string | null>(initial?.qr_url ?? null)
+  const [coords, setCoords] = useState<Coords | null>(
+    initial?.coordinates_lat != null && initial?.coordinates_lng != null
+      ? { lat: initial.coordinates_lat, lng: initial.coordinates_lng }
+      : null,
+  )
   const [ownerEmail, setOwnerEmail] = useState('')
   const [ownerPassword, setOwnerPassword] = useState('')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -41,6 +62,11 @@ export function RestaurantForm({ mode, initial }: Props) {
     ev.preventDefault()
     setErrorMsg(null)
 
+    if (!coords) {
+      setErrorMsg('Marca la ubicación exacta del restaurante en el mapa.')
+      return
+    }
+
     if (mode === 'create') {
       const body: Restaurants.CreateRestaurantRequest = {
         name,
@@ -49,6 +75,7 @@ export function RestaurantForm({ mode, initial }: Props) {
         yapeNumber: yapeNumber || undefined,
         qrUrl: qrUrl || undefined,
         accentColor,
+        coordinates: coords,
         ownerEmail,
         ownerPassword,
       }
@@ -66,6 +93,7 @@ export function RestaurantForm({ mode, initial }: Props) {
         yapeNumber: yapeNumber || undefined,
         qrUrl: qrUrl ?? null,
         accentColor,
+        coordinates: coords,
       }
       try {
         await update.mutateAsync(body)
@@ -107,7 +135,7 @@ export function RestaurantForm({ mode, initial }: Props) {
           </div>
         </div>
         <div>
-          <Label htmlFor="address">Dirección</Label>
+          <Label htmlFor="address">Dirección de referencia</Label>
           <Input
             id="address"
             value={address}
@@ -115,26 +143,54 @@ export function RestaurantForm({ mode, initial }: Props) {
             required
             minLength={5}
             maxLength={200}
+            placeholder="Jr. Amazonas 234, Trujillo"
           />
+        </div>
+        <div>
+          <Label>Ubicación exacta en el mapa</Label>
+          <p className="text-xs text-on-surface-variant mt-1 mb-2">
+            Toca o arrastra el marcador para marcar la posición precisa del local.
+          </p>
+          <InteractiveMap
+            initialCenter={coords ?? undefined}
+            initialZoom={16}
+            value={coords}
+            onChange={setCoords}
+            height={360}
+          />
+          {coords && (
+            <p className="text-xs text-on-surface-variant font-mono pl-1 mt-2">
+              {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="accent">Color de acento (hex sin #)</Label>
-            <div className="flex gap-2">
-              <Input
+            <Label htmlFor="accent">Color de acento</Label>
+            <div className="flex gap-2 items-stretch">
+              <input
+                type="color"
                 id="accent"
+                value={`#${accentColor}`}
+                onChange={(e) => setAccentColor(e.target.value.replace('#', '').toUpperCase())}
+                className="h-12 w-20 rounded-xl border border-outline-variant/40 cursor-pointer bg-transparent p-1"
+                aria-label="Seleccionar color"
+              />
+              <Input
                 value={accentColor}
                 onChange={(e) =>
-                  setAccentColor(e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6))
+                  setAccentColor(
+                    e.target.value
+                      .replace(/[^0-9a-fA-F]/g, '')
+                      .slice(0, 6)
+                      .toUpperCase(),
+                  )
                 }
                 required
                 pattern="[0-9a-fA-F]{6}"
                 className="font-mono uppercase"
-              />
-              <span
-                aria-label="preview color"
-                className="w-10 h-10 rounded-lg shrink-0"
-                style={{ background: `#${accentColor}` }}
+                aria-label="Código hexadecimal"
+                placeholder="FF6B35"
               />
             </div>
           </div>
@@ -157,7 +213,8 @@ export function RestaurantForm({ mode, initial }: Props) {
             QR Yape / Plin
           </h2>
           <p className="text-xs text-on-surface-variant mt-1">
-            El motorizado mostrará este QR al cliente cuando vaya a entregar un pedido con pago pendiente por Yape.
+            El motorizado mostrará este QR al cliente cuando vaya a entregar un pedido con pago
+            pendiente por Yape.
           </p>
         </div>
         <QrUploader value={qrUrl} onChange={setQrUrl} restaurantId={initial?.id} />
@@ -205,7 +262,7 @@ export function RestaurantForm({ mode, initial }: Props) {
       )}
 
       <div className="flex gap-3">
-        <Button type="submit" disabled={pending} size="lg">
+        <Button type="submit" disabled={pending || !coords} size="lg">
           <Icon name="check" />
           {pending ? 'Guardando...' : mode === 'create' ? 'Crear restaurante' : 'Guardar cambios'}
         </Button>

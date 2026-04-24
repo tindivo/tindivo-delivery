@@ -1,16 +1,9 @@
 'use client'
 import type { Tracking } from '@tindivo/contracts'
-import {
-  ColorDot,
-  GlassTopBar,
-  HeroBadge,
-  Icon,
-  Timeline,
-  type TimelineStep,
-} from '@tindivo/ui'
+import { ColorDot, GlassTopBar, HeroBadge, Icon, Timeline, type TimelineStep } from '@tindivo/ui'
+import { motion } from 'motion/react'
 import dynamic from 'next/dynamic'
 import { useMemo, useState } from 'react'
-import { motion } from 'motion/react'
 import { useRealtimeTracking } from '../hooks/use-realtime-tracking'
 
 // Leaflet toca `window` en su top-level: cargar solo en cliente.
@@ -87,7 +80,9 @@ export function TrackingView({ initial, shortId }: Props) {
         key: 'driver_accepted',
         label: 'Motorizado asignado',
         icon: 'two_wheeler',
-        done: ['heading_to_restaurant', 'waiting_at_restaurant', 'picked_up', 'delivered'].includes(s),
+        done: ['heading_to_restaurant', 'waiting_at_restaurant', 'picked_up', 'delivered'].includes(
+          s,
+        ),
         current: s === 'heading_to_restaurant',
       },
       {

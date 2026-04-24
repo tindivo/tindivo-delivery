@@ -1,7 +1,7 @@
-import type { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
 import { problemCode } from '@/lib/http/problem'
 import { requireAuth } from '@/lib/http/require-auth'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url)
   const statusParam = url.searchParams.get('status')
   const requested = statusParam
-    ? statusParam.split(',').filter((s): s is OrderStatus => (VALID_STATUSES as string[]).includes(s))
+    ? statusParam
+        .split(',')
+        .filter((s): s is OrderStatus => (VALID_STATUSES as string[]).includes(s))
     : (['delivered', 'cancelled'] as OrderStatus[])
   const statuses = requested.length > 0 ? requested : (['delivered', 'cancelled'] as OrderStatus[])
 

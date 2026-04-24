@@ -1,8 +1,8 @@
 'use client'
-import { Button, Icon, Skeleton } from '@tindivo/ui'
-import { useRouter } from 'next/navigation'
 import { PushToggleCard } from '@/features/pwa/components/push-toggle-card'
 import { supabase } from '@/lib/supabase/client'
+import { Button, Icon, Skeleton } from '@tindivo/ui'
+import { useRouter } from 'next/navigation'
 import { useRestaurantProfile } from '../hooks/use-restaurant-profile'
 
 export function RestaurantProfileView() {
@@ -81,14 +81,18 @@ export function RestaurantProfileView() {
         <section
           className="rounded-[24px] p-5"
           style={{
-            background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(180, 83, 9, 0.12) 100%)',
+            background:
+              'linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(180, 83, 9, 0.12) 100%)',
             border: '1px solid rgba(234, 179, 8, 0.25)',
           }}
         >
           <div className="flex items-center gap-3">
             <span
               className="inline-flex items-center justify-center w-11 h-11 rounded-xl"
-              style={{ background: 'linear-gradient(135deg, #B45309 0%, #EA580C 100%)', color: '#ffffff' }}
+              style={{
+                background: 'linear-gradient(135deg, #B45309 0%, #EA580C 100%)',
+                color: '#ffffff',
+              }}
             >
               <Icon name="account_balance_wallet" size={22} filled />
             </span>

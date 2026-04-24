@@ -59,9 +59,8 @@ export function problem(error: unknown, requestId?: string): NextResponse {
     code: code as ProblemDetails['code'],
     detail,
     requestId,
-    errors: details && 'errors' in details
-      ? (details.errors as Record<string, string[]>)
-      : undefined,
+    errors:
+      details && 'errors' in details ? (details.errors as Record<string, string[]>) : undefined,
   }
 
   return NextResponse.json(body, {

@@ -19,7 +19,9 @@ export type AcceptOrderResult = {
   acceptedAt: string
 }
 
-export class AcceptOrderUseCase implements UseCase<AcceptOrderCommand, AcceptOrderResult, DomainError> {
+export class AcceptOrderUseCase
+  implements UseCase<AcceptOrderCommand, AcceptOrderResult, DomainError>
+{
   private readonly maxConcurrent = 3
 
   constructor(

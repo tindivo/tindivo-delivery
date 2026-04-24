@@ -1,4 +1,6 @@
 'use client'
+import { useDriverCapacity } from '@/features/motorizado/active-order/hooks/use-driver-capacity'
+import { useNow } from '@/shared/hooks/use-now'
 import {
   EmptyState,
   OrderCard,
@@ -10,8 +12,6 @@ import {
 import { AnimatePresence, motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
-import { useDriverCapacity } from '@/features/motorizado/active-order/hooks/use-driver-capacity'
-import { useNow } from '@/shared/hooks/use-now'
 import { useAvailableOrders } from '../hooks/use-available-orders'
 import { CapacityIndicator } from './capacity-indicator'
 import { OverdueBanner } from './overdue-banner'
@@ -112,9 +112,7 @@ export function AvailableOrdersList() {
                         estimatedReadyAt={order.estimated_ready_at}
                         now={now}
                         disabled={isLocked}
-                        onClick={() =>
-                          router.push(`/motorizado/pedidos/${order.id}/preview`)
-                        }
+                        onClick={() => router.push(`/motorizado/pedidos/${order.id}/preview`)}
                       />
                     </motion.li>
                   )

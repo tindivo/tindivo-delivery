@@ -1,7 +1,7 @@
 'use client'
-import Link from 'next/link'
-import { Icon, StatusChip, Skeleton } from '@tindivo/ui'
 import { useAdminActiveOrders } from '@/features/admin/dashboard/hooks/use-admin-active-orders'
+import { Icon, Skeleton, StatusChip } from '@tindivo/ui'
+import Link from 'next/link'
 
 export default function AdminOrdersListPage() {
   const { data, isLoading } = useAdminActiveOrders()
@@ -12,9 +12,7 @@ export default function AdminOrdersListPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="bleed-text font-black text-3xl text-on-surface">Pedidos</h1>
-        <p className="text-on-surface-variant text-sm mt-1">
-          Todos los pedidos activos del día
-        </p>
+        <p className="text-on-surface-variant text-sm mt-1">Todos los pedidos activos del día</p>
       </div>
 
       {isLoading ? (
@@ -43,7 +41,10 @@ export default function AdminOrdersListPage() {
             </thead>
             <tbody>
               {items.map((o) => (
-                <tr key={o.id} className="border-t border-outline-variant/10 hover:bg-surface-container-low/50">
+                <tr
+                  key={o.id}
+                  className="border-t border-outline-variant/10 hover:bg-surface-container-low/50"
+                >
                   <td className="px-4 py-3 font-mono text-xs">#{o.short_id}</td>
                   <td className="px-4 py-3 font-semibold">{o.restaurants?.name ?? '—'}</td>
                   <td className="px-4 py-3">

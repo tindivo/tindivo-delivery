@@ -1,7 +1,7 @@
 'use client'
+import { orders } from '@/lib/api/client'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Orders } from '@tindivo/contracts'
-import { orders } from '@/lib/api/client'
 
 export function usePickup(orderId: string) {
   const qc = useQueryClient()

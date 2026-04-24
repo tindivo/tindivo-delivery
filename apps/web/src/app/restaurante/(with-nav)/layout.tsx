@@ -1,9 +1,9 @@
 'use client'
+import { supabase } from '@/lib/supabase/client'
 import { BottomNav, type BottomNavItem, GlassTopBar, IconButton } from '@tindivo/ui'
 import { Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
-import { supabase } from '@/lib/supabase/client'
 
 const navItems: BottomNavItem[] = [
   { href: '/restaurante', label: 'Inicio', icon: 'home' },

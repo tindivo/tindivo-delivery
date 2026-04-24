@@ -1,4 +1,4 @@
-import { forwardRef, type HTMLAttributes } from 'react'
+import { type HTMLAttributes, forwardRef } from 'react'
 import { cn } from '../lib/cn'
 
 export const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
@@ -35,11 +35,12 @@ export const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadi
 )
 CardTitle.displayName = 'CardTitle'
 
-export const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => (
-    <p ref={ref} className={cn('text-sm text-on-surface-variant', className)} {...props} />
-  ),
-)
+export const CardDescription = forwardRef<
+  HTMLParagraphElement,
+  HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <p ref={ref} className={cn('text-sm text-on-surface-variant', className)} {...props} />
+))
 CardDescription.displayName = 'CardDescription'
 
 export const CardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(

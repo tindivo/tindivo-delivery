@@ -1,5 +1,5 @@
 import { ValueObject } from '../../../../shared/kernel/value-object'
-import { Money } from './money'
+import type { Money } from './money'
 
 export type PaymentStatusValue = 'prepaid' | 'pending_yape' | 'pending_cash'
 

@@ -16,7 +16,13 @@ type Props = {
  * Cuenta hacia arriba (positivo). Útil para SLA visibility:
  * "¿Cuánto lleva este pedido activo?"
  */
-export function ElapsedTimer({ createdAt, now = new Date(), className, variant = 'chip', withLabel = false }: Props) {
+export function ElapsedTimer({
+  createdAt,
+  now = new Date(),
+  className,
+  variant = 'chip',
+  withLabel = false,
+}: Props) {
   const elapsed = formatElapsed(createdAt, now)
   const label = elapsedLabel(createdAt, now)
 
@@ -36,10 +42,7 @@ export function ElapsedTimer({ createdAt, now = new Date(), className, variant =
 
   return (
     <div
-      className={cn(
-        'inline-flex flex-col items-start gap-0.5 rounded-xl px-3 py-2',
-        className,
-      )}
+      className={cn('inline-flex flex-col items-start gap-0.5 rounded-xl px-3 py-2', className)}
       style={{
         background: 'rgba(25, 118, 210, 0.08)',
         border: '1px solid rgba(25, 118, 210, 0.22)',
@@ -50,7 +53,10 @@ export function ElapsedTimer({ createdAt, now = new Date(), className, variant =
         <Icon name="timer" size={12} filled />
         Tiempo en cola
       </div>
-      <div className="font-black font-mono tabular-nums" style={{ fontSize: '18px', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+      <div
+        className="font-black font-mono tabular-nums"
+        style={{ fontSize: '18px', letterSpacing: '-0.02em', lineHeight: 1.1 }}
+      >
         {elapsed}
       </div>
       {withLabel && <div className="text-[10px] opacity-85">{label}</div>}

@@ -1,7 +1,7 @@
+import { TrackingView } from '@/features/tracking/components/tracking-view'
 import { createAdminClient } from '@tindivo/supabase'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { TrackingView } from '@/features/tracking/components/tracking-view'
 
 type Props = { params: Promise<{ shortId: string }> }
 

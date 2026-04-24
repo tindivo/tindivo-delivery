@@ -12,10 +12,18 @@ type OrderStatus =
 
 const statusStyles: Record<
   OrderStatus,
-  { label: string; icon: string; variant: 'red' | 'yellow' | 'orange' | 'darkYellow' | 'green' | 'gray' }
+  {
+    label: string
+    icon: string
+    variant: 'red' | 'yellow' | 'orange' | 'darkYellow' | 'green' | 'gray'
+  }
 > = {
   waiting_driver: { label: 'Esperando motorizado', icon: 'pending', variant: 'red' },
-  heading_to_restaurant: { label: 'En camino al local', icon: 'directions_bike', variant: 'yellow' },
+  heading_to_restaurant: {
+    label: 'En camino al local',
+    icon: 'directions_bike',
+    variant: 'yellow',
+  },
   waiting_at_restaurant: { label: 'Esperando pedido', icon: 'hourglass_top', variant: 'orange' },
   picked_up: { label: 'En entrega', icon: 'delivery_dining', variant: 'darkYellow' },
   delivered: { label: 'Entregado', icon: 'check_circle', variant: 'green' },

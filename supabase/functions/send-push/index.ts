@@ -139,7 +139,10 @@ function notificationFor(event: EventRow, context: any): Notification | null {
 /**
  * Determina los userIds destinatarios de un evento.
  */
-async function resolveRecipients(sb: ReturnType<typeof createServiceRoleClient>, event: EventRow): Promise<string[]> {
+async function resolveRecipients(
+  sb: ReturnType<typeof createServiceRoleClient>,
+  event: EventRow,
+): Promise<string[]> {
   if (event.aggregate_type === 'Order') {
     const { data: order } = await sb
       .from('orders')

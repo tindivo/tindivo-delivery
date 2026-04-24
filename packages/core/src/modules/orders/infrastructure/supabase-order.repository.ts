@@ -1,19 +1,15 @@
 import type { ServerClient } from '@tindivo/supabase'
 import { PersistenceError } from '../../../shared/errors/domain-error'
-import { RaceCondition } from '../domain/errors/order-errors'
+import type { OrderRepository } from '../application/ports/order.repository'
 import type { Order } from '../domain/entities/order'
+import { RaceCondition } from '../domain/errors/order-errors'
 import type { DriverId } from '../domain/value-objects/driver-id'
 import type { OrderId } from '../domain/value-objects/order-id'
 import type { OrderStatus } from '../domain/value-objects/order-status'
 import type { RestaurantId } from '../domain/value-objects/restaurant-id'
-import type { OrderRepository } from '../application/ports/order.repository'
 import { OrderMapper } from './order.mapper'
 
-const ACTIVE_STATUSES = [
-  'heading_to_restaurant',
-  'waiting_at_restaurant',
-  'picked_up',
-] as const
+const ACTIVE_STATUSES = ['heading_to_restaurant', 'waiting_at_restaurant', 'picked_up'] as const
 
 export class SupabaseOrderRepository implements OrderRepository {
   constructor(private readonly sb: ServerClient) {}
@@ -73,7 +69,10 @@ export class SupabaseOrderRepository implements OrderRepository {
       .eq('restaurant_id', restaurantId.value)
       .order('created_at', { ascending: false })
     if (statuses && statuses.length > 0) {
-      q = q.in('status', statuses.map((s) => s.value))
+      q = q.in(
+        'status',
+        statuses.map((s) => s.value),
+      )
     }
     const { data, error } = await q
     if (error) throw new PersistenceError(error.message, error)
@@ -87,7 +86,10 @@ export class SupabaseOrderRepository implements OrderRepository {
       .eq('driver_id', driverId.value)
       .order('created_at', { ascending: false })
     if (statuses && statuses.length > 0) {
-      q = q.in('status', statuses.map((s) => s.value))
+      q = q.in(
+        'status',
+        statuses.map((s) => s.value),
+      )
     }
     const { data, error } = await q
     if (error) throw new PersistenceError(error.message, error)

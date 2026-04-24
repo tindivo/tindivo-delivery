@@ -1,4 +1,3 @@
-import type { ServerClient } from '@tindivo/supabase'
 import {
   AcceptOrderUseCase,
   CancelOrderUseCase,
@@ -11,6 +10,7 @@ import {
   SupabaseOrderRepository,
   SystemClock,
 } from '@tindivo/core/modules/orders'
+import type { ServerClient } from '@tindivo/supabase'
 
 const clock = new SystemClock()
 

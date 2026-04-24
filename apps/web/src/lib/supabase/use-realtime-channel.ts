@@ -118,12 +118,7 @@ type Options = {
  *  - Propagación de JWT fresh via `realtime.setAuth()` en TOKEN_REFRESHED.
  *  - Callback por ref — actualizar `onEvent` no re-suscribe.
  */
-export function useRealtimeChannel({
-  channelName,
-  changes,
-  onEvent,
-  enabled = true,
-}: Options) {
+export function useRealtimeChannel({ channelName, changes, onEvent, enabled = true }: Options) {
   const callbackRef = useRef(onEvent)
   callbackRef.current = onEvent
 

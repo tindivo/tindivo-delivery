@@ -49,9 +49,7 @@ export function YapeQrCard({ qrUrl, yapeNumber, amount, restaurantName }: Props)
               <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85">
                 Yape al cliente
               </div>
-              <div className="font-black text-lg leading-tight">
-                Cobrar S/ {amount.toFixed(2)}
-              </div>
+              <div className="font-black text-lg leading-tight">Cobrar S/ {amount.toFixed(2)}</div>
             </div>
           </div>
 
@@ -90,7 +88,8 @@ export function YapeQrCard({ qrUrl, yapeNumber, amount, restaurantName }: Props)
               <p className="mt-2 text-sm font-semibold">QR no disponible para este restaurante.</p>
               {yapeNumber && (
                 <p className="text-xs opacity-90 mt-1">
-                  Cobra manualmente al número: <span className="font-mono font-bold">+51 {yapeNumber}</span>
+                  Cobra manualmente al número:{' '}
+                  <span className="font-mono font-bold">+51 {yapeNumber}</span>
                 </p>
               )}
             </div>

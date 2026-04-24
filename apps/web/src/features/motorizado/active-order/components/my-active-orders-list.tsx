@@ -81,12 +81,7 @@ export function MyActiveOrdersList() {
       >
         <AnimatePresence>
           {items.map((order) => (
-            <motion.li
-              key={order.id}
-              variants={listItem}
-              exit={{ opacity: 0, scale: 0.9 }}
-              layout
-            >
+            <motion.li key={order.id} variants={listItem} exit={{ opacity: 0, scale: 0.9 }} layout>
               <OrderCard
                 shortId={order.short_id}
                 restaurantName={order.restaurants?.name ?? 'Restaurante'}

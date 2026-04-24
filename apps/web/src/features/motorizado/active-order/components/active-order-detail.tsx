@@ -1,4 +1,5 @@
 'use client'
+import { useNow } from '@/shared/hooks/use-now'
 import {
   BottomActionBar,
   Button,
@@ -9,16 +10,15 @@ import {
   IconButton,
   StatusChip,
   Timeline,
-  UrgencyBadge,
   type TimelineStep,
+  UrgencyBadge,
 } from '@tindivo/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
-import { useNow } from '@/shared/hooks/use-now'
-import { useOrderDetail } from '../hooks/use-order-detail'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
 import { useMarkDelivered } from '../hooks/use-mark-delivered'
+import { useOrderDetail } from '../hooks/use-order-detail'
 import { YapeQrCard } from './yape-qr-card'
 
 type Props = { orderId: string }
@@ -84,7 +84,10 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const restaurant = raw.restaurants ?? {}
 
   return (
-    <div className="min-h-screen" style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
+    <div
+      className="min-h-screen"
+      style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}
+    >
       <GlassTopBar
         title="PEDIDO"
         subtitle="Motorizado"
@@ -119,10 +122,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
           </div>
           <div className="mt-4 flex items-center gap-4 text-sm">
             {Number(raw.order_amount) === 0 ? (
-              <div
-                className="flex items-center gap-1.5 font-bold"
-                style={{ color: '#059669' }}
-              >
+              <div className="flex items-center gap-1.5 font-bold" style={{ color: '#059669' }}>
                 <Icon name="verified" size={16} filled />
                 <span>No cobrar · Solo entregar</span>
               </div>
@@ -158,14 +158,15 @@ export function ActiveOrderDetail({ orderId }: Props) {
           {raw.created_at && (
             <ElapsedTimer createdAt={raw.created_at} now={now} withLabel className="flex-1" />
           )}
-          {raw.estimated_ready_at && ['heading_to_restaurant', 'waiting_at_restaurant'].includes(status) && (
-            <UrgencyBadge
-              estimatedReadyAt={raw.estimated_ready_at}
-              now={now}
-              variant="hero"
-              className="flex-1"
-            />
-          )}
+          {raw.estimated_ready_at &&
+            ['heading_to_restaurant', 'waiting_at_restaurant'].includes(status) && (
+              <UrgencyBadge
+                estimatedReadyAt={raw.estimated_ready_at}
+                now={now}
+                variant="hero"
+                className="flex-1"
+              />
+            )}
         </section>
 
         {/* Timeline */}
@@ -223,62 +224,62 @@ export function ActiveOrderDetail({ orderId }: Props) {
 
       <BottomActionBar>
         {status === 'heading_to_restaurant' && (
-            <>
-              <Link
-                href={buildRestaurantNavUrl(restaurant)}
-                target="_blank"
-                className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
-              >
-                <Icon name="navigation" size={20} filled />
-                Abrir en Google Maps
-              </Link>
-              <Button
-                size="lg"
-                className="w-full"
-                disabled={arrived.isPending}
-                onClick={() => arrived.mutate()}
-              >
-                <Icon name="check" />
-                Llegué al local
-              </Button>
-            </>
-          )}
-
-          {status === 'waiting_at_restaurant' && (
+          <>
             <Link
-              href={`/motorizado/pedidos/${orderId}/pickup`}
-              className="w-full inline-flex items-center justify-center gap-2 h-14 px-8 rounded-xl bg-primary-container text-on-primary font-bold tracking-wide text-lg shadow-[0_4px_20px_rgba(255,107,53,0.3)] transition-all duration-300 active:scale-95"
+              href={buildRestaurantNavUrl(restaurant)}
+              target="_blank"
+              className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
             >
-              <Icon name="shopping_bag" size={22} filled />
-              Recibí el pedido
+              <Icon name="navigation" size={20} filled />
+              Abrir en Google Maps
             </Link>
-          )}
+            <Button
+              size="lg"
+              className="w-full"
+              disabled={arrived.isPending}
+              onClick={() => arrived.mutate()}
+            >
+              <Icon name="check" />
+              Llegué al local
+            </Button>
+          </>
+        )}
 
-          {status === 'picked_up' && raw.delivery_maps_url && (
-            <>
-              <a
-                href={raw.delivery_maps_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
-              >
-                <Icon name="navigation" size={20} filled />
-                Abrir en Google Maps
-              </a>
-              <Button
-                size="lg"
-                variant="success"
-                className="w-full"
-                disabled={delivered.isPending}
-                onClick={() => {
-                  if (confirm('¿Confirmas que entregaste el pedido?')) delivered.mutate()
-                }}
-              >
-                <Icon name="check_circle" filled />
-                Pedido entregado
-              </Button>
-            </>
-          )}
+        {status === 'waiting_at_restaurant' && (
+          <Link
+            href={`/motorizado/pedidos/${orderId}/pickup`}
+            className="w-full inline-flex items-center justify-center gap-2 h-14 px-8 rounded-xl bg-primary-container text-on-primary font-bold tracking-wide text-lg shadow-[0_4px_20px_rgba(255,107,53,0.3)] transition-all duration-300 active:scale-95"
+          >
+            <Icon name="shopping_bag" size={22} filled />
+            Recibí el pedido
+          </Link>
+        )}
+
+        {status === 'picked_up' && raw.delivery_maps_url && (
+          <>
+            <a
+              href={raw.delivery_maps_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
+            >
+              <Icon name="navigation" size={20} filled />
+              Abrir en Google Maps
+            </a>
+            <Button
+              size="lg"
+              variant="success"
+              className="w-full"
+              disabled={delivered.isPending}
+              onClick={() => {
+                if (confirm('¿Confirmas que entregaste el pedido?')) delivered.mutate()
+              }}
+            >
+              <Icon name="check_circle" filled />
+              Pedido entregado
+            </Button>
+          </>
+        )}
       </BottomActionBar>
     </div>
   )
@@ -382,10 +383,7 @@ function PaymentBreakdown({
 
       {/* Grid: monto pedido · paga con */}
       <div className="grid grid-cols-2 gap-3">
-        <div
-          className="rounded-2xl p-4"
-          style={{ background: 'rgba(255, 107, 53, 0.08)' }}
-        >
+        <div className="rounded-2xl p-4" style={{ background: 'rgba(255, 107, 53, 0.08)' }}>
           <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
             Precio
           </div>
@@ -395,10 +393,7 @@ function PaymentBreakdown({
           <div className="text-[10px] text-on-surface-variant mt-0.5">lo que debe pagar</div>
         </div>
         {clientPaysWith != null ? (
-          <div
-            className="rounded-2xl p-4"
-            style={{ background: 'rgba(59, 130, 246, 0.08)' }}
-          >
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(59, 130, 246, 0.08)' }}>
             <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
               Paga con
             </div>
@@ -416,9 +411,7 @@ function PaymentBreakdown({
               Paga con
             </div>
             <div className="font-bold text-sm mt-2 text-on-surface-variant">—</div>
-            <div className="text-[10px] text-on-surface-variant/70 mt-0.5">
-              no se especificó
-            </div>
+            <div className="text-[10px] text-on-surface-variant/70 mt-0.5">no se especificó</div>
           </div>
         )}
       </div>
@@ -457,9 +450,7 @@ function PaymentBreakdown({
               >
                 S/ {changeToGive.toFixed(2)}
               </div>
-              <div className="text-[11px] opacity-90 mt-0.5">
-                debe ir ya en la bolsa
-              </div>
+              <div className="text-[11px] opacity-90 mt-0.5">debe ir ya en la bolsa</div>
             </div>
           </div>
         </div>

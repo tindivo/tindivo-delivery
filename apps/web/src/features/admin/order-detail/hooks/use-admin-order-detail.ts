@@ -1,7 +1,7 @@
 'use client'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { orders } from '@/lib/api/client'
 import { useRealtimeChannel } from '@/lib/supabase/use-realtime-channel'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 export function useAdminOrderDetail(orderId: string) {
   const qc = useQueryClient()

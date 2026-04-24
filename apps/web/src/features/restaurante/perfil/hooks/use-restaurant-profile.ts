@@ -1,6 +1,6 @@
 'use client'
-import { useQuery } from '@tanstack/react-query'
 import { restaurant } from '@/lib/api/client'
+import { useQuery } from '@tanstack/react-query'
 
 export function useRestaurantProfile() {
   return useQuery({

@@ -46,10 +46,11 @@ export function CapacityIndicator({ activeCount, max }: Props) {
     >
       <Icon name={palette.icon} size={22} filled />
       <div className="flex-1 min-w-0">
-        <div className="text-[10px] font-bold tracking-[0.2em] uppercase opacity-85">
-          Capacidad
-        </div>
-        <div className="font-black text-base font-mono tabular-nums" style={{ letterSpacing: '-0.01em' }}>
+        <div className="text-[10px] font-bold tracking-[0.2em] uppercase opacity-85">Capacidad</div>
+        <div
+          className="font-black text-base font-mono tabular-nums"
+          style={{ letterSpacing: '-0.01em' }}
+        >
           {activeCount} / {max} activos
         </div>
         {isFull && (

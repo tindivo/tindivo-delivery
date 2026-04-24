@@ -31,10 +31,7 @@ export function Icon({
   const label = ariaLabel ?? name.replace(/_/g, ' ')
   return (
     <span
-      className={cn(
-        'material-symbols-outlined inline-block select-none leading-none',
-        className,
-      )}
+      className={cn('material-symbols-outlined inline-block select-none leading-none', className)}
       style={{
         fontSize: `${size}px`,
         lineHeight: `${size}px`,

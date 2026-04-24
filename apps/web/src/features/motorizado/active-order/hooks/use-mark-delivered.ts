@@ -1,7 +1,7 @@
 'use client'
+import { orders } from '@/lib/api/client'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { orders } from '@/lib/api/client'
 
 export function useMarkDelivered(orderId: string) {
   const qc = useQueryClient()
@@ -10,7 +10,7 @@ export function useMarkDelivered(orderId: string) {
     mutationFn: () => orders.markDelivered(orderId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['driver'] })
-      router.push("/motorizado")
+      router.push('/motorizado')
     },
   })
 }

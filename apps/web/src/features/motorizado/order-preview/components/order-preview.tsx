@@ -1,4 +1,7 @@
 'use client'
+import { useDriverCapacity } from '@/features/motorizado/active-order/hooks/use-driver-capacity'
+import { useAcceptOrder } from '@/features/motorizado/available-orders/hooks/use-accept-order'
+import { useNow } from '@/shared/hooks/use-now'
 import { ApiError } from '@tindivo/api-client'
 import {
   BottomActionBar,
@@ -14,9 +17,6 @@ import {
 } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { useDriverCapacity } from '@/features/motorizado/active-order/hooks/use-driver-capacity'
-import { useAcceptOrder } from '@/features/motorizado/available-orders/hooks/use-accept-order'
-import { useNow } from '@/shared/hooks/use-now'
 import { useOrderPreview } from '../hooks/use-order-preview'
 
 type Props = { orderId: string }
@@ -93,9 +93,7 @@ export function OrderPreview({ orderId }: Props) {
   const order = data
   const restaurant = order.restaurants ?? {}
   const accent = restaurant.accent_color ?? 'ab3500'
-  const tier = order.estimated_ready_at
-    ? computeUrgencyTier(order.estimated_ready_at, now)
-    : null
+  const tier = order.estimated_ready_at ? computeUrgencyTier(order.estimated_ready_at, now) : null
   const noCharge = Number(order.order_amount) === 0
 
   return (
@@ -137,10 +135,7 @@ export function OrderPreview({ orderId }: Props) {
                 Recoger en
               </span>
             </div>
-            <h1
-              className="bleed-text font-black text-2xl"
-              style={{ letterSpacing: '-0.02em' }}
-            >
+            <h1 className="bleed-text font-black text-2xl" style={{ letterSpacing: '-0.02em' }}>
               {restaurant.name ?? 'Restaurante'}
             </h1>
             <div className="mt-1 flex items-center gap-2 text-xs opacity-90">
@@ -280,7 +275,8 @@ export function OrderPreview({ orderId }: Props) {
                   Capacidad llena
                 </div>
                 <div className="font-bold text-sm">
-                  Tienes {activeCount}/{max} pedidos activos. Completa una entrega para recibir nuevos.
+                  Tienes {activeCount}/{max} pedidos activos. Completa una entrega para recibir
+                  nuevos.
                 </div>
               </div>
             </div>

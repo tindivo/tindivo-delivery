@@ -1,7 +1,7 @@
+import { problemCode } from '@/lib/http/problem'
 import { createAdminClient } from '@tindivo/supabase'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { problemCode } from '@/lib/http/problem'
 
 export const dynamic = 'force-dynamic'
 

@@ -35,7 +35,15 @@ export function BottomActionBar({ children, zIndex = 40 }: Props) {
         boxShadow: '0 -8px 24px -8px rgba(171, 53, 0, 0.08)',
       }}
     >
-      <div style={{ maxWidth: '28rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div
+        style={{
+          maxWidth: '28rem',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}
+      >
         {children}
       </div>
     </div>

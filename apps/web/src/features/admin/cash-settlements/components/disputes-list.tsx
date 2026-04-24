@@ -129,8 +129,8 @@ function DisputeCard({
             {restaurantName} ↔ {driverName}
           </h3>
           <p className="text-xs text-on-surface-variant mt-1">
-            {formatDate(settlement.disputed_at ?? settlement.updated_at)} ·{' '}
-            {settlement.order_count} {settlement.order_count === 1 ? 'pedido' : 'pedidos'}
+            {formatDate(settlement.disputed_at ?? settlement.updated_at)} · {settlement.order_count}{' '}
+            {settlement.order_count === 1 ? 'pedido' : 'pedidos'}
           </p>
         </div>
       </div>
@@ -139,7 +139,10 @@ function DisputeCard({
       <div className="grid grid-cols-3 gap-3">
         <div
           className="rounded-xl p-3"
-          style={{ background: 'rgba(255, 107, 53, 0.08)', border: '1px solid rgba(255, 107, 53, 0.2)' }}
+          style={{
+            background: 'rgba(255, 107, 53, 0.08)',
+            border: '1px solid rgba(255, 107, 53, 0.2)',
+          }}
         >
           <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
             Driver declaró
@@ -150,7 +153,10 @@ function DisputeCard({
         </div>
         <div
           className="rounded-xl p-3"
-          style={{ background: 'rgba(186, 26, 26, 0.08)', border: '1px solid rgba(186, 26, 26, 0.22)' }}
+          style={{
+            background: 'rgba(186, 26, 26, 0.08)',
+            border: '1px solid rgba(186, 26, 26, 0.22)',
+          }}
         >
           <div className="text-[10px] font-bold tracking-widest uppercase text-red-700">
             Restaurante recibió

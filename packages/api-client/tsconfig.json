@@ -1,6 +1,10 @@
 {
   "extends": "@tindivo/config/tsconfig/library.json",
-  "compilerOptions": { "noEmit": true, "rootDir": "src" },
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "src",
+    "lib": ["DOM", "ES2023"]
+  },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

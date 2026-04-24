@@ -1,8 +1,8 @@
 'use client'
-import { Icon, Skeleton } from '@tindivo/ui'
-import { use } from 'react'
 import { RestaurantForm } from '@/features/admin/restaurants/components/restaurant-form'
 import { useAdminRestaurant } from '@/features/admin/restaurants/hooks/use-admin-restaurants'
+import { Icon, Skeleton } from '@tindivo/ui'
+import { use } from 'react'
 
 type Props = { params: Promise<{ id: string }> }
 

@@ -1,11 +1,11 @@
 'use client'
 import {
   Badge,
-  ColorDot,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  ColorDot,
   Icon,
   StatusChip,
   Timeline,
@@ -30,7 +30,9 @@ export function OrderDetail({ orderId }: Props) {
         key: 'accepted',
         label: 'Motorizado asignado',
         icon: 'two_wheeler',
-        done: ['heading_to_restaurant', 'waiting_at_restaurant', 'picked_up', 'delivered'].includes(s),
+        done: ['heading_to_restaurant', 'waiting_at_restaurant', 'picked_up', 'delivered'].includes(
+          s,
+        ),
         current: s === 'heading_to_restaurant',
       },
       {
@@ -59,7 +61,8 @@ export function OrderDetail({ orderId }: Props) {
   }
 
   // El tracking público vive en la misma app, solo cambia el path.
-  const origin = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_APP_URL ?? '') : window.location.origin
+  const origin =
+    typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_APP_URL ?? '') : window.location.origin
   const trackingUrl = `${origin}/pedidos/${order.short_id}`
 
   return (
@@ -134,13 +137,19 @@ export function OrderDetail({ orderId }: Props) {
             <CardContent className="space-y-3">
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-on-surface-variant">Monto</span>
-                <span className="text-2xl font-black">S/ {Number(order.order_amount).toFixed(2)}</span>
+                <span className="text-2xl font-black">
+                  S/ {Number(order.order_amount).toFixed(2)}
+                </span>
               </div>
-              <Badge variant={paymentBadge(order.payment_status)}>{paymentLabel(order.payment_status)}</Badge>
+              <Badge variant={paymentBadge(order.payment_status)}>
+                {paymentLabel(order.payment_status)}
+              </Badge>
               {order.client_pays_with && (
                 <div className="text-sm text-on-surface-variant">
                   Paga con <strong>S/ {Number(order.client_pays_with).toFixed(2)}</strong>
-                  {order.change_to_give ? <> · Vuelto S/ {Number(order.change_to_give).toFixed(2)}</> : null}
+                  {order.change_to_give ? (
+                    <> · Vuelto S/ {Number(order.change_to_give).toFixed(2)}</>
+                  ) : null}
                 </div>
               )}
             </CardContent>

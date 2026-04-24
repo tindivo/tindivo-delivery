@@ -1,11 +1,5 @@
-import { ComingSoon } from '@/features/admin/placeholder/components/coming-soon'
+import { DriversList } from '@/features/admin/drivers/components/drivers-list'
 
 export default function AdminDriversPage() {
-  return (
-    <ComingSoon
-      icon="two_wheeler"
-      title="Motorizados"
-      description="Gestiona la flota, revisa disponibilidad y configura horarios desde aquí."
-    />
-  )
+  return <DriversList />
 }

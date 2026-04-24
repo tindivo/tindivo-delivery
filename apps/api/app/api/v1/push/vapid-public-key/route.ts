@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
 import { problemCode } from '@/lib/http/problem'
+import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 

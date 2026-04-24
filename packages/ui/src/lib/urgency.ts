@@ -15,8 +15,7 @@ export function computeUrgencyTier(
   estimatedReadyAt: Date | string,
   now: Date = new Date(),
 ): UrgencyTier {
-  const ready =
-    typeof estimatedReadyAt === 'string' ? new Date(estimatedReadyAt) : estimatedReadyAt
+  const ready = typeof estimatedReadyAt === 'string' ? new Date(estimatedReadyAt) : estimatedReadyAt
   const deltaMin = (ready.getTime() - now.getTime()) / 60000
   if (deltaMin > URGENCY_THRESHOLD_MIN) return 'upcoming'
   if (deltaMin > 0) return 'pending'
@@ -27,12 +26,8 @@ export function computeUrgencyTier(
  * Formato mm:ss (con signo negativo si ya pasó).
  * -02:45 significa "vencido hace 2 min 45 seg"
  */
-export function formatRemaining(
-  estimatedReadyAt: Date | string,
-  now: Date = new Date(),
-): string {
-  const ready =
-    typeof estimatedReadyAt === 'string' ? new Date(estimatedReadyAt) : estimatedReadyAt
+export function formatRemaining(estimatedReadyAt: Date | string, now: Date = new Date()): string {
+  const ready = typeof estimatedReadyAt === 'string' ? new Date(estimatedReadyAt) : estimatedReadyAt
   const deltaSec = Math.round((ready.getTime() - now.getTime()) / 1000)
   const absMin = Math.floor(Math.abs(deltaSec) / 60)
   const absSec = Math.abs(deltaSec) % 60
@@ -43,12 +38,8 @@ export function formatRemaining(
 /**
  * Texto humano "En 5 min", "Vence ahora", "Vencido 2 min" según tier.
  */
-export function remainingLabel(
-  estimatedReadyAt: Date | string,
-  now: Date = new Date(),
-): string {
-  const ready =
-    typeof estimatedReadyAt === 'string' ? new Date(estimatedReadyAt) : estimatedReadyAt
+export function remainingLabel(estimatedReadyAt: Date | string, now: Date = new Date()): string {
+  const ready = typeof estimatedReadyAt === 'string' ? new Date(estimatedReadyAt) : estimatedReadyAt
   const deltaMin = Math.round((ready.getTime() - now.getTime()) / 60000)
   if (deltaMin > 1) return `En ${deltaMin} min`
   if (deltaMin === 1) return 'En 1 min'
@@ -62,12 +53,8 @@ export function remainingLabel(
  * Formato: `HH:MM:SS` si >= 1 hora, `MM:SS` si < 1 hora.
  * Útil para mostrar "el pedido lleva 12:34 desde que se creó".
  */
-export function formatElapsed(
-  createdAt: Date | string,
-  now: Date = new Date(),
-): string {
-  const created =
-    typeof createdAt === 'string' ? new Date(createdAt) : createdAt
+export function formatElapsed(createdAt: Date | string, now: Date = new Date()): string {
+  const created = typeof createdAt === 'string' ? new Date(createdAt) : createdAt
   const deltaSec = Math.max(0, Math.floor((now.getTime() - created.getTime()) / 1000))
   const hours = Math.floor(deltaSec / 3600)
   const minutes = Math.floor((deltaSec % 3600) / 60)
@@ -81,12 +68,8 @@ export function formatElapsed(
 /**
  * "Hace 5 min", "Hace 1 h 20 min", "Hace unos segundos".
  */
-export function elapsedLabel(
-  createdAt: Date | string,
-  now: Date = new Date(),
-): string {
-  const created =
-    typeof createdAt === 'string' ? new Date(createdAt) : createdAt
+export function elapsedLabel(createdAt: Date | string, now: Date = new Date()): string {
+  const created = typeof createdAt === 'string' ? new Date(createdAt) : createdAt
   const deltaSec = Math.max(0, Math.floor((now.getTime() - created.getTime()) / 1000))
   if (deltaSec < 45) return 'Hace unos segundos'
   const min = Math.floor(deltaSec / 60)

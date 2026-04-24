@@ -26,8 +26,11 @@ export function Timeline({ steps, className }: Props) {
               <span
                 className={cn(
                   'w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all duration-300',
-                  step.done && 'bg-emerald-100 text-emerald-700 shadow-[0_4px_20px_rgba(16,185,129,0.15)]',
-                  step.current && !step.done && 'bg-primary-container text-on-primary animate-pulse shadow-[0_4px_20px_rgba(255,107,53,0.25)]',
+                  step.done &&
+                    'bg-emerald-100 text-emerald-700 shadow-[0_4px_20px_rgba(16,185,129,0.15)]',
+                  step.current &&
+                    !step.done &&
+                    'bg-primary-container text-on-primary animate-pulse shadow-[0_4px_20px_rgba(255,107,53,0.25)]',
                   !step.done && !step.current && 'bg-surface-container text-on-surface-variant',
                 )}
               >

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import {
   AccentColorSchema,
+  CoordinatesSchema,
   MoneyPenSchema,
   PhonePeSchema,
   TimestampSchema,
@@ -16,6 +17,8 @@ export const CreateRestaurantRequest = z.object({
   // desde el cliente directamente a Storage; solo se persiste la URL.
   qrUrl: z.string().url().optional(),
   accentColor: AccentColorSchema,
+  // Ubicación exacta seleccionada por el admin en el mapa (Leaflet).
+  coordinates: CoordinatesSchema,
   ownerEmail: z.string().email(),
   ownerPassword: z.string().min(8).max(80),
 })
@@ -28,6 +31,7 @@ export const UpdateRestaurantRequest = z.object({
   yapeNumber: PhonePeSchema.optional(),
   qrUrl: z.string().url().nullable().optional(),
   accentColor: AccentColorSchema.optional(),
+  coordinates: CoordinatesSchema.optional(),
 })
 export type UpdateRestaurantRequest = z.infer<typeof UpdateRestaurantRequest>
 
@@ -45,6 +49,7 @@ export const RestaurantResponse = z.object({
   yapeNumber: PhonePeSchema.nullable(),
   qrUrl: z.string().url().nullable(),
   accentColor: AccentColorSchema,
+  coordinates: CoordinatesSchema.nullable(),
   isActive: z.boolean(),
   isBlocked: z.boolean(),
   blockReason: z.string().nullable(),

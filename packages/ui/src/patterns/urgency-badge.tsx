@@ -47,7 +47,12 @@ const TIER_STYLES: Record<
  * - `variant="chip"` — pill compacto para esquina de OrderCard.
  * - `variant="hero"` — bloque grande para el header del detalle.
  */
-export function UrgencyBadge({ estimatedReadyAt, now = new Date(), variant = 'chip', className }: Props) {
+export function UrgencyBadge({
+  estimatedReadyAt,
+  now = new Date(),
+  variant = 'chip',
+  className,
+}: Props) {
   const tier = computeUrgencyTier(estimatedReadyAt, now)
   const style = TIER_STYLES[tier]
   const countdown = formatRemaining(estimatedReadyAt, now)
@@ -74,7 +79,10 @@ export function UrgencyBadge({ estimatedReadyAt, now = new Date(), variant = 'ch
             <div className="text-[10px] font-bold tracking-[0.18em] uppercase opacity-80">
               {style.label}
             </div>
-            <div className="font-black text-lg font-mono tabular-nums" style={{ letterSpacing: '-0.02em' }}>
+            <div
+              className="font-black text-lg font-mono tabular-nums"
+              style={{ letterSpacing: '-0.02em' }}
+            >
               {countdown}
             </div>
           </div>

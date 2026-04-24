@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { type SupabaseClient, createClient } from '@supabase/supabase-js'
 import type { Database } from './types.gen'
 
 let adminSingleton: SupabaseClient<Database> | undefined

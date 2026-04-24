@@ -1,6 +1,6 @@
 import { Icon } from '../icons/icon'
 import { cn } from '../lib/cn'
-import { computeUrgencyTier, type UrgencyTier } from '../lib/urgency'
+import { type UrgencyTier, computeUrgencyTier } from '../lib/urgency'
 import { ColorDot } from './color-dot'
 import { StatusChip } from './status-chip'
 import { UrgencyBadge } from './urgency-badge'
@@ -117,9 +117,7 @@ export function OrderCard({
       style={{
         background: tierStyle?.bgGradient ?? defaultBg,
         border: `1px solid ${tierStyle?.borderColor ?? defaultBorder}`,
-        boxShadow: tierStyle?.extraClass
-          ? undefined
-          : '0 4px 20px rgba(171, 53, 0, 0.04)',
+        boxShadow: tierStyle?.extraClass ? undefined : '0 4px 20px rgba(171, 53, 0, 0.04)',
         opacity: disabled ? 0.55 : 1,
         filter: disabled ? 'saturate(0.6)' : 'none',
       }}
@@ -140,9 +138,7 @@ export function OrderCard({
             <ColorDot color={restaurantAccentColor} size={10} label={restaurantName} />
             <span className="font-bold truncate text-on-surface">{restaurantName}</span>
           </div>
-          <div className="text-xs text-on-surface-variant font-mono tracking-wider">
-            #{shortId}
-          </div>
+          <div className="text-xs text-on-surface-variant font-mono tracking-wider">#{shortId}</div>
         </div>
         <StatusChip status={status} />
       </div>

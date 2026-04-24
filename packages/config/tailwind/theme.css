@@ -131,39 +131,19 @@
 
 /* Utilities de wash ambiental por estado */
 .wash-success {
-  background-image: radial-gradient(
-    circle at 50% 40%,
-    rgba(16, 185, 129, 0.08) 0%,
-    transparent 60%
-  );
+  background-image: radial-gradient(circle at 50% 40%, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
 }
 .wash-warning {
-  background-image: radial-gradient(
-    circle at 50% 40%,
-    rgba(234, 179, 8, 0.08) 0%,
-    transparent 60%
-  );
+  background-image: radial-gradient(circle at 50% 40%, rgba(234, 179, 8, 0.08) 0%, transparent 60%);
 }
 .wash-danger {
-  background-image: radial-gradient(
-    circle at 50% 40%,
-    rgba(186, 26, 26, 0.08) 0%,
-    transparent 60%
-  );
+  background-image: radial-gradient(circle at 50% 40%, rgba(186, 26, 26, 0.08) 0%, transparent 60%);
 }
 .wash-active {
-  background-image: radial-gradient(
-    circle at 50% 40%,
-    rgba(255, 107, 53, 0.08) 0%,
-    transparent 60%
-  );
+  background-image: radial-gradient(circle at 50% 40%, rgba(255, 107, 53, 0.08) 0%, transparent 60%);
 }
 .wash-info {
-  background-image: radial-gradient(
-    circle at 50% 40%,
-    rgba(59, 130, 246, 0.08) 0%,
-    transparent 60%
-  );
+  background-image: radial-gradient(circle at 50% 40%, rgba(59, 130, 246, 0.08) 0%, transparent 60%);
 }
 
 /* Glass primitive */
@@ -193,14 +173,10 @@
   box-shadow: 0 8px 15px rgba(255, 107, 53, 0.3);
 }
 .solar-glow-lg {
-  box-shadow:
-    0 10px 40px rgba(255, 107, 53, 0.35),
-    0 4px 12px rgba(171, 53, 0, 0.15);
+  box-shadow: 0 10px 40px rgba(255, 107, 53, 0.35), 0 4px 12px rgba(171, 53, 0, 0.15);
 }
 .solar-glow-xl {
-  box-shadow:
-    0 20px 60px rgba(255, 107, 53, 0.4),
-    0 8px 20px rgba(171, 53, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(255, 107, 53, 0.4), 0 8px 20px rgba(171, 53, 0, 0.2);
 }
 
 /* Tipografía de impacto: títulos muy grandes sin aire entre caracteres */
@@ -274,7 +250,7 @@
   overflow: hidden;
 }
 .tindivo-shimmer::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(

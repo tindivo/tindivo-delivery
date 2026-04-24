@@ -1,5 +1,5 @@
-import { SolarCTA } from '@tindivo/ui'
 import { ActiveOrders } from '@/features/restaurante/active-orders/components/active-orders'
+import { SolarCTA } from '@tindivo/ui'
 
 export default function RestauranteHome() {
   return (

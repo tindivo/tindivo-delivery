@@ -19,8 +19,7 @@ export function ordersApi(client: ApiClient) {
     // Driver
     listAvailable: () =>
       client.get<{ items: Orders.OrderSummaryResponse[] }>('driver/orders/available'),
-    listDriverOrders: () =>
-      client.get<{ items: Orders.OrderSummaryResponse[] }>('driver/orders'),
+    listDriverOrders: () => client.get<{ items: Orders.OrderSummaryResponse[] }>('driver/orders'),
     acceptOrder: (id: string) =>
       client.post<Orders.AcceptOrderResponse>(`driver/orders/${id}/accept`),
     markArrived: (id: string, body?: Orders.MarkArrivedRequest) =>
@@ -39,7 +38,6 @@ export function ordersApi(client: ApiClient) {
       client.patch<void>(`admin/orders/${id}/client-phone`, body),
     reassignOrder: (id: string, body: Orders.ReassignOrderRequest) =>
       client.post<void>(`admin/orders/${id}/reassign`, body),
-    logTrackingLinkSent: (id: string) =>
-      client.post<void>(`admin/orders/${id}/tracking-link-sent`),
+    logTrackingLinkSent: (id: string) => client.post<void>(`admin/orders/${id}/tracking-link-sent`),
   }
 }

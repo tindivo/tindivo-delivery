@@ -180,8 +180,8 @@ function SettlementCard({
             style={{ background: 'rgba(255, 255, 255, 0.7)', color: '#92400E' }}
           >
             <Icon name="info" size={14} className="inline align-middle mr-1" />
-            Primero cuenta el efectivo físicamente. Si coincide, confirma. Si no,
-            reporta diferencia — Tindivo resuelve. No discutas en el local.
+            Primero cuenta el efectivo físicamente. Si coincide, confirma. Si no, reporta diferencia
+            — Tindivo resuelve. No discutas en el local.
           </div>
           <div className="flex gap-2">
             <button
@@ -286,9 +286,7 @@ function SettlementCard({
         >
           <div className="font-semibold mb-1">Tu nota</div>
           <div>{settlement.dispute_note}</div>
-          <div className="mt-2 text-[11px] opacity-85">
-            Tindivo está revisando este caso.
-          </div>
+          <div className="mt-2 text-[11px] opacity-85">Tindivo está revisando este caso.</div>
         </div>
       )}
 
@@ -307,13 +305,14 @@ function SettlementCard({
 
 function StatusPill({ status }: { status: string }) {
   const c = colorForStatus(status)
-  const label = {
-    delivered: 'Por confirmar',
-    confirmed: 'Confirmado',
-    disputed: 'En revisión',
-    resolved: 'Resuelto',
-    pending: 'Pendiente',
-  }[status] ?? status
+  const label =
+    {
+      delivered: 'Por confirmar',
+      confirmed: 'Confirmado',
+      disputed: 'En revisión',
+      resolved: 'Resuelto',
+      pending: 'Pendiente',
+    }[status] ?? status
   return (
     <span
       className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase px-2 py-1 rounded-full"

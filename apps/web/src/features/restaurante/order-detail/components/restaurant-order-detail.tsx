@@ -1,4 +1,5 @@
 'use client'
+import { useNow } from '@/shared/hooks/use-now'
 import {
   BottomActionBar,
   Button,
@@ -10,12 +11,11 @@ import {
   Skeleton,
   StatusChip,
   Timeline,
-  UrgencyBadge,
   type TimelineStep,
+  UrgencyBadge,
 } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
-import { useNow } from '@/shared/hooks/use-now'
 import { useCancelRestaurantOrder } from '../hooks/use-cancel-order'
 import { useMarkReadyEarly } from '../hooks/use-mark-ready-early'
 import { useRequestExtension } from '../hooks/use-request-extension'
@@ -51,12 +51,9 @@ export function RestaurantOrderDetail({ orderId }: Props) {
         key: 'accepted',
         label: 'Driver asignado',
         icon: 'assignment_ind',
-        done: [
-          'heading_to_restaurant',
-          'waiting_at_restaurant',
-          'picked_up',
-          'delivered',
-        ].includes(s),
+        done: ['heading_to_restaurant', 'waiting_at_restaurant', 'picked_up', 'delivered'].includes(
+          s,
+        ),
         current: s === 'waiting_driver',
       },
       {
@@ -141,10 +138,7 @@ export function RestaurantOrderDetail({ orderId }: Props) {
           </div>
           <div className="mt-4 flex items-center gap-4 text-sm">
             {Number(order.order_amount) === 0 ? (
-              <div
-                className="flex items-center gap-1.5 font-bold"
-                style={{ color: '#059669' }}
-              >
+              <div className="flex items-center gap-1.5 font-bold" style={{ color: '#059669' }}>
                 <Icon name="verified" size={16} filled />
                 <span>No cobrar · Solo entregar</span>
               </div>
@@ -345,7 +339,9 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                       size="lg"
                       className="flex-1"
                       disabled={extend.isPending}
-                      onClick={() => extend.mutate(10, { onSuccess: () => setShowExtension(false) })}
+                      onClick={() =>
+                        extend.mutate(10, { onSuccess: () => setShowExtension(false) })
+                      }
                     >
                       +10 min
                     </Button>
@@ -360,9 +356,7 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                 className="w-full"
                 disabled={cancel.isPending}
                 onClick={() => {
-                  const reason = window.prompt(
-                    '¿Por qué cancelas el pedido? (mínimo 3 caracteres)',
-                  )
+                  const reason = window.prompt('¿Por qué cancelas el pedido? (mínimo 3 caracteres)')
                   if (!reason || reason.trim().length < 3) return
                   cancel.mutate(reason.trim())
                 }}

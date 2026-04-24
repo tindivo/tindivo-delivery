@@ -1,7 +1,7 @@
-import type { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
 import { problemCode } from '@/lib/http/problem'
 import { requireAuth } from '@/lib/http/require-auth'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,9 +21,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await auth.auth.supabase
     .from('orders')
-    .select(
-      '*, restaurants!inner(name, accent_color), drivers(full_name, phone, vehicle_type)',
-    )
+    .select('*, restaurants!inner(name, accent_color), drivers(full_name, phone, vehicle_type)')
     .eq('status', 'picked_up')
     .is('tracking_link_sent_at', null)
     .not('client_phone', 'is', null)

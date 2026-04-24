@@ -8,7 +8,11 @@ import type { EventPublisher } from '../ports/event-publisher'
 import type { OrderRepository } from '../ports/order.repository'
 
 export type RequestExtensionCommand = { orderId: string; additionalMinutes: 5 | 10 }
-export type RequestExtensionResult = { id: string; estimatedReadyAt: string; appearsInQueueAt: string }
+export type RequestExtensionResult = {
+  id: string
+  estimatedReadyAt: string
+  appearsInQueueAt: string
+}
 
 export class RequestExtensionUseCase
   implements UseCase<RequestExtensionCommand, RequestExtensionResult, DomainError>

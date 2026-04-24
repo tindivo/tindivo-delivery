@@ -17,10 +17,7 @@ export class OrderCreated extends BaseDomainEvent {
     estimatedReadyAt: string
   }
 
-  constructor(
-    payload: OrderCreated['payload'],
-    metadata?: EventMetadata,
-  ) {
+  constructor(payload: OrderCreated['payload'], metadata?: EventMetadata) {
     super(metadata)
     this.aggregateId = payload.orderId
     this.payload = payload

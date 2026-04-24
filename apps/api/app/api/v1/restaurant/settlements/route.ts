@@ -1,7 +1,7 @@
-import type { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
 import { problemCode } from '@/lib/http/problem'
 import { requireAuth } from '@/lib/http/require-auth'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +13,9 @@ export async function GET(req: NextRequest) {
   const [{ data: settlements, error }, { data: restaurant }] = await Promise.all([
     auth.auth.supabase
       .from('settlements')
-      .select('id, period_start, period_end, order_count, total_amount, status, due_date, paid_at, payment_method, payment_note')
+      .select(
+        'id, period_start, period_end, order_count, total_amount, status, due_date, paid_at, payment_method, payment_note',
+      )
       .eq('restaurant_id', auth.auth.restaurantId)
       .order('period_start', { ascending: false })
       .limit(20),

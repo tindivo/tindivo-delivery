@@ -1,6 +1,6 @@
 'use client'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { driver } from '@/lib/api/client'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { DriverProfile } from '@tindivo/api-client'
 
 export function useToggleAvailability() {

@@ -9,7 +9,14 @@ export { Button, buttonVariants, type ButtonProps } from './primitives/button'
 export { IconButton, iconButtonVariants, type IconButtonProps } from './primitives/icon-button'
 export { Input, type InputProps } from './primitives/input'
 export { Label } from './primitives/label'
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './primitives/card'
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from './primitives/card'
 export { Badge, type BadgeProps } from './primitives/badge'
 export { Skeleton } from './primitives/skeleton'
 

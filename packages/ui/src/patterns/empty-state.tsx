@@ -18,9 +18,7 @@ export function EmptyState({ icon = 'inbox', title, description, action }: Props
         </div>
       </div>
       <h3 className="font-black text-2xl tracking-tight text-on-surface mb-2">{title}</h3>
-      {description && (
-        <p className="text-on-surface-variant max-w-sm mb-6">{description}</p>
-      )}
+      {description && <p className="text-on-surface-variant max-w-sm mb-6">{description}</p>}
       {action}
     </div>
   )

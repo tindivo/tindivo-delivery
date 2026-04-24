@@ -1,5 +1,5 @@
-import { generateShortId, isValidShortId } from '../../../../shared/utils/short-id'
 import { ValueObject } from '../../../../shared/kernel/value-object'
+import { generateShortId, isValidShortId } from '../../../../shared/utils/short-id'
 
 type Props = { value: string }
 

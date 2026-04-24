@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
 import { AdminSidebar } from '@/features/admin/dashboard/components/admin-sidebar'
+import type { ReactNode } from 'react'
 
 /**
  * Guard: el middleware ya validó que solo rol=admin llega aquí.

@@ -65,8 +65,7 @@ export function InstallPromptBanner() {
         className="relative overflow-hidden"
         style={{
           borderRadius: '22px',
-          background:
-            'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)',
+          background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)',
           color: '#ffffff',
           boxShadow: '0 16px 40px -12px rgba(255, 107, 53, 0.55)',
           padding: '14px 14px 14px 16px',

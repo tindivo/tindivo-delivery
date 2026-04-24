@@ -1,7 +1,7 @@
-import sharp from 'sharp'
 import { readFile, writeFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import sharp from 'sharp'
 
 const root = dirname(fileURLToPath(import.meta.url))
 const publicDir = join(root, '..', 'apps', 'web', 'public')

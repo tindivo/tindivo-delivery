@@ -1,8 +1,8 @@
 'use client'
-import type { Tracking } from '@tindivo/contracts'
-import { useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useRealtimeChannel } from '@/lib/supabase/use-realtime-channel'
+import type { Tracking } from '@tindivo/contracts'
+import { useCallback } from 'react'
 
 type Setter = (value: Tracking.TrackingResponse) => void
 

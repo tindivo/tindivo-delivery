@@ -1,6 +1,6 @@
+import { buildWaMeUrl } from '@tindivo/core'
 import type { ReactNode } from 'react'
 import { Icon } from '../icons/icon'
-import { buildWaMeUrl } from '@tindivo/core'
 import { cn } from '../lib/cn'
 
 type Props = {

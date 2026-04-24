@@ -42,11 +42,7 @@ export function QrUploader({ value, onChange, restaurantId }: Props) {
           className="relative overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-container-lowest"
           style={{ aspectRatio: '1 / 1', maxWidth: 240 }}
         >
-          <img
-            src={value}
-            alt="QR Yape/Plin"
-            className="w-full h-full object-contain"
-          />
+          <img src={value} alt="QR Yape/Plin" className="w-full h-full object-contain" />
         </div>
         <div className="flex gap-2">
           <button

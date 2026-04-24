@@ -1,10 +1,10 @@
+import { problemCode } from '@/lib/http/problem'
+import { requireAuth } from '@/lib/http/require-auth'
+import { parseJson } from '@/lib/http/validate'
 import { Restaurants } from '@tindivo/contracts'
 import { createAdminClient } from '@tindivo/supabase'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { problemCode } from '@/lib/http/problem'
-import { requireAuth } from '@/lib/http/require-auth'
-import { parseJson } from '@/lib/http/validate'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,6 +88,8 @@ export async function POST(req: NextRequest) {
       yape_number: input.yapeNumber ?? null,
       qr_url: input.qrUrl ?? null,
       accent_color: input.accentColor,
+      coordinates_lat: input.coordinates.lat,
+      coordinates_lng: input.coordinates.lng,
       is_active: true,
       is_blocked: false,
     })
@@ -96,7 +98,11 @@ export async function POST(req: NextRequest) {
 
   if (restaurantErr || !restaurant) {
     await admin.auth.admin.deleteUser(userId)
-    return problemCode('INTERNAL_ERROR', 500, restaurantErr?.message ?? 'No se pudo crear el restaurante')
+    return problemCode(
+      'INTERNAL_ERROR',
+      500,
+      restaurantErr?.message ?? 'No se pudo crear el restaurante',
+    )
   }
 
   return NextResponse.json(restaurant, { status: 201 })

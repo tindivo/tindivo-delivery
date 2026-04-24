@@ -20,10 +20,7 @@ type Props = {
 export function GlassTopBar({ left, title, right, className, subtitle }: Props) {
   return (
     <header
-      className={cn(
-        'fixed top-0 left-0 right-0 z-50 w-full overflow-hidden',
-        className,
-      )}
+      className={cn('fixed top-0 left-0 right-0 z-50 w-full overflow-hidden', className)}
       style={{
         height: '64px',
         background:
@@ -86,8 +83,7 @@ export function GlassTopBar({ left, title, right, className, subtitle }: Props) 
                   aria-hidden="true"
                   className="ml-1.5 w-[7px] h-[7px] rounded-full relative shrink-0"
                   style={{
-                    background:
-                      'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
+                    background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
                     boxShadow:
                       '0 0 0 3px rgba(255, 107, 53, 0.18), 0 2px 8px rgba(255, 107, 53, 0.55)',
                   }}
@@ -127,9 +123,7 @@ export function GlassTopBar({ left, title, right, className, subtitle }: Props) 
         </div>
 
         {/* Zona derecha: acciones */}
-        {right ? (
-          <div className="flex items-center gap-2 shrink-0">{right}</div>
-        ) : null}
+        {right ? <div className="flex items-center gap-2 shrink-0">{right}</div> : null}
       </div>
 
       {/* Línea inferior gradient interior — cierre luminoso justo arriba del radius */}

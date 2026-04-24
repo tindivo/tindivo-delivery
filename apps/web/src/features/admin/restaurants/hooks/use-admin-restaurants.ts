@@ -1,7 +1,7 @@
 'use client'
-import type { Restaurants } from '@tindivo/contracts'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { admin } from '@/lib/api/client'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { Restaurants } from '@tindivo/contracts'
 
 export function useAdminRestaurants() {
   return useQuery({

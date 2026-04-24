@@ -1,10 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
-import {
-  decodeJwtClaims,
-  homePathForRole,
-  type TindivoClaims,
-} from './lib/supabase/jwt-claims'
+import { type TindivoClaims, decodeJwtClaims, homePathForRole } from './lib/supabase/jwt-claims'
 
 /**
  * Rutas que NO requieren sesión. Todo lo demás exige login.
@@ -58,10 +54,7 @@ type RedirectContext = {
  * navegaciones y iOS Safari rechaza Responses con `redirected: true` en PWA
  * modo standalone ("Response served by service worker has redirections").
  */
-type RouteAction =
-  | { kind: 'redirect'; path: string }
-  | { kind: 'rewrite'; path: string }
-  | null
+type RouteAction = { kind: 'redirect'; path: string } | { kind: 'rewrite'; path: string } | null
 
 /**
  * Política de enrutamiento: decide si la request actual debe ser desviada

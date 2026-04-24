@@ -400,6 +400,8 @@ export type Database = {
           balance_due: number
           block_reason: string | null
           coordinates: unknown
+          coordinates_lat: number | null
+          coordinates_lng: number | null
           created_at: string
           id: string
           is_active: boolean
@@ -417,6 +419,8 @@ export type Database = {
           balance_due?: number
           block_reason?: string | null
           coordinates?: unknown
+          coordinates_lat?: number | null
+          coordinates_lng?: number | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -434,6 +438,8 @@ export type Database = {
           balance_due?: number
           block_reason?: string | null
           coordinates?: unknown
+          coordinates_lat?: number | null
+          coordinates_lng?: number | null
           created_at?: string
           id?: string
           is_active?: boolean

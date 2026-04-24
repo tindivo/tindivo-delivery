@@ -1,6 +1,6 @@
 'use client'
-import { useParams } from 'next/navigation'
 import { OrderPreview } from '@/features/motorizado/order-preview/components/order-preview'
+import { useParams } from 'next/navigation'
 
 export default function OrderPreviewPage() {
   const params = useParams<{ id: string }>()

@@ -1,8 +1,8 @@
 'use client'
-import { Button, Icon, Skeleton } from '@tindivo/ui'
-import { useRouter } from 'next/navigation'
 import { PushToggleCard } from '@/features/pwa/components/push-toggle-card'
 import { supabase } from '@/lib/supabase/client'
+import { Button, Icon, Skeleton } from '@tindivo/ui'
+import { useRouter } from 'next/navigation'
 import { useDriverProfile } from '../hooks/use-driver-profile'
 import { useToggleAvailability } from '../hooks/use-toggle-availability'
 
@@ -95,9 +95,7 @@ export function DriverProfileView() {
                   {data.isAvailable ? 'Disponible' : 'No disponible'}
                 </div>
                 <div className="text-xs opacity-85 mt-0.5">
-                  {data.isAvailable
-                    ? 'Recibirás pedidos nuevos'
-                    : 'No recibirás pedidos nuevos'}
+                  {data.isAvailable ? 'Recibirás pedidos nuevos' : 'No recibirás pedidos nuevos'}
                 </div>
               </div>
             </div>
@@ -168,7 +166,9 @@ export function DriverProfileView() {
                 key={d}
                 className="text-[11px] font-bold tracking-wider uppercase px-3 py-1.5 rounded-full"
                 style={{
-                  background: on ? 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)' : 'rgba(225,191,181,0.2)',
+                  background: on
+                    ? 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)'
+                    : 'rgba(225,191,181,0.2)',
                   color: on ? '#ffffff' : '#594139',
                   boxShadow: on ? '0 4px 10px rgba(255,107,53,0.3)' : 'none',
                 }}

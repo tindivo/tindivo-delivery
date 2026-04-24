@@ -1,9 +1,9 @@
 'use client'
+import { supabase } from '@/lib/supabase/client'
 import { BottomNav, type BottomNavItem, GlassTopBar, Icon, IconButton } from '@tindivo/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
-import { supabase } from '@/lib/supabase/client'
 
 const navItems: BottomNavItem[] = [
   { href: '/motorizado', label: 'Pedidos', icon: 'receipt_long' },

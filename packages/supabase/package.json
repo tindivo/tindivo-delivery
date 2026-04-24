@@ -20,9 +20,13 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.103.3"
   },
+  "peerDependencies": {
+    "next": "^15.1.4"
+  },
   "devDependencies": {
     "@tindivo/config": "workspace:*",
     "@types/node": "^22.10.1",
+    "next": "^15.1.4",
     "typescript": "^5.8.2"
   }
 }

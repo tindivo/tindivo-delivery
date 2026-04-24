@@ -30,9 +30,24 @@ export function AdminDashboard() {
       </header>
 
       <div className="grid grid-cols-4 gap-4">
-        <MetricCard label="Esperando motorizado" value={metrics.waiting} icon="hourglass_top" variant="danger" />
-        <MetricCard label="En camino al local" value={metrics.headingToRestaurant} icon="two_wheeler" variant="warning" />
-        <MetricCard label="En entrega" value={metrics.inDelivery} icon="delivery_dining" variant="info" />
+        <MetricCard
+          label="Esperando motorizado"
+          value={metrics.waiting}
+          icon="hourglass_top"
+          variant="danger"
+        />
+        <MetricCard
+          label="En camino al local"
+          value={metrics.headingToRestaurant}
+          icon="two_wheeler"
+          variant="warning"
+        />
+        <MetricCard
+          label="En entrega"
+          value={metrics.inDelivery}
+          icon="delivery_dining"
+          variant="info"
+        />
         <Link href="/admin/tracking" className="block">
           <MetricCard
             label="Por enviar tracking"
@@ -132,6 +147,7 @@ function computeMetrics(items: any[]) {
     waiting: items.filter((o) => o.status === 'waiting_driver').length,
     headingToRestaurant: items.filter((o) => o.status === 'heading_to_restaurant').length,
     inDelivery: items.filter((o) => o.status === 'picked_up').length,
-    pendingTracking: items.filter((o) => o.status === 'picked_up' && !o.tracking_link_sent_at).length,
+    pendingTracking: items.filter((o) => o.status === 'picked_up' && !o.tracking_link_sent_at)
+      .length,
   }
 }

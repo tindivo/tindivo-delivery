@@ -1,8 +1,8 @@
 'use client'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { orders } from '@/lib/api/client'
 import { supabase } from '@/lib/supabase/client'
 import { useRealtimeChannel } from '@/lib/supabase/use-realtime-channel'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 function useMyRestaurantId() {
   return useQuery({

@@ -1,9 +1,9 @@
 'use client'
+import { supabase } from '@/lib/supabase/client'
+import { decodeJwtClaims, homePathForRole } from '@/lib/supabase/jwt-claims'
 import { Button, Icon, Input, Label } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { homePathForRole, decodeJwtClaims } from '@/lib/supabase/jwt-claims'
-import { supabase } from '@/lib/supabase/client'
 
 /**
  * Login único para los 3 roles. Tras signInWithPassword, el JWT de Supabase ya

@@ -1,14 +1,6 @@
 'use client'
 import type { Orders } from '@tindivo/contracts'
-import {
-  BottomActionBar,
-  Button,
-  GlassTopBar,
-  Icon,
-  IconButton,
-  MoneyInput,
-  cn,
-} from '@tindivo/ui'
+import { BottomActionBar, Button, GlassTopBar, Icon, IconButton, MoneyInput, cn } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCreateOrder } from '../hooks/use-create-order'
@@ -81,14 +73,11 @@ export function NewOrderForm() {
 
   const needsAmount = payment !== 'prepaid'
   const canSubmit =
-    (!needsAmount || amountNum > 0) &&
-    (payment !== 'pending_cash' || paysWithNum >= amountNum)
+    (!needsAmount || amountNum > 0) && (payment !== 'pending_cash' || paysWithNum >= amountNum)
 
   useEffect(() => {
     const idx = PREP_MINUTES.indexOf(prepMinutes)
-    const el = carouselRef.current?.querySelector<HTMLButtonElement>(
-      `[data-prep="${idx}"]`,
-    )
+    const el = carouselRef.current?.querySelector<HTMLButtonElement>(`[data-prep="${idx}"]`)
     el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
   }, [prepMinutes])
 
@@ -131,7 +120,11 @@ export function NewOrderForm() {
         }
       />
 
-      <form id="new-order-form" onSubmit={handleSubmit} className="pt-20 px-4 max-w-md mx-auto space-y-6">
+      <form
+        id="new-order-form"
+        onSubmit={handleSubmit}
+        className="pt-20 px-4 max-w-md mx-auto space-y-6"
+      >
         {/* Hero label */}
         <div className="flex items-center gap-3 px-1 pt-2">
           <span
@@ -150,12 +143,8 @@ export function NewOrderForm() {
         {/* Prep time carousel */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <span className="text-sm font-semibold text-on-surface">
-              Tiempo de preparación
-            </span>
-            <span className="text-xs font-mono text-on-surface-variant">
-              {prepMinutes} min
-            </span>
+            <span className="text-sm font-semibold text-on-surface">Tiempo de preparación</span>
+            <span className="text-xs font-mono text-on-surface-variant">{prepMinutes} min</span>
           </div>
 
           <div
@@ -275,9 +264,7 @@ export function NewOrderForm() {
                   </span>
                   <div className="flex-1 text-left min-w-0">
                     <div className="font-bold text-on-surface truncate">{opt.label}</div>
-                    <div className="text-[11px] text-on-surface-variant truncate">
-                      {opt.hint}
-                    </div>
+                    <div className="text-[11px] text-on-surface-variant truncate">{opt.hint}</div>
                   </div>
                   <span
                     aria-hidden="true"
@@ -377,9 +364,7 @@ export function NewOrderForm() {
                     <div className="text-[10px] font-bold tracking-widest uppercase text-emerald-700">
                       Vuelto
                     </div>
-                    <div className="text-[10px] text-emerald-900/60">
-                      para el cliente
-                    </div>
+                    <div className="text-[10px] text-emerald-900/60">para el cliente</div>
                   </div>
                 </div>
                 <span
@@ -396,7 +381,6 @@ export function NewOrderForm() {
             )}
           </section>
         )}
-
       </form>
 
       <BottomActionBar>

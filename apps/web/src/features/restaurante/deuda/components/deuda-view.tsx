@@ -169,7 +169,11 @@ export function DeudaView() {
                     </div>
                     <span
                       className="shrink-0 inline-flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full"
-                      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
+                      style={{
+                        background: cfg.bg,
+                        color: cfg.color,
+                        border: `1px solid ${cfg.border}`,
+                      }}
                     >
                       {cfg.label}
                     </span>

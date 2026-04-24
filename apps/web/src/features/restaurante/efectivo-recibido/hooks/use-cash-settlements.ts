@@ -1,8 +1,8 @@
 'use client'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { restaurant } from '@/lib/api/client'
 import { supabase } from '@/lib/supabase/client'
 import { useRealtimeChannel } from '@/lib/supabase/use-realtime-channel'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 function useMyRestaurantId() {
   return useQuery({
@@ -66,7 +66,11 @@ export function useConfirmCashSettlement() {
 export function useDisputeCashSettlement() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, reportedAmount, note }: { id: string; reportedAmount: number; note: string }) =>
+    mutationFn: ({
+      id,
+      reportedAmount,
+      note,
+    }: { id: string; reportedAmount: number; note: string }) =>
       restaurant.disputeCashSettlement(id, { reportedAmount, note }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['restaurant', 'cash-settlements'] }),
   })

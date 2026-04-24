@@ -18,7 +18,10 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: allowOrigin },
           { key: 'Vary', value: 'Origin' },
           { key: 'Access-Control-Allow-Methods', value: 'GET,POST,PATCH,DELETE,OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, X-Request-Id' },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization, X-Request-Id',
+          },
           { key: 'Access-Control-Max-Age', value: '86400' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },

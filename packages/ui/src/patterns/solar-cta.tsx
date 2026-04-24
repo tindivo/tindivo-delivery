@@ -24,34 +24,29 @@ const variantStyles: Record<
   { gradient: string; glow: string; text: string; shine: string; accentRgb: string }
 > = {
   solar: {
-    gradient:
-      'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)',
-    glow:
-      '0 20px 40px -12px rgba(255, 107, 53, 0.5), 0 8px 20px -6px rgba(171, 53, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(171, 53, 0, 0.18)',
+    gradient: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)',
+    glow: '0 20px 40px -12px rgba(255, 107, 53, 0.5), 0 8px 20px -6px rgba(171, 53, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(171, 53, 0, 0.18)',
     text: '#ffffff',
     shine: 'rgba(255, 255, 255, 0.38)',
     accentRgb: '255, 168, 92',
   },
   success: {
     gradient: 'linear-gradient(135deg, #059669 0%, #10b981 55%, #34d399 100%)',
-    glow:
-      '0 20px 40px -12px rgba(16, 185, 129, 0.5), 0 8px 20px -6px rgba(5, 150, 105, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+    glow: '0 20px 40px -12px rgba(16, 185, 129, 0.5), 0 8px 20px -6px rgba(5, 150, 105, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
     text: '#ffffff',
     shine: 'rgba(255, 255, 255, 0.32)',
     accentRgb: '52, 211, 153',
   },
   info: {
     gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 55%, #60a5fa 100%)',
-    glow:
-      '0 20px 40px -12px rgba(59, 130, 246, 0.5), 0 8px 20px -6px rgba(37, 99, 235, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+    glow: '0 20px 40px -12px rgba(59, 130, 246, 0.5), 0 8px 20px -6px rgba(37, 99, 235, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
     text: '#ffffff',
     shine: 'rgba(255, 255, 255, 0.32)',
     accentRgb: '96, 165, 250',
   },
   neutral: {
     gradient: 'linear-gradient(135deg, #ffffff 0%, #f9f9f6 100%)',
-    glow:
-      '0 8px 20px rgba(171, 53, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+    glow: '0 8px 20px rgba(171, 53, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
     text: '#1a1c1b',
     shine: 'rgba(255, 255, 255, 0.5)',
     accentRgb: '255, 107, 53',
@@ -127,8 +122,7 @@ export function SolarCTA(props: Props) {
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
               border: '1.5px solid rgba(255, 255, 255, 0.55)',
-              boxShadow:
-                '0 6px 16px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.65)',
+              boxShadow: '0 6px 16px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.65)',
             }}
           >
             <Icon

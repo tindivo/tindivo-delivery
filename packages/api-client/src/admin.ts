@@ -1,4 +1,4 @@
-import type { Restaurants } from '@tindivo/contracts'
+import type { Drivers, Restaurants } from '@tindivo/contracts'
 import type { ApiClient } from './client'
 
 // El backend devuelve en snake_case (select '*' de Supabase sin mapping).
@@ -14,12 +14,31 @@ export type RestaurantRow = {
   yape_number: string | null
   qr_url: string | null
   accent_color: string
+  coordinates_lat: number | null
+  coordinates_lng: number | null
   is_active: boolean
   is_blocked: boolean
   block_reason: string | null
   balance_due: number
   created_at: string
   updated_at: string
+}
+
+export type DriverRow = {
+  id: string
+  user_id: string
+  full_name: string
+  phone: string
+  vehicle_type: 'moto' | 'bicicleta' | 'pie' | 'auto'
+  license_plate: string | null
+  operating_days: string[]
+  shift_start: string
+  shift_end: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  users?: { email: string } | null
+  driver_availability?: { is_available: boolean } | null
 }
 
 export type AdminCashSettlementRow = {
@@ -69,14 +88,19 @@ export function adminApi(client: ApiClient) {
   return {
     listTrackingPending: () =>
       client.get<{ items: TrackingPendingRow[] }>('admin/orders/tracking-pending'),
-    listRestaurants: () =>
-      client.get<{ items: RestaurantRow[] }>('admin/restaurants'),
-    getRestaurant: (id: string) =>
-      client.get<RestaurantRow>(`admin/restaurants/${id}`),
+    listRestaurants: () => client.get<{ items: RestaurantRow[] }>('admin/restaurants'),
+    getRestaurant: (id: string) => client.get<RestaurantRow>(`admin/restaurants/${id}`),
     createRestaurant: (body: Restaurants.CreateRestaurantRequest) =>
       client.post<RestaurantRow>('admin/restaurants', body),
     updateRestaurant: (id: string, body: Restaurants.UpdateRestaurantRequest) =>
       client.patch<RestaurantRow>(`admin/restaurants/${id}`, body),
+
+    listDrivers: () => client.get<{ items: DriverRow[] }>('admin/drivers'),
+    getDriver: (id: string) => client.get<DriverRow>(`admin/drivers/${id}`),
+    createDriver: (body: Drivers.CreateDriverRequest) =>
+      client.post<DriverRow>('admin/drivers', body),
+    updateDriver: (id: string, body: Drivers.UpdateDriverRequest) =>
+      client.patch<DriverRow>(`admin/drivers/${id}`, body),
 
     listCashSettlements: (status?: 'disputed' | 'delivered' | 'confirmed' | 'resolved' | 'all') =>
       client.get<{ items: AdminCashSettlementRow[] }>('admin/cash-settlements', {

@@ -20,14 +20,14 @@ import {
 } from '../events/order-events'
 import { CancellationPolicy, type Role } from '../policies/cancellation.policy'
 import { StateTransitionPolicy } from '../policies/state-transition.policy'
-import { Coordinates } from '../value-objects/coordinates'
-import { DriverId } from '../value-objects/driver-id'
+import type { Coordinates } from '../value-objects/coordinates'
+import type { DriverId } from '../value-objects/driver-id'
 import { Money } from '../value-objects/money'
 import { OrderId } from '../value-objects/order-id'
 import { OrderStatus } from '../value-objects/order-status'
-import { PaymentIntent } from '../value-objects/payment-intent'
-import { PrepTime } from '../value-objects/prep-time'
-import { RestaurantId } from '../value-objects/restaurant-id'
+import type { PaymentIntent } from '../value-objects/payment-intent'
+import type { PrepTime } from '../value-objects/prep-time'
+import type { RestaurantId } from '../value-objects/restaurant-id'
 import { ShortId } from '../value-objects/short-id'
 
 export type OrderProps = {
@@ -200,7 +200,9 @@ export class Order extends AggregateRoot<OrderId> {
     now: Date,
   ): Result<void, InvalidStateTransition | DriverCapacityExceeded> {
     if (!StateTransitionPolicy.canTransition(this._state.status.value, 'heading_to_restaurant'))
-      return Result.fail(new InvalidStateTransition(this._state.status.value, 'heading_to_restaurant'))
+      return Result.fail(
+        new InvalidStateTransition(this._state.status.value, 'heading_to_restaurant'),
+      )
 
     if (activeOrdersCount >= maxConcurrent) return Result.fail(new DriverCapacityExceeded())
 
@@ -222,7 +224,9 @@ export class Order extends AggregateRoot<OrderId> {
 
   markArrived(now: Date): Result<void, InvalidStateTransition> {
     if (!StateTransitionPolicy.canTransition(this._state.status.value, 'waiting_at_restaurant'))
-      return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_at_restaurant'))
+      return Result.fail(
+        new InvalidStateTransition(this._state.status.value, 'waiting_at_restaurant'),
+      )
 
     this._state.status = OrderStatus.waitingAtRestaurant()
     this._state.waitingAt = now
@@ -305,9 +309,18 @@ export class Order extends AggregateRoot<OrderId> {
     return Result.okVoid()
   }
 
-  reassignTo(newDriverId: DriverId, reason: string, now: Date): Result<void, InvalidStateTransition> {
-    if (this._state.status.value !== 'heading_to_restaurant' && this._state.status.value !== 'waiting_at_restaurant')
-      return Result.fail(new InvalidStateTransition(this._state.status.value, 'heading_to_restaurant'))
+  reassignTo(
+    newDriverId: DriverId,
+    reason: string,
+    now: Date,
+  ): Result<void, InvalidStateTransition> {
+    if (
+      this._state.status.value !== 'heading_to_restaurant' &&
+      this._state.status.value !== 'waiting_at_restaurant'
+    )
+      return Result.fail(
+        new InvalidStateTransition(this._state.status.value, 'heading_to_restaurant'),
+      )
 
     const previous = this._state.driverId
     this._state.driverId = newDriverId
@@ -336,8 +349,12 @@ export class Order extends AggregateRoot<OrderId> {
       return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
     if (this._state.extensionUsed) return Result.fail(new PrepTimeExtensionLimit())
 
-    const newEstimated = new Date(this._state.estimatedReadyAt.getTime() + additionalMinutes * 60_000)
-    const newAppearsInQueue = new Date(this._state.appearsInQueueAt.getTime() + additionalMinutes * 60_000)
+    const newEstimated = new Date(
+      this._state.estimatedReadyAt.getTime() + additionalMinutes * 60_000,
+    )
+    const newAppearsInQueue = new Date(
+      this._state.appearsInQueueAt.getTime() + additionalMinutes * 60_000,
+    )
 
     this._state.estimatedReadyAt = newEstimated
     this._state.appearsInQueueAt = newAppearsInQueue

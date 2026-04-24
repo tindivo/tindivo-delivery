@@ -1,6 +1,6 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api/client'
+import { useCallback, useEffect, useState } from 'react'
 
 type Status = 'unsupported' | 'default' | 'granted' | 'denied' | 'subscribed'
 

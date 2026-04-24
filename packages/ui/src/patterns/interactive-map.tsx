@@ -1,7 +1,7 @@
 'use client'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet'
 import { cn } from '../lib/cn'
 
@@ -113,33 +113,33 @@ export function InteractiveMap({
       {mountKey === null ? (
         <div className="h-full w-full bg-surface-container animate-pulse" />
       ) : (
-      <MapContainer
-        key={mountKey}
-        center={[center.lat, center.lng]}
-        zoom={initialZoom}
-        scrollWheelZoom
-        className="h-full w-full"
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maxZoom={19}
-        />
-        {!readOnly && <ClickCapture onSelect={handleSelect} />}
-        {marker && (
-          <Marker
-            position={[marker.lat, marker.lng]}
-            icon={markerIcon}
-            draggable={!readOnly}
-            eventHandlers={{
-              dragend(e) {
-                const pos = (e.target as L.Marker).getLatLng()
-                handleSelect({ lat: pos.lat, lng: pos.lng })
-              },
-            }}
+        <MapContainer
+          key={mountKey}
+          center={[center.lat, center.lng]}
+          zoom={initialZoom}
+          scrollWheelZoom
+          className="h-full w-full"
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
           />
-        )}
-      </MapContainer>
+          {!readOnly && <ClickCapture onSelect={handleSelect} />}
+          {marker && (
+            <Marker
+              position={[marker.lat, marker.lng]}
+              icon={markerIcon}
+              draggable={!readOnly}
+              eventHandlers={{
+                dragend(e) {
+                  const pos = (e.target as L.Marker).getLatLng()
+                  handleSelect({ lat: pos.lat, lng: pos.lng })
+                },
+              }}
+            />
+          )}
+        </MapContainer>
       )}
     </div>
   )

@@ -1,6 +1,6 @@
-import { forwardRef, type InputHTMLAttributes } from 'react'
-import { Input } from '../primitives/input'
+import { type InputHTMLAttributes, forwardRef } from 'react'
 import { cn } from '../lib/cn'
+import { Input } from '../primitives/input'
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>
 
@@ -16,7 +16,10 @@ export const MoneyInput = forwardRef<HTMLInputElement, Props>(({ className, ...p
         inputMode="decimal"
         pattern="[0-9]*[.,]?[0-9]*"
         autoComplete="off"
-        className={cn('pl-10 text-lg font-semibold placeholder:text-sm placeholder:font-medium', className)}
+        className={cn(
+          'pl-10 text-lg font-semibold placeholder:text-sm placeholder:font-medium',
+          className,
+        )}
         {...props}
       />
     </div>

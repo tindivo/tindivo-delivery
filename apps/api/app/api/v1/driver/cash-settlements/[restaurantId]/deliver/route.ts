@@ -1,9 +1,9 @@
+import { problemCode } from '@/lib/http/problem'
+import { requireAuth } from '@/lib/http/require-auth'
 import { createAdminClient } from '@tindivo/supabase'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { problemCode } from '@/lib/http/problem'
-import { requireAuth } from '@/lib/http/require-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +25,10 @@ const Body = z.object({ amount: z.number().nonnegative() })
  *  - Marca los pedidos con cash_settlement_id = new settlement.
  *  - Inserta domain_event `CashSettlementDelivered` para notificar al cajero.
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ restaurantId: string }> }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ restaurantId: string }> },
+) {
   const auth = await requireAuth(req, ['driver'])
   if (!auth.ok) return auth.response
   if (!auth.auth.driverId) return problemCode('FORBIDDEN', 403)
@@ -49,12 +52,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ res
 
   if (ordersErr) return problemCode('INTERNAL_ERROR', 500, ordersErr.message)
   if (!pendingOrders || pendingOrders.length === 0) {
-    return problemCode('NO_PENDING_CASH', 409, 'No hay pedidos en efectivo pendientes por liquidar.')
+    return problemCode(
+      'NO_PENDING_CASH',
+      409,
+      'No hay pedidos en efectivo pendientes por liquidar.',
+    )
   }
 
-  const totalCash = Number(
-    pendingOrders.reduce((s, o) => s + Number(o.order_amount), 0).toFixed(2),
-  )
+  const totalCash = Number(pendingOrders.reduce((s, o) => s + Number(o.order_amount), 0).toFixed(2))
   const orderCount = pendingOrders.length
 
   // 2) ¿Hay ya un ciclo activo (delivered/disputed) sin confirmar?

@@ -1,10 +1,12 @@
-import { createServerClient } from '@supabase/ssr'
+import { type CookieOptions, createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 import type { Database } from './types.gen'
 
+type CookieToSet = { name: string; value: string; options?: CookieOptions }
+
 /**
  * Middleware de Next.js que refresca la sesión Supabase en cada request.
- * Usar en `apps/*/middleware.ts`.
+ * Usar en apps/[app]/middleware.ts.
  */
 export async function updateSupabaseSession(
   request: NextRequest,
@@ -21,7 +23,7 @@ export async function updateSupabaseSession(
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookies) {
+        setAll(cookies: CookieToSet[]) {
           for (const { name, value } of cookies) {
             request.cookies.set(name, value)
           }
