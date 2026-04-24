@@ -537,6 +537,35 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      admin_generate_settlements: {
+        Args: {
+          p_due_date: string
+          p_period_end: string
+          p_period_start: string
+        }
+        Returns: {
+          order_count: number
+          restaurant_id: string
+          settlement_id: string
+          total_amount: number
+        }[]
+      }
+      admin_settlements_summary: {
+        Args: never
+        Returns: {
+          accent_color: string
+          balance_due: number
+          last_paid_at: string
+          overdue_amount: number
+          overdue_count: number
+          pending_amount: number
+          pending_count: number
+          qr_url: string
+          restaurant_id: string
+          restaurant_name: string
+          yape_number: string
+        }[]
+      }
       current_driver_id: { Args: never; Returns: string }
       current_restaurant_id: { Args: never; Returns: string }
       current_user_role: {

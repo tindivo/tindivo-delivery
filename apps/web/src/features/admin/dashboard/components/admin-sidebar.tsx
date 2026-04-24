@@ -9,7 +9,8 @@ const items = [
   { href: '/admin/tracking', label: 'Envío tracking', icon: 'chat' },
   { href: '/admin/restaurants', label: 'Restaurantes', icon: 'restaurant' },
   { href: '/admin/drivers', label: 'Motorizados', icon: 'two_wheeler' },
-  { href: '/admin/finance', label: 'Finanzas', icon: 'account_balance' },
+  { href: '/admin/cobros', label: 'Cobros', icon: 'payments' },
+  { href: '/admin/finance', label: 'Disputas', icon: 'gavel' },
   { href: '/admin/audit', label: 'Auditoría', icon: 'fact_check' },
 ]
 

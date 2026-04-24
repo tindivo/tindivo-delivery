@@ -1,5 +1,8 @@
-import type { Drivers, Restaurants } from '@tindivo/contracts'
+import type { Drivers, Restaurants, Settlements } from '@tindivo/contracts'
 import type { ApiClient } from './client'
+
+export type AdminSettlementRow = Settlements.AdminSettlementRow
+export type RestaurantDebtSummaryRow = Settlements.RestaurantDebtSummaryRow
 
 // El backend devuelve en snake_case (select '*' de Supabase sin mapping).
 // Para el consumer del API, tipamos con los campos que efectivamente usa
@@ -111,5 +114,16 @@ export function adminApi(client: ApiClient) {
         `admin/cash-settlements/${id}/resolve`,
         body,
       ),
+
+    listSettlements: (status?: 'pending' | 'paid' | 'overdue' | 'all', restaurantId?: string) =>
+      client.get<{ items: AdminSettlementRow[] }>('admin/settlements', {
+        query: { status, restaurantId },
+      }),
+    getSettlementsSummary: () =>
+      client.get<{ items: RestaurantDebtSummaryRow[] }>('admin/settlements/summary'),
+    generateSettlements: (body?: Settlements.GenerateSettlementsRequest) =>
+      client.post<{ generated: AdminSettlementRow[] }>('admin/settlements/generate', body ?? {}),
+    markSettlementPaid: (id: string, body: Settlements.MarkSettlementPaidRequest) =>
+      client.post<AdminSettlementRow>(`admin/settlements/${id}/mark-paid`, body),
   }
 }
