@@ -28,9 +28,10 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/v1/admin/drivers
- * Crea un motorizado: genera auth.users, perfil en public.users (rol driver),
- * entidad en public.drivers y su registro de disponibilidad en
- * public.driver_availability con is_available=false.
+ * Crea un motorizado: genera auth.users, perfil en public.users (rol driver)
+ * y entidad en public.drivers. El trigger `trg_drivers_ensure_availability`
+ * crea automáticamente la fila en public.driver_availability con
+ * is_available=false, así que no hay que insertarla desde aquí.
  */
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req, ['admin'])
@@ -91,17 +92,6 @@ export async function POST(req: NextRequest) {
       500,
       driverErr?.message ?? 'No se pudo crear el motorizado',
     )
-  }
-
-  // 4) Crear registro de disponibilidad (offline por default)
-  const { error: availErr } = await admin
-    .from('driver_availability')
-    .insert({ driver_id: driver.id, is_available: false })
-
-  if (availErr) {
-    await admin.from('drivers').delete().eq('id', driver.id)
-    await admin.auth.admin.deleteUser(userId)
-    return problemCode('INTERNAL_ERROR', 500, availErr.message)
   }
 
   return NextResponse.json(driver, { status: 201 })
