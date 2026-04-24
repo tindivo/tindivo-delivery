@@ -37,7 +37,9 @@ export async function GET(req: NextRequest) {
   // Bucket 1: pedidos pending_cash delivered que aún no están liquidados
   const { data: unsettledOrders, error: ordersErr } = await auth.auth.supabase
     .from('orders')
-    .select('id, order_amount, restaurant_id, restaurants!inner(name, accent_color)')
+    .select(
+      'id, order_amount, client_pays_with, restaurant_id, restaurants!inner(name, accent_color)',
+    )
     .eq('driver_id', auth.auth.driverId)
     .eq('status', 'delivered')
     .eq('payment_status', 'pending_cash')
@@ -69,7 +71,11 @@ export async function GET(req: NextRequest) {
       settlementId: null,
       settlementStatus: null,
     }
-    existing.totalCash = Number((existing.totalCash + Number(o.order_amount)).toFixed(2))
+    // El driver debe entregar al restaurante el monto que pagó el cliente
+    // (client_pays_with), no el order_amount: el restaurante adelantó el vuelto
+    // y al recibir client_pays_with recupera el vuelto + cobra el pedido.
+    const cashOwed = Number(o.client_pays_with ?? o.order_amount)
+    existing.totalCash = Number((existing.totalCash + cashOwed).toFixed(2))
     existing.orderCount += 1
     byRestaurant.set(o.restaurant_id, existing)
   }

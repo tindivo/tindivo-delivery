@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useRestaurantHistory } from '../hooks/use-restaurant-history'
 
-const PREP_MINS: Record<string, number> = { fast: 10, normal: 15, slow: 20 }
 type Filter = 'all' | 'delivered' | 'cancelled'
 
 const FILTERS: { value: Filter; label: string }[] = [
@@ -87,7 +86,7 @@ export function RestaurantHistory() {
                 status={order.status}
                 orderAmount={Number(order.order_amount)}
                 paymentLabel={paymentLabel(order.payment_status)}
-                prepTimeMinutes={PREP_MINS[order.prep_time_option]}
+                prepTimeMinutes={order.prep_minutes}
                 driverName={order.drivers?.full_name ?? null}
                 onClick={() => router.push(`/restaurante/pedidos/${order.id}`)}
               />

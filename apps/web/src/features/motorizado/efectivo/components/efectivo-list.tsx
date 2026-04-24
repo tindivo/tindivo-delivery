@@ -113,6 +113,9 @@ export function EfectivoList() {
             {totalCount} {totalCount === 1 ? 'pedido' : 'pedidos'} · {items.length}{' '}
             {items.length === 1 ? 'restaurante' : 'restaurantes'}
           </div>
+          <div className="text-[11px] opacity-75 mt-1">
+            Total que cobraste a los clientes (incluye los vueltos)
+          </div>
         </div>
       </section>
 

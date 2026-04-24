@@ -3,7 +3,7 @@ import type { UseCase } from '../../../../shared/kernel/use-case'
 import { Order } from '../../domain/entities/order'
 import { Money } from '../../domain/value-objects/money'
 import { PaymentIntent, type PaymentStatusValue } from '../../domain/value-objects/payment-intent'
-import { PrepTime, type PrepTimeOptionValue } from '../../domain/value-objects/prep-time'
+import { PrepTime } from '../../domain/value-objects/prep-time'
 import { RestaurantId } from '../../domain/value-objects/restaurant-id'
 import type { Clock } from '../ports/clock'
 import type { EventPublisher } from '../ports/event-publisher'
@@ -11,7 +11,7 @@ import type { OrderRepository } from '../ports/order.repository'
 
 export type CreateOrderCommand = {
   restaurantId: string
-  prepTimeOption: PrepTimeOptionValue
+  prepMinutes: number
   paymentStatus: PaymentStatusValue
   orderAmount: number
   clientPaysWith?: number
@@ -37,7 +37,7 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
   async execute(cmd: CreateOrderCommand): Promise<Result<CreateOrderResult, Error>> {
     try {
       const restaurantId = RestaurantId.of(cmd.restaurantId)
-      const prepTime = PrepTime.of(cmd.prepTimeOption)
+      const prepTime = PrepTime.of(cmd.prepMinutes)
       const payment = PaymentIntent.create(
         cmd.paymentStatus,
         Money.pen(cmd.orderAmount),

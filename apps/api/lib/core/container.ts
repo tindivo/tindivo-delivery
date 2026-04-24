@@ -5,6 +5,7 @@ import {
   MarkArrivedUseCase,
   MarkDeliveredUseCase,
   MarkPickedUpUseCase,
+  MarkReadyEarlyUseCase,
   RequestExtensionUseCase,
   SupabaseEventPublisher,
   SupabaseOrderRepository,
@@ -57,4 +58,9 @@ export function buildCancelOrderUseCase(sb: ServerClient) {
 export function buildRequestExtensionUseCase(sb: ServerClient) {
   const { orders, events } = deps(sb)
   return new RequestExtensionUseCase(orders, events, clock)
+}
+
+export function buildMarkReadyEarlyUseCase(sb: ServerClient) {
+  const { orders, events } = deps(sb)
+  return new MarkReadyEarlyUseCase(orders, events, clock)
 }

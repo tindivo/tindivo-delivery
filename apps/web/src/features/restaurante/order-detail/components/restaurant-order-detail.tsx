@@ -104,7 +104,11 @@ export function RestaurantOrderDetail({ orderId }: Props) {
   const canCancel = status === 'waiting_driver' || status === 'heading_to_restaurant'
   const canExtend =
     (status === 'waiting_driver' || status === 'heading_to_restaurant') && !order.extension_used
-  const canReadyEarly = status === 'waiting_driver' && !order.ready_early_used
+  const remainingMinutes = order.estimated_ready_at
+    ? (new Date(order.estimated_ready_at).getTime() - now.getTime()) / 60_000
+    : 0
+  const canReadyEarly =
+    status === 'waiting_driver' && !order.ready_early_used && remainingMinutes > 10
   const isActive = !['delivered', 'cancelled'].includes(status)
   const showUrgency = status === 'waiting_driver' && order.estimated_ready_at
 

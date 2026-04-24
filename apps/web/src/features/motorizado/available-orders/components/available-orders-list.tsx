@@ -18,8 +18,6 @@ import { CapacityIndicator } from './capacity-indicator'
 import { OverdueBanner } from './overdue-banner'
 import { UpcomingOrdersSection } from './upcoming-orders-section'
 
-const PREP_MINS: Record<string, number> = { fast: 10, normal: 15, slow: 20 }
-
 // Nota: el backend hace `supabase.from('orders').select('*')` y devuelve columnas
 // en snake_case. El tipo generado de Zod es camelCase por convención, pero
 // runtime no coincide — por eso casteamos a `any[]` (mismo patrón que otros
@@ -111,7 +109,7 @@ export function AvailableOrdersList() {
                         status={order.status}
                         orderAmount={Number(order.order_amount)}
                         paymentLabel={paymentLabel(order.payment_status)}
-                        prepTimeMinutes={PREP_MINS[order.prep_time_option]}
+                        prepTimeMinutes={order.prep_minutes}
                         estimatedReadyAt={order.estimated_ready_at}
                         now={now}
                         disabled={isLocked}

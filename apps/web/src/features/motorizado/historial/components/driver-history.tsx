@@ -2,8 +2,6 @@
 import { EmptyState, OrderCard, Skeleton } from '@tindivo/ui'
 import { useDriverHistory } from '../hooks/use-driver-history'
 
-const PREP_MINS: Record<string, number> = { fast: 10, normal: 15, slow: 20 }
-
 function paymentLabel(status: string): string {
   switch (status) {
     case 'prepaid':
@@ -53,7 +51,7 @@ export function DriverHistory() {
             status={order.status}
             orderAmount={Number(order.order_amount)}
             paymentLabel={paymentLabel(order.payment_status)}
-            prepTimeMinutes={PREP_MINS[order.prep_time_option]}
+            prepTimeMinutes={order.prep_minutes}
           />
         </li>
       ))}

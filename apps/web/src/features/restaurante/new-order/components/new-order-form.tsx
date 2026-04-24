@@ -1,4 +1,5 @@
 'use client'
+import { useIsDesktop } from '@/shared/hooks/use-is-desktop'
 import type { Orders } from '@tindivo/contracts'
 import { BottomActionBar, Button, GlassTopBar, Icon, IconButton, MoneyInput, cn } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
@@ -7,7 +8,7 @@ import { useCreateOrder } from '../hooks/use-create-order'
 
 type Payment = 'prepaid' | 'pending_yape' | 'pending_cash'
 
-const PREP_MINUTES = [10, 20, 30, 40, 50, 60] as const
+const PREP_MINUTES = [10, 15, 20, 30, 45, 60] as const
 type PrepMinutes = (typeof PREP_MINUTES)[number]
 
 function parseMoney(raw: string): number {
@@ -15,12 +16,6 @@ function parseMoney(raw: string): number {
   const normalized = raw.replace(',', '.').replace(/[^0-9.]/g, '')
   const n = Number.parseFloat(normalized)
   return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0
-}
-
-function prepOption(minutes: PrepMinutes): 'fast' | 'normal' | 'slow' {
-  if (minutes <= 10) return 'fast'
-  if (minutes >= 40) return 'slow'
-  return 'normal'
 }
 
 const paymentOptions: {
@@ -47,7 +42,7 @@ const paymentOptions: {
   {
     value: 'pending_cash',
     label: 'Cobrar efectivo',
-    hint: 'Driver calcula vuelto',
+    hint: 'Adelanta el vuelto al driver',
     icon: 'payments',
     gradient: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
   },
@@ -63,6 +58,13 @@ export function NewOrderForm() {
   const [paysWith, setPaysWith] = useState<string>('')
 
   const carouselRef = useRef<HTMLDivElement>(null)
+  const isDesktop = useIsDesktop()
+
+  function scrollCarousel(direction: -1 | 1) {
+    const el = carouselRef.current
+    if (!el) return
+    el.scrollBy({ left: direction * 200, behavior: 'smooth' })
+  }
 
   const amountNum = parseMoney(amount)
   const paysWithNum = parseMoney(paysWith)
@@ -85,7 +87,7 @@ export function NewOrderForm() {
     e.preventDefault()
     if (!canSubmit) return
     const body: Orders.CreateOrderRequest = {
-      prepTimeOption: prepOption(prepMinutes),
+      prepMinutes,
       paymentStatus: payment,
       orderAmount: needsAmount ? amountNum : 0,
       clientPaysWith: payment === 'pending_cash' ? paysWithNum : undefined,
@@ -147,72 +149,121 @@ export function NewOrderForm() {
             <span className="text-xs font-mono text-on-surface-variant">{prepMinutes} min</span>
           </div>
 
-          <div
-            ref={carouselRef}
-            className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-3 -mx-4 px-4"
-            style={{ scrollbarWidth: 'none' }}
-          >
-            {PREP_MINUTES.map((m, idx) => {
-              const active = prepMinutes === m
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  data-prep={idx}
-                  onClick={() => setPrepMinutes(m)}
-                  className={cn(
-                    'snap-center shrink-0 flex flex-col items-center justify-center transition-all duration-300 ease-out',
-                    active ? 'scale-100' : 'scale-95 opacity-70 hover:opacity-100 hover:scale-100',
-                  )}
-                  style={{
-                    width: '92px',
-                    height: '108px',
-                    borderRadius: '22px',
-                    background: active
-                      ? 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)'
-                      : 'rgba(255, 255, 255, 0.85)',
-                    backdropFilter: 'blur(12px)',
-                    border: active
-                      ? '1px solid rgba(255, 107, 53, 0.4)'
-                      : '1px solid rgba(225, 191, 181, 0.3)',
-                    boxShadow: active
-                      ? '0 12px 30px -8px rgba(255, 107, 53, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25)'
-                      : '0 2px 8px rgba(171, 53, 0, 0.05)',
-                    color: active ? '#ffffff' : '#1a1c1b',
-                  }}
-                >
-                  <span
-                    className="font-black"
+          <div className="relative">
+            {isDesktop && (
+              <button
+                type="button"
+                aria-label="Desplazar izquierda"
+                onClick={() => scrollCarousel(-1)}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center transition-transform duration-200 hover:scale-105 active:scale-95"
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(225, 191, 181, 0.4)',
+                  boxShadow: '0 4px 14px rgba(171, 53, 0, 0.12)',
+                  color: '#1a1c1b',
+                }}
+              >
+                <Icon name="chevron_left" size={22} />
+              </button>
+            )}
+            {isDesktop && (
+              <button
+                type="button"
+                aria-label="Desplazar derecha"
+                onClick={() => scrollCarousel(1)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center transition-transform duration-200 hover:scale-105 active:scale-95"
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(225, 191, 181, 0.4)',
+                  boxShadow: '0 4px 14px rgba(171, 53, 0, 0.12)',
+                  color: '#1a1c1b',
+                }}
+              >
+                <Icon name="chevron_right" size={22} />
+              </button>
+            )}
+
+            <div
+              ref={carouselRef}
+              className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-3 -mx-4 px-4"
+              style={{
+                scrollbarWidth: 'none',
+                WebkitOverflowScrolling: 'touch',
+                touchAction: 'pan-x',
+              }}
+            >
+              {PREP_MINUTES.map((m, idx) => {
+                const active = prepMinutes === m
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    data-prep={idx}
+                    onClick={() => setPrepMinutes(m)}
+                    className={cn(
+                      'snap-center shrink-0 flex flex-col items-center justify-center transition-all duration-300 ease-out',
+                      active
+                        ? 'scale-100'
+                        : 'scale-95 opacity-70 hover:opacity-100 hover:scale-100',
+                    )}
                     style={{
-                      fontSize: '30px',
-                      letterSpacing: '-0.04em',
-                      lineHeight: 1,
-                      textShadow: active ? '0 1px 2px rgba(95, 25, 0, 0.25)' : 'none',
+                      width: '92px',
+                      height: '108px',
+                      borderRadius: '22px',
+                      background: active
+                        ? 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)'
+                        : 'rgba(255, 255, 255, 0.85)',
+                      backdropFilter: 'blur(12px)',
+                      border: active
+                        ? '1px solid rgba(255, 107, 53, 0.4)'
+                        : '1px solid rgba(225, 191, 181, 0.3)',
+                      boxShadow: active
+                        ? '0 12px 30px -8px rgba(255, 107, 53, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25)'
+                        : '0 2px 8px rgba(171, 53, 0, 0.05)',
+                      color: active ? '#ffffff' : '#1a1c1b',
                     }}
                   >
-                    {m}
-                  </span>
-                  <span
-                    className="text-[10px] font-bold tracking-[0.14em] uppercase mt-1.5"
-                    style={{ opacity: active ? 0.92 : 0.65 }}
-                  >
-                    min
-                  </span>
-                  {active && (
                     <span
-                      aria-hidden="true"
-                      className="mt-2 inline-block rounded-full"
+                      className="font-black"
                       style={{
-                        width: '20px',
-                        height: '3px',
-                        background: 'rgba(255, 255, 255, 0.75)',
-                        boxShadow: '0 1px 4px rgba(255, 255, 255, 0.4)',
+                        fontSize: '30px',
+                        letterSpacing: '-0.04em',
+                        lineHeight: 1,
+                        textShadow: active ? '0 1px 2px rgba(95, 25, 0, 0.25)' : 'none',
                       }}
-                    />
-                  )}
-                </button>
-              )
-            })}
+                    >
+                      {m}
+                    </span>
+                    <span
+                      className="text-[10px] font-bold tracking-[0.14em] uppercase mt-1.5"
+                      style={{ opacity: active ? 0.92 : 0.65 }}
+                    >
+                      min
+                    </span>
+                    {active && (
+                      <span
+                        aria-hidden="true"
+                        className="mt-2 inline-block rounded-full"
+                        style={{
+                          width: '20px',
+                          height: '3px',
+                          background: 'rgba(255, 255, 255, 0.75)',
+                          boxShadow: '0 1px 4px rgba(255, 255, 255, 0.4)',
+                        }}
+                      />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </section>
 
@@ -362,9 +413,9 @@ export function NewOrderForm() {
                   </span>
                   <div>
                     <div className="text-[10px] font-bold tracking-widest uppercase text-emerald-700">
-                      Vuelto
+                      Vuelto a entregar al driver
                     </div>
-                    <div className="text-[10px] text-emerald-900/60">para el cliente</div>
+                    <div className="text-[10px] text-emerald-900/60">prepáralo en efectivo</div>
                   </div>
                 </div>
                 <span

@@ -37,7 +37,7 @@ export const OrderMapper = {
       restaurantId: RestaurantId.of(row.restaurant_id),
       driverId: row.driver_id ? DriverId.of(row.driver_id) : null,
       status: OrderStatus.of(row.status),
-      prepTime: PrepTime.of(row.prep_time_option),
+      prepTime: PrepTime.of(row.prep_minutes),
       payment: PaymentIntent.create(
         row.payment_status,
         Money.pen(Number(row.order_amount)),
@@ -78,7 +78,7 @@ export const OrderMapper = {
       restaurant_id: p.restaurantId.value,
       driver_id: p.driverId?.value ?? null,
       status: p.status.value,
-      prep_time_option: p.prepTime.option,
+      prep_minutes: p.prepTime.minutes,
       estimated_ready_at: p.estimatedReadyAt.toISOString(),
       appears_in_queue_at: p.appearsInQueueAt.toISOString(),
       order_amount: p.payment.orderAmount.amount,

@@ -3,8 +3,6 @@ import { Card, Icon, OrderCard, Skeleton } from '@tindivo/ui'
 import Link from 'next/link'
 import { useAdminActiveOrders } from '../hooks/use-admin-active-orders'
 
-const PREP_MIN: Record<string, number> = { fast: 10, normal: 15, slow: 20 }
-
 export function AdminDashboard() {
   const { data, isLoading } = useAdminActiveOrders()
   const items = data?.items ?? []
@@ -82,7 +80,7 @@ export function AdminDashboard() {
                   status={order.status}
                   orderAmount={Number(order.order_amount)}
                   paymentLabel={paymentLabel(order.payment_status)}
-                  prepTimeMinutes={PREP_MIN[order.prep_time_option]}
+                  prepTimeMinutes={order.prep_minutes}
                   driverName={order.drivers?.full_name?.split(' ')[0] ?? null}
                 />
               </Link>

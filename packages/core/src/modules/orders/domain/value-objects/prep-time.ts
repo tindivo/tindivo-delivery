@@ -1,49 +1,40 @@
 import { ValueObject } from '../../../../shared/kernel/value-object'
 
-export type PrepTimeOptionValue = 'fast' | 'normal' | 'slow'
+type Props = { minutes: number }
 
-type Props = { option: PrepTimeOptionValue }
-
-const MINUTES: Record<PrepTimeOptionValue, number> = {
-  fast: 10,
-  normal: 15,
-  slow: 20,
-}
+const MIN_MINUTES = 5
+const MAX_MINUTES = 120
+const QUEUE_WINDOW_MS = 10 * 60 * 1000
 
 /**
- * Tiempo de preparación (no es la hora estimada de listo).
- * 'fast' 10 min | 'normal' 15 min | 'slow' 20 min.
+ * Tiempo de preparación del pedido (minutos enteros, rango 5-120).
+ * No confundir con `estimatedReadyAt` (hora concreta calculada a partir de
+ * createdAt + minutes).
  */
 export class PrepTime extends ValueObject<Props> {
-  private constructor(option: PrepTimeOptionValue) {
-    super({ option })
+  private constructor(minutes: number) {
+    super({ minutes })
   }
 
-  static of(option: PrepTimeOptionValue): PrepTime {
-    return new PrepTime(option)
-  }
-
-  static fast = () => new PrepTime('fast')
-  static normal = () => new PrepTime('normal')
-  static slow = () => new PrepTime('slow')
-
-  get option(): PrepTimeOptionValue {
-    return this.props.option
+  static of(minutes: number): PrepTime {
+    if (!Number.isInteger(minutes)) throw new Error('PrepTime.minutes debe ser entero')
+    if (minutes < MIN_MINUTES || minutes > MAX_MINUTES)
+      throw new Error(`PrepTime.minutes fuera de rango (${MIN_MINUTES}-${MAX_MINUTES})`)
+    return new PrepTime(minutes)
   }
 
   get minutes(): number {
-    return MINUTES[this.props.option]
+    return this.props.minutes
   }
 
   /**
-   * Calcula cuándo el pedido aparece en la bandeja de drivers.
-   * Regla de negocio: el pedido aparece 10 min antes de estar listo
-   * (o inmediatamente si el prep time es ≤ 10 min).
+   * Regla de negocio: el pedido aparece en la bandeja de drivers 10 min antes
+   * de estar listo (o inmediatamente si el prep time es ≤ 10 min).
    */
   computeAppearsInQueueAt(createdAt: Date): Date {
-    const prep = this.minutes * 60 * 1000
-    const advance = Math.min(10 * 60 * 1000, prep)
-    return new Date(createdAt.getTime() + prep - advance)
+    const prepMs = this.minutes * 60 * 1000
+    const advance = Math.min(QUEUE_WINDOW_MS, prepMs)
+    return new Date(createdAt.getTime() + prepMs - advance)
   }
 
   computeEstimatedReadyAt(createdAt: Date): Date {

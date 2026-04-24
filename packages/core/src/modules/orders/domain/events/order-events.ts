@@ -12,7 +12,7 @@ export class OrderCreated extends BaseDomainEvent {
     restaurantId: string
     orderAmount: number
     paymentStatus: string
-    prepTimeOption: string
+    prepMinutes: number
     appearsInQueueAt: string
     estimatedReadyAt: string
   }
@@ -135,7 +135,7 @@ export class OrderReadyEarly extends BaseDomainEvent {
   readonly eventType = 'OrderReadyEarly' as const
   readonly aggregateType = AGG
   readonly aggregateId: string
-  readonly payload: { orderId: string; newAppearsInQueueAt: string }
+  readonly payload: { orderId: string; newAppearsInQueueAt: string; newEstimatedReadyAt: string }
 
   constructor(payload: OrderReadyEarly['payload'], metadata?: EventMetadata) {
     super(metadata)
@@ -163,6 +163,31 @@ export class OrderReadyForDrivers extends BaseDomainEvent {
   }
 
   constructor(payload: OrderReadyForDrivers['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
+/**
+ * Emitido cuando un pedido cruza su `estimatedReadyAt` sin driver asignado
+ * (status=waiting_driver). Lo publica pg_cron vía la función SQL
+ * `enqueue_overdue_orders()`. La Edge Function send-push lo mapea a una
+ * notificación "zona roja" con vibración larga y requireInteraction=true.
+ */
+export class OrderOverdue extends BaseDomainEvent {
+  readonly eventType = 'OrderOverdue' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    shortId: string
+    restaurantId: string
+    orderAmount: number
+    estimatedReadyAt: string
+  }
+
+  constructor(payload: OrderOverdue['payload'], metadata?: EventMetadata) {
     super(metadata)
     this.aggregateId = payload.orderId
     this.payload = payload

@@ -53,6 +53,11 @@ export class PrepTimeExtensionLimit extends DomainError {
   readonly message = 'Ya se usó la prórroga de tiempo para este pedido'
 }
 
+export class NoPrepTimeToReduce extends DomainError {
+  readonly code = 'NO_PREP_TIME_TO_REDUCE'
+  readonly message = 'El pedido ya está a ≤ 10 min; no hay tiempo para reducir'
+}
+
 export class DriverNotAssigned extends DomainError {
   readonly code = 'DRIVER_NOT_ASSIGNED'
   readonly message = 'El pedido no tiene driver asignado'

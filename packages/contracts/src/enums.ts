@@ -16,9 +16,6 @@ export type OrderStatus = z.infer<typeof OrderStatus>
 export const PaymentStatus = z.enum(['prepaid', 'pending_yape', 'pending_cash'])
 export type PaymentStatus = z.infer<typeof PaymentStatus>
 
-export const PrepTimeOption = z.enum(['fast', 'normal', 'slow'])
-export type PrepTimeOption = z.infer<typeof PrepTimeOption>
-
 export const SettlementStatus = z.enum(['pending', 'paid', 'overdue'])
 export type SettlementStatus = z.infer<typeof SettlementStatus>
 
@@ -43,12 +40,3 @@ export const CancellationReason = z.enum([
   'other',
 ])
 export type CancellationReason = z.infer<typeof CancellationReason>
-
-/**
- * Mapa de opciones de prep time → minutos.
- */
-export const PREP_TIME_MINUTES: Record<PrepTimeOption, number> = {
-  fast: 10,
-  normal: 15,
-  slow: 20,
-}

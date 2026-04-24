@@ -43,7 +43,7 @@ export async function POST(
   // 1) Pedidos pendientes de liquidación para este (driver, restaurant)
   const { data: pendingOrders, error: ordersErr } = await auth.auth.supabase
     .from('orders')
-    .select('id, order_amount')
+    .select('id, order_amount, client_pays_with')
     .eq('driver_id', auth.auth.driverId)
     .eq('restaurant_id', restaurantId)
     .eq('status', 'delivered')
@@ -59,7 +59,11 @@ export async function POST(
     )
   }
 
-  const totalCash = Number(pendingOrders.reduce((s, o) => s + Number(o.order_amount), 0).toFixed(2))
+  // total_cash debe reflejar lo que el cliente pagó al driver (client_pays_with),
+  // no solo el monto del pedido: así el restaurante recupera el vuelto adelantado.
+  const totalCash = Number(
+    pendingOrders.reduce((s, o) => s + Number(o.client_pays_with ?? o.order_amount), 0).toFixed(2),
+  )
   const orderCount = pendingOrders.length
 
   // 2) ¿Hay ya un ciclo activo (delivered/disputed) sin confirmar?

@@ -3,8 +3,6 @@ import { EmptyState, OrderCard, Skeleton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useRestaurantOrders } from '../hooks/use-restaurant-orders'
 
-const PREP_MIN: Record<string, number> = { fast: 10, normal: 15, slow: 20 }
-
 export function ActiveOrders() {
   const router = useRouter()
   const { data, isLoading } = useRestaurantOrders()
@@ -45,7 +43,7 @@ export function ActiveOrders() {
             status={order.status}
             orderAmount={Number(order.order_amount)}
             paymentLabel={paymentLabel(order.payment_status)}
-            prepTimeMinutes={PREP_MIN[order.prep_time_option]}
+            prepTimeMinutes={order.prep_minutes}
             driverName={order.drivers?.full_name?.split(' ')[0] ?? null}
             onClick={() => router.push(`/restaurante/pedidos/${order.id}`)}
           />

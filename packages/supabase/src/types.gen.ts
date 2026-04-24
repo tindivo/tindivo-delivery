@@ -10,8 +10,10 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.5'
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -40,7 +42,15 @@ export type Database = {
           resolved_by?: string | null
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "admin_alerts_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cash_settlements: {
         Row: {
@@ -61,7 +71,7 @@ export type Database = {
           resolved_by: string | null
           restaurant_id: string
           settlement_date: string
-          status: Database['public']['Enums']['cash_settlement_status']
+          status: Database["public"]["Enums"]["cash_settlement_status"]
           total_cash: number
           updated_at: string
         }
@@ -83,7 +93,7 @@ export type Database = {
           resolved_by?: string | null
           restaurant_id: string
           settlement_date: string
-          status?: Database['public']['Enums']['cash_settlement_status']
+          status?: Database["public"]["Enums"]["cash_settlement_status"]
           total_cash?: number
           updated_at?: string
         }
@@ -105,11 +115,40 @@ export type Database = {
           resolved_by?: string | null
           restaurant_id?: string
           settlement_date?: string
-          status?: Database['public']['Enums']['cash_settlement_status']
+          status?: Database["public"]["Enums"]["cash_settlement_status"]
           total_cash?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cash_settlements_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_settlements_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_settlements_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_settlements_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       domain_events: {
         Row: {
@@ -123,7 +162,7 @@ export type Database = {
           payload: Json
           published_at: string | null
           retry_count: number
-          status: Database['public']['Enums']['domain_event_status']
+          status: Database["public"]["Enums"]["domain_event_status"]
         }
         Insert: {
           aggregate_id: string
@@ -136,7 +175,7 @@ export type Database = {
           payload?: Json
           published_at?: string | null
           retry_count?: number
-          status?: Database['public']['Enums']['domain_event_status']
+          status?: Database["public"]["Enums"]["domain_event_status"]
         }
         Update: {
           aggregate_id?: string
@@ -149,7 +188,7 @@ export type Database = {
           payload?: Json
           published_at?: string | null
           retry_count?: number
-          status?: Database['public']['Enums']['domain_event_status']
+          status?: Database["public"]["Enums"]["domain_event_status"]
         }
         Relationships: []
       }
@@ -172,7 +211,15 @@ export type Database = {
           is_available?: boolean
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "driver_availability_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: true
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       drivers: {
         Row: {
@@ -187,7 +234,7 @@ export type Database = {
           shift_start: string
           updated_at: string
           user_id: string
-          vehicle_type: Database['public']['Enums']['vehicle_type']
+          vehicle_type: Database["public"]["Enums"]["vehicle_type"]
         }
         Insert: {
           created_at?: string
@@ -201,7 +248,7 @@ export type Database = {
           shift_start?: string
           updated_at?: string
           user_id: string
-          vehicle_type?: Database['public']['Enums']['vehicle_type']
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"]
         }
         Update: {
           created_at?: string
@@ -215,9 +262,17 @@ export type Database = {
           shift_start?: string
           updated_at?: string
           user_id?: string
-          vehicle_type?: Database['public']['Enums']['vehicle_type']
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "drivers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_status_history: {
         Row: {
@@ -226,7 +281,7 @@ export type Database = {
           id: string
           notes: string | null
           order_id: string
-          status: Database['public']['Enums']['order_status']
+          status: Database["public"]["Enums"]["order_status"]
         }
         Insert: {
           changed_at?: string
@@ -234,7 +289,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id: string
-          status: Database['public']['Enums']['order_status']
+          status: Database["public"]["Enums"]["order_status"]
         }
         Update: {
           changed_at?: string
@@ -242,9 +297,24 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id?: string
-          status?: Database['public']['Enums']['order_status']
+          status?: Database["public"]["Enums"]["order_status"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       orders: {
         Row: {
@@ -270,14 +340,14 @@ export type Database = {
           id: string
           notes: string | null
           order_amount: number
-          payment_status: Database['public']['Enums']['payment_status']
+          payment_status: Database["public"]["Enums"]["payment_status"]
           picked_up_at: string | null
-          prep_time_option: Database['public']['Enums']['prep_time_option']
+          prep_minutes: number
           ready_early_used: boolean
           restaurant_coordinates_cache: unknown
           restaurant_id: string
           short_id: string
-          status: Database['public']['Enums']['order_status']
+          status: Database["public"]["Enums"]["order_status"]
           tracking_link_sent_at: string | null
           tracking_link_sent_by: string | null
           updated_at: string
@@ -306,14 +376,14 @@ export type Database = {
           id?: string
           notes?: string | null
           order_amount: number
-          payment_status: Database['public']['Enums']['payment_status']
+          payment_status: Database["public"]["Enums"]["payment_status"]
           picked_up_at?: string | null
-          prep_time_option: Database['public']['Enums']['prep_time_option']
+          prep_minutes: number
           ready_early_used?: boolean
           restaurant_coordinates_cache?: unknown
           restaurant_id: string
           short_id: string
-          status?: Database['public']['Enums']['order_status']
+          status?: Database["public"]["Enums"]["order_status"]
           tracking_link_sent_at?: string | null
           tracking_link_sent_by?: string | null
           updated_at?: string
@@ -342,20 +412,49 @@ export type Database = {
           id?: string
           notes?: string | null
           order_amount?: number
-          payment_status?: Database['public']['Enums']['payment_status']
+          payment_status?: Database["public"]["Enums"]["payment_status"]
           picked_up_at?: string | null
-          prep_time_option?: Database['public']['Enums']['prep_time_option']
+          prep_minutes?: number
           ready_early_used?: boolean
           restaurant_coordinates_cache?: unknown
           restaurant_id?: string
           short_id?: string
-          status?: Database['public']['Enums']['order_status']
+          status?: Database["public"]["Enums"]["order_status"]
           tracking_link_sent_at?: string | null
           tracking_link_sent_by?: string | null
           updated_at?: string
           waiting_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_cash_settlement_id_fkey"
+            columns: ["cash_settlement_id"]
+            isOneToOne: false
+            referencedRelation: "cash_settlements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_tracking_link_sent_by_fkey"
+            columns: ["tracking_link_sent_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_subscriptions: {
         Row: {
@@ -397,7 +496,15 @@ export type Database = {
           user_agent?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       restaurants: {
         Row: {
@@ -457,7 +564,15 @@ export type Database = {
           user_id?: string
           yape_number?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "restaurants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       settlements: {
         Row: {
@@ -471,7 +586,7 @@ export type Database = {
           period_end: string
           period_start: string
           restaurant_id: string
-          status: Database['public']['Enums']['settlement_status']
+          status: Database["public"]["Enums"]["settlement_status"]
           total_amount: number
           updated_at: string
         }
@@ -486,7 +601,7 @@ export type Database = {
           period_end: string
           period_start: string
           restaurant_id: string
-          status?: Database['public']['Enums']['settlement_status']
+          status?: Database["public"]["Enums"]["settlement_status"]
           total_amount?: number
           updated_at?: string
         }
@@ -501,11 +616,19 @@ export type Database = {
           period_end?: string
           period_start?: string
           restaurant_id?: string
-          status?: Database['public']['Enums']['settlement_status']
+          status?: Database["public"]["Enums"]["settlement_status"]
           total_amount?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "settlements_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {
@@ -513,7 +636,7 @@ export type Database = {
           email: string
           id: string
           is_active: boolean
-          role: Database['public']['Enums']['user_role']
+          role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
@@ -521,7 +644,7 @@ export type Database = {
           email: string
           id: string
           is_active?: boolean
-          role: Database['public']['Enums']['user_role']
+          role: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
@@ -529,13 +652,15 @@ export type Database = {
           email?: string
           id?: string
           is_active?: boolean
-          role?: Database['public']['Enums']['user_role']
+          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Relationships: []
       }
     }
-    Views: Record<string, never>
+    Views: {
+      [_ in never]: never
+    }
     Functions: {
       admin_generate_settlements: {
         Args: {
@@ -570,103 +695,180 @@ export type Database = {
       current_restaurant_id: { Args: never; Returns: string }
       current_user_role: {
         Args: never
-        Returns: Database['public']['Enums']['user_role']
+        Returns: Database["public"]["Enums"]["user_role"]
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       enqueue_orders_ready_for_drivers: { Args: never; Returns: undefined }
+      enqueue_overdue_orders: { Args: never; Returns: undefined }
       generate_short_id: { Args: never; Returns: string }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
     }
     Enums: {
       cash_settlement_status:
-        | 'pending'
-        | 'delivered'
-        | 'confirmed'
-        | 'disputed'
-        | 'resolved'
-      domain_event_status: 'pending' | 'published' | 'failed'
+        | "pending"
+        | "delivered"
+        | "confirmed"
+        | "disputed"
+        | "resolved"
+      domain_event_status: "pending" | "published" | "failed"
       order_status:
-        | 'waiting_driver'
-        | 'heading_to_restaurant'
-        | 'waiting_at_restaurant'
-        | 'picked_up'
-        | 'delivered'
-        | 'cancelled'
-      payment_status: 'prepaid' | 'pending_yape' | 'pending_cash'
-      prep_time_option: 'fast' | 'normal' | 'slow'
-      settlement_status: 'pending' | 'paid' | 'overdue'
-      user_role: 'admin' | 'restaurant' | 'driver'
-      vehicle_type: 'moto' | 'bicicleta' | 'pie' | 'auto'
+        | "waiting_driver"
+        | "heading_to_restaurant"
+        | "waiting_at_restaurant"
+        | "picked_up"
+        | "delivered"
+        | "cancelled"
+      payment_status: "prepaid" | "pending_yape" | "pending_cash"
+      settlement_status: "pending" | "paid" | "overdue"
+      user_role: "admin" | "restaurant" | "driver"
+      vehicle_type: "moto" | "bicicleta" | "pie" | "auto"
     }
-    CompositeTypes: Record<string, never>
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-  Name extends
-    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends Name extends { schema: keyof DatabaseWithoutInternals }
-    ? keyof (DatabaseWithoutInternals[Name['schema']]['Tables'] &
-        DatabaseWithoutInternals[Name['schema']]['Views'])
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = Name extends { schema: keyof DatabaseWithoutInternals }
-  ? (DatabaseWithoutInternals[Name['schema']]['Tables'] &
-      DatabaseWithoutInternals[Name['schema']]['Views'])[TableName] extends { Row: infer R }
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
     ? R
     : never
-  : Name extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
-    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[Name] extends { Row: infer R }
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
       ? R
       : never
     : never
 
 export type TablesInsert<
-  Name extends
-    | keyof DefaultSchema['Tables']
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends Name extends { schema: keyof DatabaseWithoutInternals }
-    ? keyof DatabaseWithoutInternals[Name['schema']]['Tables']
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = Name extends { schema: keyof DatabaseWithoutInternals }
-  ? DatabaseWithoutInternals[Name['schema']]['Tables'][TableName] extends { Insert: infer I }
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
     ? I
     : never
-  : Name extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][Name] extends { Insert: infer I }
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
       ? I
       : never
     : never
 
 export type TablesUpdate<
-  Name extends
-    | keyof DefaultSchema['Tables']
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends Name extends { schema: keyof DatabaseWithoutInternals }
-    ? keyof DatabaseWithoutInternals[Name['schema']]['Tables']
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = Name extends { schema: keyof DatabaseWithoutInternals }
-  ? DatabaseWithoutInternals[Name['schema']]['Tables'][TableName] extends { Update: infer U }
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
     ? U
     : never
-  : Name extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][Name] extends { Update: infer U }
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
       ? U
       : never
     : never
 
 export type Enums<
-  Name extends
-    | keyof DefaultSchema['Enums']
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends Name extends { schema: keyof DatabaseWithoutInternals }
-    ? keyof DatabaseWithoutInternals[Name['schema']]['Enums']
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = Name extends { schema: keyof DatabaseWithoutInternals }
-  ? DatabaseWithoutInternals[Name['schema']]['Enums'][EnumName]
-  : Name extends keyof DefaultSchema['Enums']
-    ? DefaultSchema['Enums'][Name]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      cash_settlement_status: [
+        "pending",
+        "delivered",
+        "confirmed",
+        "disputed",
+        "resolved",
+      ],
+      domain_event_status: ["pending", "published", "failed"],
+      order_status: [
+        "waiting_driver",
+        "heading_to_restaurant",
+        "waiting_at_restaurant",
+        "picked_up",
+        "delivered",
+        "cancelled",
+      ],
+      payment_status: ["prepaid", "pending_yape", "pending_cash"],
+      settlement_status: ["pending", "paid", "overdue"],
+      user_role: ["admin", "restaurant", "driver"],
+      vehicle_type: ["moto", "bicicleta", "pie", "auto"],
+    },
+  },
+} as const

@@ -3,6 +3,7 @@ import { Result } from '../../../../shared/kernel/result'
 import {
   DriverCapacityExceeded,
   InvalidStateTransition,
+  NoPrepTimeToReduce,
   OrderNotCancellable,
   PrepTimeExtensionLimit,
 } from '../errors/order-errors'
@@ -137,7 +138,7 @@ export class Order extends AggregateRoot<OrderId> {
         restaurantId: input.restaurantId.value,
         orderAmount: input.payment.orderAmount.amount,
         paymentStatus: input.payment.status,
-        prepTimeOption: input.prepTime.option,
+        prepMinutes: input.prepTime.minutes,
         appearsInQueueAt: appearsInQueueAt.toISOString(),
         estimatedReadyAt: estimatedReadyAt.toISOString(),
       }),
@@ -371,10 +372,15 @@ export class Order extends AggregateRoot<OrderId> {
     return Result.okVoid()
   }
 
-  markReadyEarly(now: Date): Result<void, InvalidStateTransition> {
+  markReadyEarly(now: Date): Result<void, InvalidStateTransition | NoPrepTimeToReduce> {
     if (this._state.status.value !== 'waiting_driver')
       return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
 
+    const remainingMin = (this._state.estimatedReadyAt.getTime() - now.getTime()) / 60_000
+    if (remainingMin <= 10) return Result.fail(new NoPrepTimeToReduce())
+
+    const newReadyAt = new Date(now.getTime() + 10 * 60_000)
+    this._state.estimatedReadyAt = newReadyAt
     this._state.appearsInQueueAt = now
     this._state.readyEarlyUsed = true
     this._state.updatedAt = now
@@ -383,6 +389,7 @@ export class Order extends AggregateRoot<OrderId> {
       new OrderReadyEarly({
         orderId: this.id.value,
         newAppearsInQueueAt: now.toISOString(),
+        newEstimatedReadyAt: newReadyAt.toISOString(),
       }),
     )
     return Result.okVoid()

@@ -155,10 +155,13 @@ function SettlementCard({
       <div className="mt-3 flex items-end gap-4">
         <div>
           <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-            Dice haber entregado
+            Monto entregado
           </div>
           <div className="bleed-text text-3xl font-black font-mono tabular-nums text-on-surface">
             S/ {declared.toFixed(2)}
+          </div>
+          <div className="text-[11px] text-on-surface-variant mt-0.5">
+            total cobrado al cliente — incluye vuelto adelantado
           </div>
         </div>
         {settlement.status === 'disputed' && settlement.reported_amount != null && (

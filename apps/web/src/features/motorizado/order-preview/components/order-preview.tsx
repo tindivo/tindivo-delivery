@@ -34,12 +34,6 @@ function paymentLabel(status: string): string {
   }
 }
 
-const PREP_LABEL: Record<string, string> = {
-  fast: 'Rápido (~10 min)',
-  normal: 'Normal (~15 min)',
-  slow: 'Lento (~20 min)',
-}
-
 /**
  * Preview de un pedido disponible antes de aceptarlo. El driver puede ver
  * todos los detalles (restaurante, monto, tiempo de espera, urgencia) y
@@ -219,9 +213,7 @@ export function OrderPreview({ orderId }: Props) {
             <Icon name="schedule" size={18} className="text-on-surface-variant" />
             <div className="text-sm">
               <span className="text-on-surface-variant">Preparación: </span>
-              <span className="font-semibold text-on-surface">
-                {PREP_LABEL[order.prep_time_option] ?? order.prep_time_option}
-              </span>
+              <span className="font-semibold text-on-surface">{order.prep_minutes} min</span>
             </div>
           </div>
           {restaurant.phone && (

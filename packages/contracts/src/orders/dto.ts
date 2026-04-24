@@ -8,13 +8,13 @@ import {
   TimestampSchema,
   UuidSchema,
 } from '../common'
-import { CancellationReason, OrderStatus, PaymentStatus, PrepTimeOption } from '../enums'
+import { CancellationReason, OrderStatus, PaymentStatus } from '../enums'
 
 /* ─────────────── Request DTOs ─────────────── */
 
 export const CreateOrderRequest = z
   .object({
-    prepTimeOption: PrepTimeOption,
+    prepMinutes: z.number().int().min(5).max(120),
     paymentStatus: PaymentStatus,
     orderAmount: MoneyPenSchema,
     clientPaysWith: MoneyPenSchema.optional(),
@@ -90,7 +90,7 @@ export const OrderSummaryResponse = z.object({
   orderAmount: MoneyPenSchema,
   deliveryFee: MoneyPenSchema,
   paymentStatus: PaymentStatus,
-  prepTimeOption: PrepTimeOption,
+  prepMinutes: z.number().int(),
   estimatedReadyAt: TimestampSchema,
   appearsInQueueAt: TimestampSchema,
   clientPhone: PhonePeSchema.nullable(),

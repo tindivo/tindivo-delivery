@@ -16,16 +16,14 @@ export async function PATCH(req: NextRequest) {
   const parsed = Body.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) return problemCode('INVALID_REQUEST', 400, parsed.error.message)
 
-  const { error } = await auth.auth.supabase
-    .from('driver_availability')
-    .upsert(
-      {
-        driver_id: auth.auth.driverId,
-        is_available: parsed.data.isAvailable,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'driver_id' },
-    )
+  const { error } = await auth.auth.supabase.from('driver_availability').upsert(
+    {
+      driver_id: auth.auth.driverId,
+      is_available: parsed.data.isAvailable,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'driver_id' },
+  )
 
   if (error) return problemCode('INTERNAL_ERROR', 500, error.message)
   return new NextResponse(null, { status: 204 })
