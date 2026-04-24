@@ -144,6 +144,31 @@ export class OrderReadyEarly extends BaseDomainEvent {
   }
 }
 
+/**
+ * Emitido cuando un pedido cruza su `appearsInQueueAt` y queda visible para
+ * los drivers. No se dispara desde el agregado: lo publica pg_cron vía la
+ * función SQL `enqueue_orders_ready_for_drivers()`. La Edge Function
+ * send-push lo mapea a una notificación con destino /motorizado/pedidos/{id}/preview.
+ */
+export class OrderReadyForDrivers extends BaseDomainEvent {
+  readonly eventType = 'OrderReadyForDrivers' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    shortId: string
+    restaurantId: string
+    orderAmount: number
+    appearsInQueueAt: string
+  }
+
+  constructor(payload: OrderReadyForDrivers['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
 export class TrackingLinkSent extends BaseDomainEvent {
   readonly eventType = 'TrackingLinkSent' as const
   readonly aggregateType = AGG

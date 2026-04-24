@@ -1,10 +1,11 @@
 'use client'
 import { api } from '@/lib/api/client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 type Status = 'unsupported' | 'default' | 'granted' | 'denied' | 'subscribed'
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
+const AUTO_HEAL_MIN_INTERVAL_MS = 60_000
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -18,21 +19,70 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 /**
  * Hook para gestionar la suscripción a Web Push Notifications.
  *
- * - Detecta si el browser soporta (Notification + ServiceWorker + PushManager).
- * - Expone el estado actual del permiso.
- * - `subscribe()` dispara el prompt de permisos, registra con pushManager y
- *   envía el endpoint al backend (POST /api/v1/push/subscribe).
- * - `unsubscribe()` invierte el proceso.
+ * Fuente de verdad: `pushManager.getSubscription()`. Tras cualquier operación
+ * se revalida contra PushManager para que el toggle refleje el estado real.
  *
- * UX: tras subscribe/unsubscribe SIEMPRE se revalida el estado real contra
- * PushManager (fuente de verdad) — esto hace que el toggle reaccione al
- * instante sin necesidad de cambiar de pestaña. Además se escucha el evento
- * `visibilitychange` para re-sincronizar cuando el user vuelve a la tab
- * (puede haber cambiado permisos desde settings del browser).
+ * Auto-heal silencioso: si el navegador rota el endpoint (pushsubscriptionchange)
+ * o revoca la suscripción, `checkStatus` detecta `permission=granted` pero
+ * `sub=null` y re-suscribe sin pedir permiso (ya está granted). Esto evita
+ * que el toggle se vea "desactivado" cuando en realidad el usuario sí tiene
+ * permiso concedido.
+ *
+ * Re-sync:
+ *  - `visibilitychange` (user vuelve a la tab).
+ *  - Polling cada 60s (detecta rotación mientras la app está abierta).
+ *  - `message` del SW con `type: 'push-subscription-changed'` (reactivo).
  */
 export function usePushSubscription() {
   const [status, setStatus] = useState<Status>('default')
   const [loading, setLoading] = useState(false)
+  const lastAutoHealAtRef = useRef<number>(0)
+  const autoHealInFlightRef = useRef<boolean>(false)
+
+  const subscribeInternal = useCallback(async (): Promise<boolean> => {
+    if (!VAPID_PUBLIC_KEY) {
+      console.error('[push] NEXT_PUBLIC_VAPID_PUBLIC_KEY no configurada')
+      return false
+    }
+    const reg = await navigator.serviceWorker.ready
+    let sub = await reg.pushManager.getSubscription()
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
+      })
+    }
+
+    const json = sub.toJSON()
+    if (!json.keys?.p256dh || !json.keys?.auth) {
+      throw new Error('PushSubscription incompleto (faltan keys)')
+    }
+    await api.post<void>('push/subscribe', {
+      endpoint: sub.endpoint,
+      keys: {
+        p256dh: json.keys.p256dh,
+        auth: json.keys.auth,
+      },
+      userAgent: navigator.userAgent.slice(0, 300),
+    })
+    return true
+  }, [])
+
+  const tryAutoHeal = useCallback(async (): Promise<void> => {
+    // Debounce: máximo 1 intento por minuto. Evita loops si subscribe falla.
+    const now = Date.now()
+    if (autoHealInFlightRef.current) return
+    if (now - lastAutoHealAtRef.current < AUTO_HEAL_MIN_INTERVAL_MS) return
+    autoHealInFlightRef.current = true
+    lastAutoHealAtRef.current = now
+    try {
+      await subscribeInternal()
+    } catch (err) {
+      console.warn('[push] auto-heal failed, retrying next cycle', err)
+    } finally {
+      autoHealInFlightRef.current = false
+    }
+  }, [subscribeInternal])
 
   const checkStatus = useCallback(async (): Promise<Status> => {
     if (typeof window === 'undefined') return 'default'
@@ -55,27 +105,59 @@ export function usePushSubscription() {
       return 'default'
     }
 
-    // granted → revisar si hay subscription activa
     try {
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.getSubscription()
-      const next: Status = sub ? 'subscribed' : 'granted'
-      setStatus(next)
-      return next
+      if (sub) {
+        setStatus('subscribed')
+        return 'subscribed'
+      }
+      // Permiso granted + sub=null → browser rotó el endpoint. Auto-heal
+      // silencioso porque no necesitamos pedir permiso (ya está granted).
+      setStatus('granted')
+      void tryAutoHeal().then(() => {
+        void (async () => {
+          const regAfter = await navigator.serviceWorker.ready
+          const subAfter = await regAfter.pushManager.getSubscription()
+          if (subAfter) setStatus('subscribed')
+        })()
+      })
+      return 'granted'
     } catch {
       setStatus('granted')
       return 'granted'
     }
-  }, [])
+  }, [tryAutoHeal])
 
   useEffect(() => {
-    checkStatus()
+    void checkStatus()
 
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') checkStatus()
+      if (document.visibilityState === 'visible') void checkStatus()
     }
     document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
+
+    const onSwMessage = (ev: MessageEvent) => {
+      if (ev.data?.type === 'push-subscription-changed') {
+        lastAutoHealAtRef.current = 0 // forzar auto-heal aunque esté en debounce
+        void checkStatus()
+      }
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', onSwMessage)
+    }
+
+    const interval = window.setInterval(() => {
+      void checkStatus()
+    }, AUTO_HEAL_MIN_INTERVAL_MS)
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', onSwMessage)
+      }
+      window.clearInterval(interval)
+    }
   }, [checkStatus])
 
   /**
@@ -87,10 +169,6 @@ export function usePushSubscription() {
    * de gesto si hay setState/render intermedios.
    */
   const subscribe = useCallback(async () => {
-    if (!VAPID_PUBLIC_KEY) {
-      console.error('[push] NEXT_PUBLIC_VAPID_PUBLIC_KEY no configurada')
-      return false
-    }
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
       console.warn('[push] subscribe called without granted permission')
       await checkStatus()
@@ -98,29 +176,7 @@ export function usePushSubscription() {
     }
     setLoading(true)
     try {
-      const reg = await navigator.serviceWorker.ready
-      let sub = await reg.pushManager.getSubscription()
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
-        })
-      }
-
-      const json = sub.toJSON()
-      if (!json.keys?.p256dh || !json.keys?.auth) {
-        throw new Error('PushSubscription incompleto (faltan keys)')
-      }
-      await api.post<void>('push/subscribe', {
-        endpoint: sub.endpoint,
-        keys: {
-          p256dh: json.keys.p256dh,
-          auth: json.keys.auth,
-        },
-        userAgent: navigator.userAgent.slice(0, 300),
-      })
-
-      // Fuente de verdad = PushManager real (no optimistic)
+      await subscribeInternal()
       await checkStatus()
       return true
     } catch (err) {
@@ -130,7 +186,7 @@ export function usePushSubscription() {
     } finally {
       setLoading(false)
     }
-  }, [checkStatus])
+  }, [checkStatus, subscribeInternal])
 
   const unsubscribe = useCallback(async () => {
     setLoading(true)
@@ -141,6 +197,8 @@ export function usePushSubscription() {
         await api.post<void>('push/unsubscribe', { endpoint: sub.endpoint }).catch(() => null)
         await sub.unsubscribe()
       }
+      // Evitar que el polling re-suscriba inmediatamente.
+      lastAutoHealAtRef.current = Date.now()
       await checkStatus()
       return true
     } catch (err) {

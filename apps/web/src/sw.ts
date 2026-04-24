@@ -126,21 +126,30 @@ self.addEventListener('notificationclick', (event) => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────
-// PUSH SUBSCRIPTION CHANGE — re-suscribir transparentemente
+// PUSH SUBSCRIPTION CHANGE — avisar al frontend para re-suscribir
 // ─────────────────────────────────────────────────────────────────────────
+//
+// El SW no tiene el token de Supabase Auth, así que no puede llamar directo
+// a /api/v1/push/subscribe (la API vive en otro origen y requireAuth valida
+// Bearer JWT). Estrategia: avisar a cualquier tab abierta vía postMessage.
+// Si no hay tab abierta, el AutoHealPush del layout se encarga al siguiente
+// boot detectando `permission=granted` + `getSubscription()===null`.
 
 self.addEventListener('pushsubscriptionchange', (event) => {
   const e = event as Event & {
     oldSubscription?: PushSubscription | null
+    newSubscription?: PushSubscription | null
     waitUntil: (p: Promise<unknown>) => void
   }
-  const oldSub = e.oldSubscription
   e.waitUntil(
     (async () => {
-      // Aquí idealmente notificaríamos al backend del cambio. Por ahora,
-      // dejamos que la próxima vez que el usuario abra la app el hook
-      // usePushSubscription re-establezca el subscription.
-      console.log('[SW] pushsubscriptionchange', oldSub?.endpoint)
+      const clientsList = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      })
+      for (const client of clientsList) {
+        client.postMessage({ type: 'push-subscription-changed' })
+      }
     })(),
   )
 })

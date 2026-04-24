@@ -1,3 +1,4 @@
+import { AutoHealPush } from '@/features/pwa/components/auto-heal-push'
 import { InstallPromptBanner } from '@/features/pwa/components/install-prompt-banner'
 import { RegisterPWA } from '@/features/pwa/components/register-pwa'
 import type { Metadata, Viewport } from 'next'
@@ -55,7 +56,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="min-h-screen antialiased text-on-surface">
         <RegisterPWA />
-        <Providers>{children}</Providers>
+        <Providers>
+          <AutoHealPush />
+          {children}
+        </Providers>
         <InstallPromptBanner />
       </body>
     </html>

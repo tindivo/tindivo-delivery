@@ -6,6 +6,15 @@
  *
  * Invocación: por pg_cron cada minuto o por trigger pg_net tras INSERT
  * en domain_events.
+ *
+ * URLs por rol:
+ *  - driver     → /motorizado/...
+ *  - restaurant → /restaurante/...
+ *
+ * Retry/purge:
+ *  - 410/404         → DELETE subscription (endpoint muerto).
+ *  - 5xx/throw       → consecutive_failures++, si >=3 DELETE.
+ *  - 2xx             → last_success_at=now(), consecutive_failures=0.
  */
 
 // @ts-expect-error: Deno remote import
@@ -20,6 +29,8 @@ const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:soporte@tindivo.pe'
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
+
+type Role = 'driver' | 'restaurant' | 'admin'
 
 type EventRow = {
   id: string
@@ -36,63 +47,93 @@ type Notification = {
   tag?: string
 }
 
+type Recipient = { userId: string; role: Role }
+
 function fmtPEN(n: number | string | null | undefined): string {
   const v = Number(n ?? 0)
   return `S/ ${v.toFixed(2)}`
 }
 
 /**
- * Mapea un evento a una notificación (o null si no debe generar push).
+ * Mapea un evento + rol del recipient a una notificación (o null si no debe
+ * generar push para ese rol). Las URLs por rol previenen 404s: el driver
+ * navega bajo /motorizado y el restaurante bajo /restaurante.
  */
-function notificationFor(event: EventRow, context: any): Notification | null {
-  // Order events
+function notificationFor(event: EventRow, context: any, role: Role): Notification | null {
   if (event.aggregate_type === 'Order') {
     const restaurantName = context?.restaurants?.name ?? 'Tindivo'
     const shortId = context?.short_id ?? ''
     const amount = context?.order_amount ? fmtPEN(context.order_amount) : ''
+    const tag = `order-${shortId || event.aggregate_id}`
 
     switch (event.event_type) {
       case 'OrderCreated':
+        // Ya no notifica a drivers en OrderCreated. El push al driver se dispara
+        // con OrderReadyForDrivers cuando el pedido entra en su bandeja.
+        return null
+
+      case 'OrderReadyForDrivers':
+        if (role !== 'driver') return null
         return {
           title: `Nuevo pedido — ${restaurantName}`,
           body: `${amount} · listo pronto`,
-          url: `/orders/available`,
-          tag: `order-${shortId}`,
+          url: `/motorizado/pedidos/${event.aggregate_id}/preview`,
+          tag,
         }
+
       case 'OrderAccepted':
+        if (role !== 'restaurant') return null
         return {
           title: `Motorizado en camino`,
           body: `Tu pedido #${shortId} fue aceptado`,
-          url: `/orders/${event.aggregate_id}`,
-          tag: `order-${shortId}`,
+          url: `/restaurante/pedidos/${event.aggregate_id}`,
+          tag,
         }
+
       case 'DriverArrived':
+        if (role !== 'restaurant') return null
         return {
           title: `Motorizado en el local`,
           body: `Recogiendo pedido #${shortId}`,
-          url: `/orders/${event.aggregate_id}`,
-          tag: `order-${shortId}`,
+          url: `/restaurante/pedidos/${event.aggregate_id}`,
+          tag,
         }
+
       case 'OrderDelivered':
+        if (role !== 'restaurant') return null
         return {
-          title: `Pedido entregado ✓`,
+          title: `Pedido entregado`,
           body: `#${shortId} completado`,
-          url: `/orders/${event.aggregate_id}`,
-          tag: `order-${shortId}`,
+          url: `/restaurante/pedidos/${event.aggregate_id}`,
+          tag,
         }
-      case 'OrderCancelled':
-        return {
-          title: `Pedido cancelado`,
-          body: `#${shortId} ha sido cancelado`,
-          url: `/orders/${event.aggregate_id}`,
-          tag: `order-${shortId}`,
+
+      case 'OrderCancelled': {
+        const base = `#${shortId} ha sido cancelado`
+        if (role === 'driver') {
+          return {
+            title: `Pedido cancelado`,
+            body: base,
+            url: `/motorizado/pedidos/${event.aggregate_id}`,
+            tag,
+          }
         }
+        if (role === 'restaurant') {
+          return {
+            title: `Pedido cancelado`,
+            body: base,
+            url: `/restaurante/pedidos/${event.aggregate_id}`,
+            tag,
+          }
+        }
+        return null
+      }
+
       default:
         return null
     }
   }
 
-  // CashSettlement events
   if (event.aggregate_type === 'CashSettlement') {
     const payload = event.payload ?? {}
     const driverName = context?.drivers?.full_name ?? 'El motorizado'
@@ -101,33 +142,53 @@ function notificationFor(event: EventRow, context: any): Notification | null {
 
     switch (event.event_type) {
       case 'CashSettlementDelivered':
+        if (role !== 'restaurant') return null
         return {
           title: `Efectivo por confirmar — ${driverName}`,
           body: `Declara haber entregado ${fmtPEN(payload.delivered_amount as number)} de ${payload.order_count ?? 0} pedido(s). Tócalo para validar.`,
           url: `/restaurante/efectivo`,
           tag,
         }
+
       case 'CashSettlementConfirmed':
+        if (role !== 'driver') return null
         return {
-          title: `Recepción confirmada ✓`,
+          title: `Recepción confirmada`,
           body: `${restaurantName} confirmó ${fmtPEN(payload.confirmed_amount as number)} de efectivo.`,
           url: `/motorizado/efectivo`,
           tag,
         }
+
       case 'CashSettlementDisputed':
+        if (role !== 'driver') return null
         return {
           title: `Diferencia reportada`,
           body: `${restaurantName} reportó una diferencia. Tindivo está revisando — no discutas en el local.`,
           url: `/motorizado/efectivo`,
           tag,
         }
-      case 'CashSettlementResolved':
-        return {
-          title: `Caso resuelto por Tindivo`,
-          body: `Monto final: ${fmtPEN(payload.resolved_amount as number)}.`,
-          url: `/motorizado/efectivo`,
-          tag,
+
+      case 'CashSettlementResolved': {
+        const body = `Monto final: ${fmtPEN(payload.resolved_amount as number)}.`
+        if (role === 'driver') {
+          return {
+            title: `Caso resuelto por Tindivo`,
+            body,
+            url: `/motorizado/efectivo`,
+            tag,
+          }
         }
+        if (role === 'restaurant') {
+          return {
+            title: `Caso resuelto por Tindivo`,
+            body,
+            url: `/restaurante/efectivo`,
+            tag,
+          }
+        }
+        return null
+      }
+
       default:
         return null
     }
@@ -137,12 +198,12 @@ function notificationFor(event: EventRow, context: any): Notification | null {
 }
 
 /**
- * Determina los userIds destinatarios de un evento.
+ * Determina los recipients (userId + rol) de un evento.
  */
 async function resolveRecipients(
   sb: ReturnType<typeof createServiceRoleClient>,
   event: EventRow,
-): Promise<string[]> {
+): Promise<Recipient[]> {
   if (event.aggregate_type === 'Order') {
     const { data: order } = await sb
       .from('orders')
@@ -152,31 +213,48 @@ async function resolveRecipients(
 
     if (!order) return []
 
-    const users: string[] = []
+    const out: Recipient[] = []
 
     switch (event.event_type) {
-      case 'OrderCreated':
-        {
-          const { data: drivers } = await sb
-            .from('drivers')
-            .select('user_id, driver_availability(is_available)')
-            .eq('is_active', true)
-          for (const d of drivers ?? []) {
-            if (d.driver_availability?.is_available) users.push(d.user_id)
+      case 'OrderReadyForDrivers': {
+        const { data: drivers } = await sb
+          .from('drivers')
+          .select('user_id, driver_availability(is_available)')
+          .eq('is_active', true)
+        for (const d of drivers ?? []) {
+          if (d.driver_availability?.is_available && d.user_id) {
+            out.push({ userId: d.user_id, role: 'driver' })
           }
         }
         break
+      }
+
       case 'OrderAccepted':
       case 'DriverArrived':
       case 'OrderDelivered':
-        if (order.restaurants?.user_id) users.push(order.restaurants.user_id)
+        if (order.restaurants?.user_id) {
+          out.push({ userId: order.restaurants.user_id, role: 'restaurant' })
+        }
         break
+
       case 'OrderCancelled':
-        if (order.drivers?.user_id) users.push(order.drivers.user_id)
-        if (order.restaurants?.user_id) users.push(order.restaurants.user_id)
+        if (order.drivers?.user_id) {
+          out.push({ userId: order.drivers.user_id, role: 'driver' })
+        }
+        if (order.restaurants?.user_id) {
+          out.push({ userId: order.restaurants.user_id, role: 'restaurant' })
+        }
         break
     }
-    return [...new Set(users)]
+
+    // Dedupe por userId + role
+    const seen = new Set<string>()
+    return out.filter((r) => {
+      const key = `${r.userId}:${r.role}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
   }
 
   if (event.aggregate_type === 'CashSettlement') {
@@ -188,27 +266,83 @@ async function resolveRecipients(
 
     if (!settlement) return []
 
-    const users: string[] = []
+    const out: Recipient[] = []
     switch (event.event_type) {
       case 'CashSettlementDelivered':
-        // Al cajero del restaurante
-        if (settlement.restaurants?.user_id) users.push(settlement.restaurants.user_id)
+        if (settlement.restaurants?.user_id) {
+          out.push({ userId: settlement.restaurants.user_id, role: 'restaurant' })
+        }
         break
       case 'CashSettlementConfirmed':
       case 'CashSettlementDisputed':
-        // Al driver
-        if (settlement.drivers?.user_id) users.push(settlement.drivers.user_id)
+        if (settlement.drivers?.user_id) {
+          out.push({ userId: settlement.drivers.user_id, role: 'driver' })
+        }
         break
       case 'CashSettlementResolved':
-        // A ambos
-        if (settlement.drivers?.user_id) users.push(settlement.drivers.user_id)
-        if (settlement.restaurants?.user_id) users.push(settlement.restaurants.user_id)
+        if (settlement.drivers?.user_id) {
+          out.push({ userId: settlement.drivers.user_id, role: 'driver' })
+        }
+        if (settlement.restaurants?.user_id) {
+          out.push({ userId: settlement.restaurants.user_id, role: 'restaurant' })
+        }
         break
     }
-    return [...new Set(users)]
+    return out
   }
 
   return []
+}
+
+/**
+ * Envía la notificación a una lista de suscripciones con manejo de errores
+ * que mantiene saneada la tabla push_subscriptions.
+ */
+async function sendToSubscriptions(
+  sb: ReturnType<typeof createServiceRoleClient>,
+  subs: Array<{
+    id: string
+    endpoint: string
+    p256dh: string
+    auth: string
+    consecutive_failures?: number
+  }>,
+  notification: Notification,
+  tag: string,
+): Promise<number> {
+  let pushed = 0
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        JSON.stringify(notification),
+        { TTL: 60, urgency: 'high', topic: tag },
+      )
+      pushed++
+      await sb
+        .from('push_subscriptions')
+        .update({ last_success_at: new Date().toISOString(), consecutive_failures: 0 })
+        .eq('id', sub.id)
+    } catch (err: any) {
+      const code = err?.statusCode
+      if (code === 410 || code === 404) {
+        // Endpoint muerto — limpiar
+        await sb.from('push_subscriptions').delete().eq('id', sub.id)
+      } else {
+        // Error transitorio: incrementar contador. Purgar al 3er fallo.
+        const next = (sub.consecutive_failures ?? 0) + 1
+        if (next >= 3) {
+          await sb.from('push_subscriptions').delete().eq('id', sub.id)
+        } else {
+          await sb
+            .from('push_subscriptions')
+            .update({ consecutive_failures: next })
+            .eq('id', sub.id)
+        }
+      }
+    }
+  }
+  return pushed
 }
 
 Deno.serve(async () => {
@@ -233,7 +367,7 @@ Deno.serve(async () => {
   let pushed = 0
 
   for (const event of (events ?? []) as EventRow[]) {
-    // Carga contexto según el tipo de agregado (order vs cash_settlement)
+    // Cargar contexto del agregado para los mensajes.
     let context: any = null
     if (event.aggregate_type === 'Order') {
       const { data } = await sb
@@ -251,8 +385,8 @@ Deno.serve(async () => {
       context = data
     }
 
-    const notification = notificationFor(event, context)
-    if (!notification) {
+    const recipients = await resolveRecipients(sb, event)
+    if (recipients.length === 0) {
       await sb
         .from('domain_events')
         .update({ published_at: new Date().toISOString(), status: 'published' })
@@ -261,34 +395,32 @@ Deno.serve(async () => {
       continue
     }
 
-    const userIds = await resolveRecipients(sb, event)
-    if (userIds.length === 0) {
-      await sb
-        .from('domain_events')
-        .update({ published_at: new Date().toISOString(), status: 'published' })
-        .eq('id', event.id)
-      processed++
-      continue
+    // Agrupar recipients por rol para elegir URL correcta en notificationFor.
+    const byRole = new Map<Role, string[]>()
+    for (const r of recipients) {
+      const list = byRole.get(r.role) ?? []
+      list.push(r.userId)
+      byRole.set(r.role, list)
     }
 
-    const { data: subs } = await sb
-      .from('push_subscriptions')
-      .select('id, endpoint, p256dh, auth')
-      .in('user_id', userIds)
+    for (const [role, userIds] of byRole) {
+      const notification = notificationFor(event, context, role)
+      if (!notification) continue
 
-    for (const sub of subs ?? []) {
-      try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          JSON.stringify(notification),
-          { TTL: 60, urgency: 'high', topic: notification.tag ?? event.event_type },
-        )
-        pushed++
-      } catch (err: any) {
-        if (err?.statusCode === 410 || err?.statusCode === 404) {
-          await sb.from('push_subscriptions').delete().eq('id', sub.id)
-        }
-      }
+      const { data: subs } = await sb
+        .from('push_subscriptions')
+        .select('id, endpoint, p256dh, auth, consecutive_failures')
+        .in('user_id', userIds)
+
+      if (!subs || subs.length === 0) continue
+
+      const count = await sendToSubscriptions(
+        sb,
+        subs,
+        notification,
+        notification.tag ?? event.event_type,
+      )
+      pushed += count
     }
 
     await sb

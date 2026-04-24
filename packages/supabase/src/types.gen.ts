@@ -360,10 +360,12 @@ export type Database = {
       push_subscriptions: {
         Row: {
           auth: string
+          consecutive_failures: number
           created_at: string
           device_label: string | null
           endpoint: string
           id: string
+          last_success_at: string | null
           p256dh: string
           updated_at: string
           user_agent: string | null
@@ -371,10 +373,12 @@ export type Database = {
         }
         Insert: {
           auth: string
+          consecutive_failures?: number
           created_at?: string
           device_label?: string | null
           endpoint: string
           id?: string
+          last_success_at?: string | null
           p256dh: string
           updated_at?: string
           user_agent?: string | null
@@ -382,10 +386,12 @@ export type Database = {
         }
         Update: {
           auth?: string
+          consecutive_failures?: number
           created_at?: string
           device_label?: string | null
           endpoint?: string
           id?: string
+          last_success_at?: string | null
           p256dh?: string
           updated_at?: string
           user_agent?: string | null
@@ -538,6 +544,7 @@ export type Database = {
         Returns: Database['public']['Enums']['user_role']
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      enqueue_orders_ready_for_drivers: { Args: never; Returns: undefined }
       generate_short_id: { Args: never; Returns: string }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
     }
