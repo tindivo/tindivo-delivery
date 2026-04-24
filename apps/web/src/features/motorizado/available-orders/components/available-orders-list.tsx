@@ -13,6 +13,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 import { useAvailableOrders } from '../hooks/use-available-orders'
+import { useOverdueFeedback } from '../hooks/use-overdue-feedback'
 import { CapacityIndicator } from './capacity-indicator'
 import { OverdueBanner } from './overdue-banner'
 import { UpcomingOrdersSection } from './upcoming-orders-section'
@@ -61,6 +62,8 @@ export function AvailableOrdersList() {
       overdueCount: overdueSet.size,
     }
   }, [items, now])
+
+  useOverdueFeedback(overdueIds)
 
   return (
     <div className="flex flex-col gap-3">

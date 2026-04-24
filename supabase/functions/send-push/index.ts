@@ -45,6 +45,8 @@ type Notification = {
   body: string
   url: string
   tag?: string
+  requireInteraction?: boolean
+  vibrate?: number[]
 }
 
 type Recipient = { userId: string; role: Role }
@@ -79,6 +81,17 @@ function notificationFor(event: EventRow, context: any, role: Role): Notificatio
           body: `${amount} · listo pronto`,
           url: `/motorizado/pedidos/${event.aggregate_id}/preview`,
           tag,
+        }
+
+      case 'OrderOverdue':
+        if (role !== 'driver') return null
+        return {
+          title: `Zona roja — ${restaurantName}`,
+          body: `El pedido se enfría. ${amount} · acéptalo ya`,
+          url: `/motorizado/pedidos/${event.aggregate_id}/preview`,
+          tag: `overdue-${shortId || event.aggregate_id}`,
+          requireInteraction: true,
+          vibrate: [400, 150, 400, 150, 400],
         }
 
       case 'OrderAccepted':
@@ -216,7 +229,8 @@ async function resolveRecipients(
     const out: Recipient[] = []
 
     switch (event.event_type) {
-      case 'OrderReadyForDrivers': {
+      case 'OrderReadyForDrivers':
+      case 'OrderOverdue': {
         const { data: drivers } = await sb
           .from('drivers')
           .select('user_id, driver_availability(is_available)')
