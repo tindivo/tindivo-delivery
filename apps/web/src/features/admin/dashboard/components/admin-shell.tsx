@@ -148,7 +148,14 @@ function SidebarLink({
   item: { href: string; label: string; icon: string }
   pathname: string
 }) {
-  const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+  // Para el dashboard ('/admin') solo matchea exacto, sino "Dashboard" se
+  // marcaría activo en TODAS las subrutas /admin/* (porque toda url empieza
+  // por '/admin/'). Para los demás items el prefix match es correcto: ej.
+  // /admin/orders/historial activa "Pedidos".
+  const active =
+    item.href === '/admin'
+      ? pathname === '/admin'
+      : pathname === item.href || pathname.startsWith(`${item.href}/`)
   return (
     <Link
       href={item.href}
