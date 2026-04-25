@@ -29,7 +29,7 @@ export function AvailableOrdersList() {
   const router = useRouter()
   const { data, isLoading } = useAvailableOrders()
   const { activeCount, max, isFull } = useDriverCapacity()
-  const now = useNow(15_000)
+  const now = useNow(1_000)
 
   const items = (data?.items ?? []) as OrderItem[]
 
