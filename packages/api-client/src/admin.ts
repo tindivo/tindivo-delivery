@@ -148,5 +148,12 @@ export function adminApi(client: ApiClient) {
 
     getMetrics: (from?: string, to?: string) =>
       client.get<AdminMetricsResponse>('admin/metrics', { query: { from, to } }),
+
+    getSupportPhone: () =>
+      client.get<{ phone: string; updatedAt: string | null }>('admin/settings/support-phone'),
+    updateSupportPhone: (phone: string) =>
+      client.patch<{ phone: string; updatedAt: string | null }>('admin/settings/support-phone', {
+        phone,
+      }),
   }
 }

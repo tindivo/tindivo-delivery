@@ -77,5 +77,6 @@ export function restaurantApi(client: ApiClient) {
         `restaurant/cash-settlements/${id}/dispute`,
         body,
       ),
+    getSupportPhone: () => client.get<{ phone: string }>('restaurant/support-phone'),
   }
 }

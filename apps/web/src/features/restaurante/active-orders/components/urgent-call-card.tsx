@@ -1,5 +1,6 @@
 'use client'
 import { Icon } from '@tindivo/ui'
+import { useSupportPhone } from '../hooks/use-support-phone'
 
 type Props = {
   count: number
@@ -10,16 +11,17 @@ type Props = {
  * hay 1+ pedidos del restaurante con prep_time vencido y SIN driver asignado.
  *
  * UX: el restaurante necesita escalar a Tindivo para que coordinen un driver
- * manualmente. El número se lee de `NEXT_PUBLIC_TINDIVO_PHONE` (formato sin
- * +51, p.ej. "987654321"). Si no está configurado se muestra el botón pero
- * sin link `tel:` — el dueño verá la alerta y sabrá que debe contactar a
- * soporte por otro canal.
+ * manualmente. El número se obtiene de `app_settings.support_phone` (editable
+ * por el admin desde `/admin/settings`). Si está vacío, mostramos un estado
+ * fallback sin link tel: (el dueño verá la alerta y sabrá que debe contactar
+ * a soporte por otro canal).
  */
 export function UrgentCallCard({ count }: Props) {
-  if (count === 0) return null
+  const { data } = useSupportPhone()
+  const phone = (data?.phone ?? '').replace(/\D/g, '')
+  const hasPhone = /^9\d{8}$/.test(phone)
 
-  const phone = process.env.NEXT_PUBLIC_TINDIVO_PHONE?.replace(/\D/g, '') ?? ''
-  const hasPhone = phone.length >= 9
+  if (count === 0) return null
 
   const label = count === 1 ? '1 pedido sin driver' : `${count} pedidos sin driver`
 
@@ -74,8 +76,16 @@ export function UrgentCallCard({ count }: Props) {
         }}
       >
         <Icon name="call" size={20} filled />
-        {hasPhone ? 'Llamar a Tindivo' : 'Contacta a soporte Tindivo'}
+        {hasPhone ? `Llamar al ${formatPhone(phone)}` : 'Contacta a soporte Tindivo'}
       </a>
     </section>
   )
+}
+
+/**
+ * Formato visual: 987 654 321 (en grupos de 3 para legibilidad).
+ */
+function formatPhone(digits: string): string {
+  if (digits.length !== 9) return digits
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 9)}`
 }
