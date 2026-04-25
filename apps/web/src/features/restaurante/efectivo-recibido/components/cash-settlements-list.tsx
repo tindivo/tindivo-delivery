@@ -7,6 +7,8 @@ import {
   useDisputeCashSettlement,
   useRestaurantCashSettlements,
 } from '../hooks/use-cash-settlements'
+import { useRestaurantPendingCash } from '../hooks/use-pending-cash'
+import { PendingCashSection } from './pending-cash-section'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('es-PE', {
@@ -27,6 +29,7 @@ const STATUS_ORDER: Record<string, number> = {
 
 export function CashSettlementsList() {
   const { data, isLoading } = useRestaurantCashSettlements()
+  const { data: pendingData } = useRestaurantPendingCash()
   const [openDispute, setOpenDispute] = useState<string | null>(null)
 
   const items = [...(data?.items ?? [])].sort((a, b) => {
@@ -36,30 +39,37 @@ export function CashSettlementsList() {
   })
 
   const pendingCount = items.filter((i) => i.status === 'delivered').length
+  const pendingDriverCount = pendingData?.items.length ?? 0
 
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="bleed-text font-black text-3xl text-on-surface">Efectivo recibido</h1>
+        <h1 className="bleed-text font-black text-3xl text-on-surface">Efectivo</h1>
         <p className="text-on-surface-variant text-sm mt-1">
-          {pendingCount > 0
-            ? `${pendingCount} ${pendingCount === 1 ? 'entrega pendiente' : 'entregas pendientes'} de confirmación.`
-            : 'Aquí aparecerán las entregas que te hagan los motorizados.'}
+          {buildHeaderCopy(pendingDriverCount, pendingCount)}
         </p>
       </header>
+
+      <PendingCashSection />
+
+      {items.length > 0 && (
+        <h2 className="text-xs font-bold tracking-[0.18em] uppercase text-on-surface-variant pt-2">
+          Por confirmar
+        </h2>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-32" />
           <Skeleton className="h-32" />
         </div>
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && pendingDriverCount === 0 ? (
         <EmptyState
           icon="payments"
-          title="Sin entregas"
-          description="Cuando un motorizado entregue el efectivo que cobró, podrás confirmarlo aquí."
+          title="Sin pedidos en efectivo"
+          description="Cuando un motorizado cobre efectivo de tus pedidos, lo verás aquí en tiempo real."
         />
-      ) : (
+      ) : items.length === 0 ? null : (
         <ul className="space-y-3">
           {items.map((s) => (
             <SettlementCard
@@ -74,6 +84,19 @@ export function CashSettlementsList() {
       )}
     </div>
   )
+}
+
+function buildHeaderCopy(pendingDrivers: number, awaitingConfirm: number): string {
+  if (pendingDrivers > 0 && awaitingConfirm > 0) {
+    return `${pendingDrivers} ${pendingDrivers === 1 ? 'motorizado' : 'motorizados'} con efectivo pendiente · ${awaitingConfirm} por confirmar.`
+  }
+  if (pendingDrivers > 0) {
+    return `${pendingDrivers} ${pendingDrivers === 1 ? 'motorizado tiene' : 'motorizados tienen'} efectivo tuyo sin liquidar.`
+  }
+  if (awaitingConfirm > 0) {
+    return `${awaitingConfirm} ${awaitingConfirm === 1 ? 'entrega pendiente' : 'entregas pendientes'} de confirmación.`
+  }
+  return 'Aquí ves el efectivo que los motorizados aún no te han entregado.'
 }
 
 function SettlementCard({

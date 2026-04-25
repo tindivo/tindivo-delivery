@@ -35,6 +35,28 @@ export type RestaurantSettlementsResponse = {
   items: Settlement[]
 }
 
+/**
+ * Pedido entregado en efectivo del restaurante que el driver aún no liquidó
+ * (status=delivered + payment_status=pending_cash + cash_settlement_id null).
+ * Agrupado por driver en `RestaurantPendingCashGroup`.
+ */
+export type RestaurantPendingCashGroup = {
+  driverId: string
+  driverName: string
+  driverPhone: string
+  vehicleType: string
+  totalCash: number
+  orderCount: number
+  orders: Array<{
+    id: string
+    shortId: string
+    orderAmount: number
+    clientPaysWith: number | null
+    cashOwed: number
+    deliveredAt: string | null
+  }>
+}
+
 // Row crudo de cash_settlements como viene del backend (snake_case con drivers anidado)
 export type RestaurantCashSettlementRow = {
   id: string
@@ -78,5 +100,7 @@ export function restaurantApi(client: ApiClient) {
         body,
       ),
     getSupportPhone: () => client.get<{ phone: string }>('restaurant/support-phone'),
+    listPendingCash: () =>
+      client.get<{ items: RestaurantPendingCashGroup[] }>('restaurant/cash-pending'),
   }
 }
