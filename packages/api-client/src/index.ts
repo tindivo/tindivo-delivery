@@ -17,4 +17,5 @@ export {
   type TrackingPendingRow,
   type AdminSettlementRow,
   type RestaurantDebtSummaryRow,
+  type AdminMetricsResponse,
 } from './admin'

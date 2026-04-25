@@ -16,6 +16,9 @@ export type { MarkDeliveredCommand, MarkDeliveredResult } from './mark-delivered
 export { MarkPickedUpUseCase } from './mark-picked-up.use-case'
 export type { MarkPickedUpCommand, MarkPickedUpResult } from './mark-picked-up.use-case'
 
+export { MarkReceivedUseCase } from './mark-received.use-case'
+export type { MarkReceivedCommand, MarkReceivedResult } from './mark-received.use-case'
+
 export { MarkReadyEarlyUseCase } from './mark-ready-early.use-case'
 export type {
   MarkReadyEarlyCommand,

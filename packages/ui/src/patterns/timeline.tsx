@@ -8,6 +8,8 @@ export type TimelineStep = {
   done: boolean
   current?: boolean
   timestamp?: string
+  /** Texto adicional (ej. "Aceptado en 2:30 · countdown -1:45") */
+  description?: string
 }
 
 type Props = {
@@ -61,7 +63,12 @@ export function Timeline({ steps, className }: Props) {
                 {step.label}
               </p>
               {step.timestamp && (
-                <p className="text-xs text-on-surface-variant/80 mt-0.5">{step.timestamp}</p>
+                <p className="text-xs text-on-surface-variant/80 mt-0.5 font-mono tabular-nums">
+                  {step.timestamp}
+                </p>
+              )}
+              {step.description && (
+                <p className="text-[11px] text-on-surface-variant/70 mt-0.5">{step.description}</p>
               )}
             </div>
           </li>

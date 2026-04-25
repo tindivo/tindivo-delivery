@@ -4,7 +4,6 @@ import {
   BottomActionBar,
   Button,
   ColorDot,
-  ElapsedTimer,
   GlassTopBar,
   Icon,
   IconButton,
@@ -110,7 +109,10 @@ export function RestaurantOrderDetail({ orderId }: Props) {
   const canReadyEarly =
     status === 'waiting_driver' && !order.ready_early_used && remainingMinutes > 10
   const isActive = !['delivered', 'cancelled'].includes(status)
-  const showUrgency = status === 'waiting_driver' && order.estimated_ready_at
+  // El countdown del prep_time se muestra durante toda la fase activa hasta que
+  // el driver recibe el pedido (después ya no aporta info al restaurante).
+  const showCountdown =
+    !['picked_up', 'delivered', 'cancelled'].includes(status) && order.estimated_ready_at
 
   return (
     <div
@@ -163,20 +165,11 @@ export function RestaurantOrderDetail({ orderId }: Props) {
           </div>
         </section>
 
-        {/* Cronómetros: tiempo en cola + countdown si aplica */}
-        {!['delivered', 'cancelled'].includes(status) && (
-          <section className="flex items-stretch gap-2">
-            {order.created_at && (
-              <ElapsedTimer createdAt={order.created_at} now={now} withLabel className="flex-1" />
-            )}
-            {showUrgency && (
-              <UrgencyBadge
-                estimatedReadyAt={order.estimated_ready_at}
-                now={now}
-                variant="hero"
-                className="flex-1"
-              />
-            )}
+        {/* Countdown del prep_time — único timer que ve el restaurante.
+            Va del prep_time → 0 → negativo si el driver tarda en aceptar. */}
+        {showCountdown && (
+          <section>
+            <UrgencyBadge estimatedReadyAt={order.estimated_ready_at} now={now} variant="hero" />
           </section>
         )}
 

@@ -39,6 +39,7 @@ export { SolarCTA } from './patterns/solar-cta'
 export { BottomActionBar } from './patterns/bottom-action-bar'
 export { UrgencyBadge } from './patterns/urgency-badge'
 export { ElapsedTimer } from './patterns/elapsed-timer'
+export { KpiCard } from './patterns/kpi-card'
 
 // Urgency helpers (compartidos frontend + backend)
 export {

@@ -24,6 +24,12 @@ export type CashSummaryItem = {
   settlementStatus: 'pending' | 'delivered' | 'confirmed' | 'disputed' | 'resolved' | null
 }
 
+export type MarkReceivedResponse = {
+  id: string
+  status: string
+  receivedAt: string
+}
+
 export function driverApi(client: ApiClient) {
   return {
     getProfile: () => client.get<DriverProfile>('driver/profile'),
@@ -36,5 +42,7 @@ export function driverApi(client: ApiClient) {
         `driver/cash-settlements/${restaurantId}/deliver`,
         body,
       ),
+    markReceived: (orderId: string) =>
+      client.post<MarkReceivedResponse>(`driver/orders/${orderId}/received`, {}),
   }
 }

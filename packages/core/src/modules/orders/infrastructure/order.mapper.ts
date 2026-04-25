@@ -60,10 +60,18 @@ export const OrderMapper = {
       acceptedAt: row.accepted_at ? new Date(row.accepted_at) : null,
       headingAt: row.heading_at ? new Date(row.heading_at) : null,
       waitingAt: row.waiting_at ? new Date(row.waiting_at) : null,
+      receivedAt: row.received_at ? new Date(row.received_at) : null,
       pickedUpAt: row.picked_up_at ? new Date(row.picked_up_at) : null,
       deliveredAt: row.delivered_at ? new Date(row.delivered_at) : null,
       cancelledAt: row.cancelled_at ? new Date(row.cancelled_at) : null,
       cancelReason: row.cancel_reason,
+      acceptCountdownSeconds: row.accept_countdown_seconds,
+      prepExtendedAt: row.prep_extended_at ? new Date(row.prep_extended_at) : null,
+      prepExtensionMinutes:
+        row.prep_extension_minutes === 5 || row.prep_extension_minutes === 10
+          ? row.prep_extension_minutes
+          : null,
+      readyEarlyAt: row.ready_early_at ? new Date(row.ready_early_at) : null,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     }
@@ -111,10 +119,15 @@ export const OrderMapper = {
       accepted_at: p.acceptedAt?.toISOString() ?? null,
       heading_at: p.headingAt?.toISOString() ?? null,
       waiting_at: p.waitingAt?.toISOString() ?? null,
+      received_at: p.receivedAt?.toISOString() ?? null,
       picked_up_at: p.pickedUpAt?.toISOString() ?? null,
       delivered_at: p.deliveredAt?.toISOString() ?? null,
       cancelled_at: p.cancelledAt?.toISOString() ?? null,
       cancel_reason: p.cancelReason,
+      accept_countdown_seconds: p.acceptCountdownSeconds,
+      prep_extended_at: p.prepExtendedAt?.toISOString() ?? null,
+      prep_extension_minutes: p.prepExtensionMinutes,
+      ready_early_at: p.readyEarlyAt?.toISOString() ?? null,
     }
   },
 }

@@ -120,9 +120,14 @@ export const OrderDetailResponse = OrderSummaryResponse.extend({
   acceptedAt: TimestampSchema.nullable(),
   headingAt: TimestampSchema.nullable(),
   waitingAt: TimestampSchema.nullable(),
+  receivedAt: TimestampSchema.nullable(),
   pickedUpAt: TimestampSchema.nullable(),
   deliveredAt: TimestampSchema.nullable(),
   cancelledAt: TimestampSchema.nullable(),
+  acceptCountdownSeconds: z.number().int().nullable(),
+  prepExtendedAt: TimestampSchema.nullable(),
+  prepExtensionMinutes: z.union([z.literal(5), z.literal(10)]).nullable(),
+  readyEarlyAt: TimestampSchema.nullable(),
 })
 export type OrderDetailResponse = z.infer<typeof OrderDetailResponse>
 
@@ -142,6 +147,13 @@ export const AcceptOrderResponse = z.object({
   acceptedAt: TimestampSchema,
 })
 export type AcceptOrderResponse = z.infer<typeof AcceptOrderResponse>
+
+export const MarkReceivedResponse = z.object({
+  id: UuidSchema,
+  status: OrderStatus,
+  receivedAt: TimestampSchema,
+})
+export type MarkReceivedResponse = z.infer<typeof MarkReceivedResponse>
 
 export const PickedUpResponse = z.object({
   id: UuidSchema,

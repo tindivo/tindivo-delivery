@@ -318,6 +318,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          accept_countdown_seconds: number | null
           accepted_at: string | null
           appears_in_queue_at: string
           cancel_reason: string | null
@@ -342,8 +343,12 @@ export type Database = {
           order_amount: number
           payment_status: Database["public"]["Enums"]["payment_status"]
           picked_up_at: string | null
+          prep_extended_at: string | null
+          prep_extension_minutes: number | null
           prep_minutes: number
+          ready_early_at: string | null
           ready_early_used: boolean
+          received_at: string | null
           restaurant_coordinates_cache: unknown
           restaurant_id: string
           short_id: string
@@ -354,6 +359,7 @@ export type Database = {
           waiting_at: string | null
         }
         Insert: {
+          accept_countdown_seconds?: number | null
           accepted_at?: string | null
           appears_in_queue_at: string
           cancel_reason?: string | null
@@ -378,8 +384,12 @@ export type Database = {
           order_amount: number
           payment_status: Database["public"]["Enums"]["payment_status"]
           picked_up_at?: string | null
+          prep_extended_at?: string | null
+          prep_extension_minutes?: number | null
           prep_minutes: number
+          ready_early_at?: string | null
           ready_early_used?: boolean
+          received_at?: string | null
           restaurant_coordinates_cache?: unknown
           restaurant_id: string
           short_id: string
@@ -390,6 +400,7 @@ export type Database = {
           waiting_at?: string | null
         }
         Update: {
+          accept_countdown_seconds?: number | null
           accepted_at?: string | null
           appears_in_queue_at?: string
           cancel_reason?: string | null
@@ -414,8 +425,12 @@ export type Database = {
           order_amount?: number
           payment_status?: Database["public"]["Enums"]["payment_status"]
           picked_up_at?: string | null
+          prep_extended_at?: string | null
+          prep_extension_minutes?: number | null
           prep_minutes?: number
+          ready_early_at?: string | null
           ready_early_used?: boolean
+          received_at?: string | null
           restaurant_coordinates_cache?: unknown
           restaurant_id?: string
           short_id?: string

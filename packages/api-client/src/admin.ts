@@ -87,6 +87,24 @@ export type TrackingPendingRow = {
   drivers: { full_name: string; phone: string; vehicle_type: string } | null
 }
 
+export type AdminMetricsResponse = {
+  range: { from: string; to: string }
+  totalOrders: number
+  delivered: number
+  cancelled: number
+  avgAcceptSeconds: number | null
+  avgWaitingSeconds: number | null
+  avgReceivedSeconds: number | null
+  avgPickupSeconds: number | null
+  avgDeliverySeconds: number | null
+  avgTotalSeconds: number | null
+  overdueAcceptedCount: number
+  acceptedTotal: number
+  overduePct: number
+  extensionsCount: number
+  readyEarlyCount: number
+}
+
 export function adminApi(client: ApiClient) {
   return {
     listTrackingPending: () =>
@@ -125,5 +143,8 @@ export function adminApi(client: ApiClient) {
       client.post<{ generated: AdminSettlementRow[] }>('admin/settlements/generate', body ?? {}),
     markSettlementPaid: (id: string, body: Settlements.MarkSettlementPaidRequest) =>
       client.post<AdminSettlementRow>(`admin/settlements/${id}/mark-paid`, body),
+
+    getMetrics: (from?: string, to?: string) =>
+      client.get<AdminMetricsResponse>('admin/metrics', { query: { from, to } }),
   }
 }

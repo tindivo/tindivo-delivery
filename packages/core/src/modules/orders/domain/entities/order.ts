@@ -17,6 +17,7 @@ import {
   OrderPickedUp,
   OrderReadyEarly,
   OrderReassigned,
+  OrderReceived,
   TrackingLinkSent,
 } from '../events/order-events'
 import { CancellationPolicy, type Role } from '../policies/cancellation.policy'
@@ -54,10 +55,15 @@ export type OrderProps = {
   acceptedAt: Date | null
   headingAt: Date | null
   waitingAt: Date | null
+  receivedAt: Date | null
   pickedUpAt: Date | null
   deliveredAt: Date | null
   cancelledAt: Date | null
   cancelReason: string | null
+  acceptCountdownSeconds: number | null
+  prepExtendedAt: Date | null
+  prepExtensionMinutes: 5 | 10 | null
+  readyEarlyAt: Date | null
   createdAt: Date
   updatedAt: Date
 }
@@ -123,10 +129,15 @@ export class Order extends AggregateRoot<OrderId> {
       acceptedAt: null,
       headingAt: null,
       waitingAt: null,
+      receivedAt: null,
       pickedUpAt: null,
       deliveredAt: null,
       cancelledAt: null,
       cancelReason: null,
+      acceptCountdownSeconds: null,
+      prepExtendedAt: null,
+      prepExtensionMinutes: null,
+      readyEarlyAt: null,
       createdAt: now,
       updatedAt: now,
     })
@@ -207,10 +218,19 @@ export class Order extends AggregateRoot<OrderId> {
 
     if (activeOrdersCount >= maxConcurrent) return Result.fail(new DriverCapacityExceeded())
 
+    // Snapshot inmutable del countdown (segundos restantes al estimated_ready_at)
+    // en el instante del accept. Negativo si el pedido ya estaba overdue.
+    // Persistir el snapshot evita perder el dato si luego se extiende o
+    // se marca "listo antes" — ambos mutan estimated_ready_at.
+    const countdownSeconds = Math.round(
+      (this._state.estimatedReadyAt.getTime() - now.getTime()) / 1000,
+    )
+
     this._state.driverId = driverId
     this._state.status = OrderStatus.headingToRestaurant()
     this._state.acceptedAt = now
     this._state.headingAt = now
+    this._state.acceptCountdownSeconds = countdownSeconds
     this._state.updatedAt = now
 
     this.raise(
@@ -218,6 +238,7 @@ export class Order extends AggregateRoot<OrderId> {
         orderId: this.id.value,
         driverId: driverId.value,
         acceptedAt: now.toISOString(),
+        acceptCountdownSeconds: countdownSeconds,
       }),
     )
     return Result.okVoid()
@@ -238,6 +259,32 @@ export class Order extends AggregateRoot<OrderId> {
         orderId: this.id.value,
         driverId: this._state.driverId?.value ?? '',
         arrivedAt: now.toISOString(),
+      }),
+    )
+    return Result.okVoid()
+  }
+
+  /**
+   * Marca el momento en que el driver presionó "Recibí el pedido".
+   * No cambia el status (sigue waiting_at_restaurant) — el status pasa a
+   * picked_up cuando completa el pickup form e invoca markPickedUp.
+   * Idempotente: si receivedAt ya está set, no muta nada.
+   */
+  markReceived(now: Date): Result<void, InvalidStateTransition> {
+    if (this._state.status.value !== 'waiting_at_restaurant')
+      return Result.fail(
+        new InvalidStateTransition(this._state.status.value, 'waiting_at_restaurant'),
+      )
+    if (this._state.receivedAt) return Result.okVoid()
+
+    this._state.receivedAt = now
+    this._state.updatedAt = now
+
+    this.raise(
+      new OrderReceived({
+        orderId: this.id.value,
+        driverId: this._state.driverId?.value ?? '',
+        receivedAt: now.toISOString(),
       }),
     )
     return Result.okVoid()
@@ -360,6 +407,8 @@ export class Order extends AggregateRoot<OrderId> {
     this._state.estimatedReadyAt = newEstimated
     this._state.appearsInQueueAt = newAppearsInQueue
     this._state.extensionUsed = true
+    this._state.prepExtendedAt = now
+    this._state.prepExtensionMinutes = additionalMinutes
     this._state.updatedAt = now
 
     this.raise(
@@ -383,6 +432,7 @@ export class Order extends AggregateRoot<OrderId> {
     this._state.estimatedReadyAt = newReadyAt
     this._state.appearsInQueueAt = now
     this._state.readyEarlyUsed = true
+    this._state.readyEarlyAt = now
     this._state.updatedAt = now
 
     this.raise(

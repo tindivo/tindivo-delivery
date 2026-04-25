@@ -6,6 +6,7 @@ import {
   MarkDeliveredUseCase,
   MarkPickedUpUseCase,
   MarkReadyEarlyUseCase,
+  MarkReceivedUseCase,
   RequestExtensionUseCase,
   SupabaseEventPublisher,
   SupabaseOrderRepository,
@@ -43,6 +44,11 @@ export function buildMarkArrivedUseCase(sb: ServerClient) {
 export function buildMarkPickedUpUseCase(sb: ServerClient) {
   const { orders, events } = deps(sb)
   return new MarkPickedUpUseCase(orders, events, clock, publicAppUrl)
+}
+
+export function buildMarkReceivedUseCase(sb: ServerClient) {
+  const { orders, events } = deps(sb)
+  return new MarkReceivedUseCase(orders, events, clock)
 }
 
 export function buildMarkDeliveredUseCase(sb: ServerClient) {

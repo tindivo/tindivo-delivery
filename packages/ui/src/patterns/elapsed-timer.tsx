@@ -9,6 +9,8 @@ type Props = {
   variant?: 'chip' | 'inline'
   /** Texto pequeño bajo el cronómetro (ej. "Hace 12 min") */
   withLabel?: boolean
+  /** Sobrescribe el label superior. Default: "Tiempo en cola". */
+  label?: string
 }
 
 /**
@@ -22,9 +24,11 @@ export function ElapsedTimer({
   className,
   variant = 'chip',
   withLabel = false,
+  label,
 }: Props) {
   const elapsed = formatElapsed(createdAt, now)
-  const label = elapsedLabel(createdAt, now)
+  const subLabel = elapsedLabel(createdAt, now)
+  const headerLabel = label ?? 'Tiempo en cola'
 
   if (variant === 'inline') {
     return (
@@ -51,7 +55,7 @@ export function ElapsedTimer({
     >
       <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] uppercase">
         <Icon name="timer" size={12} filled />
-        Tiempo en cola
+        {headerLabel}
       </div>
       <div
         className="font-black font-mono tabular-nums"
@@ -59,7 +63,7 @@ export function ElapsedTimer({
       >
         {elapsed}
       </div>
-      {withLabel && <div className="text-[10px] opacity-85">{label}</div>}
+      {withLabel && <div className="text-[10px] opacity-85">{subLabel}</div>}
     </div>
   )
 }

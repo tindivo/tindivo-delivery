@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
 import { useMarkDelivered } from '../hooks/use-mark-delivered'
+import { useMarkReceived } from '../hooks/use-mark-received'
 import { useOrderDetail } from '../hooks/use-order-detail'
 import { YapeQrCard } from './yape-qr-card'
 
@@ -27,6 +28,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const router = useRouter()
   const { data: order, isLoading } = useOrderDetail(orderId)
   const arrived = useMarkArrived(orderId)
+  const received = useMarkReceived(orderId)
   const delivered = useMarkDelivered(orderId)
   const now = useNow(1_000)
 
@@ -153,10 +155,17 @@ export function ActiveOrderDetail({ orderId }: Props) {
           />
         )}
 
-        {/* Cronómetros: tiempo en cola + countdown si aplica */}
+        {/* Cronómetro: arranca en 0:00 al aceptar y crece hasta entrega.
+            Si aún hay countdown del prep_time vigente, se muestra al lado. */}
         <section className="flex items-stretch gap-2">
-          {raw.created_at && (
-            <ElapsedTimer createdAt={raw.created_at} now={now} withLabel className="flex-1" />
+          {raw.accepted_at && (
+            <ElapsedTimer
+              createdAt={raw.accepted_at}
+              now={now}
+              withLabel
+              label="TIEMPO DE ENTREGA"
+              className="flex-1"
+            />
           )}
           {raw.estimated_ready_at &&
             ['heading_to_restaurant', 'waiting_at_restaurant'].includes(status) && (
@@ -246,13 +255,22 @@ export function ActiveOrderDetail({ orderId }: Props) {
         )}
 
         {status === 'waiting_at_restaurant' && (
-          <Link
-            href={`/motorizado/pedidos/${orderId}/pickup`}
-            className="w-full inline-flex items-center justify-center gap-2 h-14 px-8 rounded-xl bg-primary-container text-on-primary font-bold tracking-wide text-lg shadow-[0_4px_20px_rgba(255,107,53,0.3)] transition-all duration-300 active:scale-95"
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={received.isPending}
+            onClick={() => {
+              received.mutate(undefined, {
+                onSuccess: () => router.push(`/motorizado/pedidos/${orderId}/pickup`),
+                // En error igual navega: el siguiente paso (pickup) no depende
+                // del received_at y fallar aquí no debe bloquear al driver.
+                onError: () => router.push(`/motorizado/pedidos/${orderId}/pickup`),
+              })
+            }}
           >
             <Icon name="shopping_bag" size={22} filled />
             Recibí el pedido
-          </Link>
+          </Button>
         )}
 
         {status === 'picked_up' && raw.delivery_maps_url && (

@@ -28,7 +28,12 @@ export class OrderAccepted extends BaseDomainEvent {
   readonly eventType = 'OrderAccepted' as const
   readonly aggregateType = AGG
   readonly aggregateId: string
-  readonly payload: { orderId: string; driverId: string; acceptedAt: string }
+  readonly payload: {
+    orderId: string
+    driverId: string
+    acceptedAt: string
+    acceptCountdownSeconds: number
+  }
 
   constructor(payload: OrderAccepted['payload'], metadata?: EventMetadata) {
     super(metadata)
@@ -44,6 +49,19 @@ export class DriverArrived extends BaseDomainEvent {
   readonly payload: { orderId: string; driverId: string; arrivedAt: string }
 
   constructor(payload: DriverArrived['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
+export class OrderReceived extends BaseDomainEvent {
+  readonly eventType = 'OrderReceived' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: { orderId: string; driverId: string; receivedAt: string }
+
+  constructor(payload: OrderReceived['payload'], metadata?: EventMetadata) {
     super(metadata)
     this.aggregateId = payload.orderId
     this.payload = payload
