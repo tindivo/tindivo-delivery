@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
       accent_color: input.accentColor,
       coordinates_lat: input.coordinates.lat,
       coordinates_lng: input.coordinates.lng,
+      commission_per_order: input.commissionPerOrder,
       is_active: true,
       is_blocked: false,
     })

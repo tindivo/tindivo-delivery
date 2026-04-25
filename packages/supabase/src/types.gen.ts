@@ -559,6 +559,7 @@ export type Database = {
           address: string
           balance_due: number
           block_reason: string | null
+          commission_per_order: number
           coordinates: unknown
           coordinates_lat: number | null
           coordinates_lng: number | null
@@ -578,6 +579,7 @@ export type Database = {
           address: string
           balance_due?: number
           block_reason?: string | null
+          commission_per_order?: number
           coordinates?: unknown
           coordinates_lat?: number | null
           coordinates_lng?: number | null
@@ -597,6 +599,7 @@ export type Database = {
           address?: string
           balance_due?: number
           block_reason?: string | null
+          commission_per_order?: number
           coordinates?: unknown
           coordinates_lat?: number | null
           coordinates_lng?: number | null

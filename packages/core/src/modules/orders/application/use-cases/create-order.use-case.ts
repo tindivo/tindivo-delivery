@@ -16,6 +16,10 @@ export type CreateOrderCommand = {
   orderAmount: number
   clientPaysWith?: number
   notes?: string
+  // Comisión Tindivo en S/ que se cobrará al restaurante por este pedido.
+  // El endpoint REST la lee de restaurants.commission_per_order y la pasa
+  // aquí. Se snapshotea en orders.delivery_fee al insertar.
+  commissionPerOrder: number
 }
 
 export type CreateOrderResult = {
@@ -48,7 +52,7 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
         restaurantId,
         prepTime,
         payment,
-        deliveryFee: Money.pen(1.0),
+        deliveryFee: Money.pen(cmd.commissionPerOrder),
         notes: cmd.notes,
         now: this.clock.now(),
       })

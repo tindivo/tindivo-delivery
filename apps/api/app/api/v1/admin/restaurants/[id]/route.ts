@@ -50,6 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     accent_color?: string
     coordinates_lat?: number
     coordinates_lng?: number
+    commission_per_order?: number
   } = { updated_at: new Date().toISOString() }
   if (input.name !== undefined) patch.name = input.name
   if (input.phone !== undefined) patch.phone = input.phone
@@ -61,6 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     patch.coordinates_lat = input.coordinates.lat
     patch.coordinates_lng = input.coordinates.lng
   }
+  if (input.commissionPerOrder !== undefined) patch.commission_per_order = input.commissionPerOrder
 
   // Si se cambia el color, validar que no choque
   if (input.accentColor) {

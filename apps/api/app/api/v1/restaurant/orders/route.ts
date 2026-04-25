@@ -23,10 +23,24 @@ export async function POST(req: NextRequest) {
     return problemCode('FORBIDDEN', 403, 'El usuario no tiene restaurante asociado')
   }
 
+  // Snapshot de la comisión actual del restaurante. Cambios futuros en
+  // restaurants.commission_per_order NO afectan este pedido (consistencia
+  // contable: cada pedido conserva su delivery_fee al momento de creación).
+  const { data: restaurant, error: rErr } = await auth.auth.supabase
+    .from('restaurants')
+    .select('commission_per_order')
+    .eq('id', auth.auth.restaurantId)
+    .single()
+
+  if (rErr || !restaurant) {
+    return problemCode('INTERNAL_ERROR', 500, 'No se pudo leer la comisión del restaurante')
+  }
+
   const useCase = buildCreateOrderUseCase(auth.auth.supabase)
   const result = await useCase.execute({
     ...body.data,
     restaurantId: auth.auth.restaurantId,
+    commissionPerOrder: Number(restaurant.commission_per_order),
   })
 
   if (result.isFailure) return problem(result.error)

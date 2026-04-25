@@ -23,6 +23,7 @@ export type RestaurantRow = {
   is_blocked: boolean
   block_reason: string | null
   balance_due: number
+  commission_per_order: number
   created_at: string
   updated_at: string
 }

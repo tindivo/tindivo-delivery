@@ -34,6 +34,7 @@ type Props = {
     accent_color: string
     coordinates_lat: number | null
     coordinates_lng: number | null
+    commission_per_order: number
   }
 }
 
@@ -53,6 +54,11 @@ export function RestaurantForm({ mode, initial }: Props) {
       ? { lat: initial.coordinates_lat, lng: initial.coordinates_lng }
       : null,
   )
+  const [commissionPerOrder, setCommissionPerOrder] = useState<string>(
+    initial?.commission_per_order != null
+      ? Number(initial.commission_per_order).toFixed(2)
+      : '1.00',
+  )
   const [ownerEmail, setOwnerEmail] = useState('')
   const [ownerPassword, setOwnerPassword] = useState('')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -68,6 +74,13 @@ export function RestaurantForm({ mode, initial }: Props) {
       return
     }
 
+    const commission = Number(commissionPerOrder)
+    if (!Number.isFinite(commission) || commission < 0 || commission > 100) {
+      setErrorMsg('La comisión debe ser un número entre 0 y 100.')
+      return
+    }
+    const commissionRounded = Math.round(commission * 100) / 100
+
     if (mode === 'create') {
       const body: Restaurants.CreateRestaurantRequest = {
         name,
@@ -77,6 +90,7 @@ export function RestaurantForm({ mode, initial }: Props) {
         qrUrl: qrUrl || undefined,
         accentColor,
         coordinates: coords,
+        commissionPerOrder: commissionRounded,
         ownerEmail,
         ownerPassword,
       }
@@ -95,6 +109,7 @@ export function RestaurantForm({ mode, initial }: Props) {
         qrUrl: qrUrl ?? null,
         accentColor,
         coordinates: coords,
+        commissionPerOrder: commissionRounded,
       }
       try {
         await update.mutateAsync(body)
@@ -205,6 +220,31 @@ export function RestaurantForm({ mode, initial }: Props) {
               pattern="\d{9}"
             />
           </div>
+        </div>
+        <div>
+          <Label htmlFor="commission">Comisión Tindivo por pedido</Label>
+          <div className="flex items-stretch gap-2">
+            <span className="inline-flex items-center px-3 rounded-xl bg-surface-container border border-outline-variant/30 text-sm font-semibold text-on-surface-variant">
+              S/
+            </span>
+            <Input
+              id="commission"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={commissionPerOrder}
+              onChange={(e) => setCommissionPerOrder(e.target.value)}
+              required
+              inputMode="decimal"
+              placeholder="1.00"
+              className="font-mono"
+            />
+          </div>
+          <p className="text-xs text-on-surface-variant mt-1">
+            Monto que se cobra al restaurante por cada pedido entregado. Solo aplica a pedidos
+            nuevos — los pedidos ya creados mantienen su comisión original.
+          </p>
         </div>
       </section>
 

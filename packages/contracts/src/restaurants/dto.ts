@@ -8,6 +8,15 @@ import {
   UuidSchema,
 } from '../common'
 
+// Comisión Tindivo por pedido entregado. Configurable por restaurante.
+// Se snapshotea en orders.delivery_fee al crear el pedido.
+export const CommissionPerOrderSchema = z
+  .number()
+  .min(0, 'La comisión no puede ser negativa')
+  .max(100, 'La comisión máxima es S/ 100')
+  .multipleOf(0.01, 'Máximo 2 decimales')
+export type CommissionPerOrder = z.infer<typeof CommissionPerOrderSchema>
+
 export const CreateRestaurantRequest = z.object({
   name: z.string().min(2).max(80),
   phone: PhonePeSchema,
@@ -19,6 +28,7 @@ export const CreateRestaurantRequest = z.object({
   accentColor: AccentColorSchema,
   // Ubicación exacta seleccionada por el admin en el mapa (Leaflet).
   coordinates: CoordinatesSchema,
+  commissionPerOrder: CommissionPerOrderSchema,
   ownerEmail: z.string().email(),
   ownerPassword: z.string().min(8).max(80),
 })
@@ -32,6 +42,7 @@ export const UpdateRestaurantRequest = z.object({
   qrUrl: z.string().url().nullable().optional(),
   accentColor: AccentColorSchema.optional(),
   coordinates: CoordinatesSchema.optional(),
+  commissionPerOrder: CommissionPerOrderSchema.optional(),
 })
 export type UpdateRestaurantRequest = z.infer<typeof UpdateRestaurantRequest>
 
@@ -54,6 +65,7 @@ export const RestaurantResponse = z.object({
   isBlocked: z.boolean(),
   blockReason: z.string().nullable(),
   balanceDue: MoneyPenSchema,
+  commissionPerOrder: MoneyPenSchema,
   createdAt: TimestampSchema,
   updatedAt: TimestampSchema,
 })

@@ -24,7 +24,7 @@ import { CancellationPolicy, type Role } from '../policies/cancellation.policy'
 import { StateTransitionPolicy } from '../policies/state-transition.policy'
 import type { Coordinates } from '../value-objects/coordinates'
 import type { DriverId } from '../value-objects/driver-id'
-import { Money } from '../value-objects/money'
+import type { Money } from '../value-objects/money'
 import { OrderId } from '../value-objects/order-id'
 import { OrderStatus } from '../value-objects/order-status'
 import type { PaymentIntent } from '../value-objects/payment-intent'
@@ -72,7 +72,7 @@ export type CreateOrderInput = {
   restaurantId: RestaurantId
   prepTime: PrepTime
   payment: PaymentIntent
-  deliveryFee?: Money
+  deliveryFee: Money
   notes?: string
   now?: Date
 }
@@ -104,7 +104,6 @@ export class Order extends AggregateRoot<OrderId> {
     const shortId = ShortId.generate()
     const estimatedReadyAt = input.prepTime.computeEstimatedReadyAt(now)
     const appearsInQueueAt = input.prepTime.computeAppearsInQueueAt(now)
-    const deliveryFee = input.deliveryFee ?? Money.pen(1.0)
 
     const order = new Order({
       id,
@@ -114,7 +113,7 @@ export class Order extends AggregateRoot<OrderId> {
       status: OrderStatus.waitingDriver(),
       prepTime: input.prepTime,
       payment: input.payment,
-      deliveryFee,
+      deliveryFee: input.deliveryFee,
       appearsInQueueAt,
       estimatedReadyAt,
       clientPhone: null,

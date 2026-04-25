@@ -46,6 +46,7 @@ export function RestaurantsList() {
                 <th className="text-left px-4 py-3">Color</th>
                 <th className="text-left px-4 py-3">Teléfono</th>
                 <th className="text-left px-4 py-3">Yape / QR</th>
+                <th className="text-left px-4 py-3">Comisión</th>
                 <th className="text-left px-4 py-3">Deuda</th>
                 <th className="text-right px-4 py-3" />
               </tr>
@@ -77,6 +78,9 @@ export function RestaurantsList() {
                         Sin QR
                       </span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-on-surface-variant">
+                    S/ {Number(r.commission_per_order).toFixed(2)}
                   </td>
                   <td className="px-4 py-3 font-semibold">S/ {Number(r.balance_due).toFixed(2)}</td>
                   <td className="px-4 py-3 text-right">
