@@ -117,7 +117,16 @@ export function RestaurantOrderDetail({ orderId }: Props) {
   return (
     <div
       className="min-h-screen"
-      style={{ paddingBottom: isActive ? 'calc(160px + env(safe-area-inset-bottom))' : '2rem' }}
+      style={{
+        // En estado activo el BottomActionBar (≈160px) cubre el fondo;
+        // en delivered/cancelled NO se renderiza ese bar pero SIGUE existiendo
+        // el BottomNav del layout (≈112px). Sin reservar ese espacio el
+        // último card se pinta detrás del nav semi-transparente y los labels
+        // del nav se ven cortados.
+        paddingBottom: isActive
+          ? 'calc(160px + env(safe-area-inset-bottom))'
+          : 'calc(112px + env(safe-area-inset-bottom))',
+      }}
     >
       <GlassTopBar
         title="PEDIDO"
