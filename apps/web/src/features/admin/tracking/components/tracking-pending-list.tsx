@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import type { TrackingPendingRow } from '@tindivo/api-client'
 import { normalizeToE164Pe } from '@tindivo/core'
 import { EmptyState, Icon, Skeleton, WaLinkButton } from '@tindivo/ui'
+import Link from 'next/link'
 import { useTrackingPending } from '../hooks/use-tracking-pending'
 
 function elapsedMinutes(iso: string): number {
@@ -44,13 +45,22 @@ export function TrackingPendingList() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="bleed-text font-black text-3xl text-on-surface">Envío de tracking</h1>
-        <p className="text-on-surface-variant text-sm mt-1 max-w-2xl">
-          Pedidos en camino al cliente sin link de tracking enviado. Toca{' '}
-          <strong>Enviar por WhatsApp</strong> — abre el chat con el mensaje pre-rellenado. Al
-          enviar desde WhatsApp queda registrado quién y cuándo lo envió.
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="bleed-text font-black text-3xl text-on-surface">Envío de tracking</h1>
+          <p className="text-on-surface-variant text-sm mt-1 max-w-2xl">
+            Pedidos en camino al cliente sin link de tracking enviado. Toca{' '}
+            <strong>Enviar por WhatsApp</strong> — abre el chat con el mensaje pre-rellenado. Al
+            enviar desde WhatsApp queda registrado quién y cuándo lo envió.
+          </p>
+        </div>
+        <Link
+          href="/admin/tracking/historial"
+          className="shrink-0 inline-flex items-center gap-2 rounded-xl px-4 py-2 bg-surface-container-lowest border border-outline-variant/30 text-sm font-semibold hover:shadow-[0_4px_20px_rgba(171,53,0,0.04)] transition-shadow"
+        >
+          <Icon name="history" size={18} />
+          Ver enviados
+        </Link>
       </header>
 
       {isLoading ? (

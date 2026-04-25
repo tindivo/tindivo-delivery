@@ -23,15 +23,16 @@ type MetricsResponse = {
   readyEarlyCount: number
 }
 
-/** Rango por defecto: hoy en hora Lima (UTC-5, sin DST). */
-function defaultRangeLima(): { from: Date; to: Date } {
+/** Rango por defecto: hoy en hora San Jacinto (UTC-5, sin DST). */
+function defaultRangeSanJacinto(): { from: Date; to: Date } {
   const now = new Date()
-  // Conviértelo a Lima (UTC-5): suma -5h al UTC y trunca al día.
-  const limaNow = new Date(now.getTime() - 5 * 60 * 60 * 1000)
-  const startLima = new Date(
-    Date.UTC(limaNow.getUTCFullYear(), limaNow.getUTCMonth(), limaNow.getUTCDate(), 0, 0, 0),
+  // San Jacinto está en UTC-5 (mismo offset que America/Lima): suma -5h al
+  // UTC y trunca al día para obtener el inicio del día local.
+  const localNow = new Date(now.getTime() - 5 * 60 * 60 * 1000)
+  const startLocal = new Date(
+    Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate(), 0, 0, 0),
   )
-  const from = new Date(startLima.getTime() + 5 * 60 * 60 * 1000)
+  const from = new Date(startLocal.getTime() + 5 * 60 * 60 * 1000)
   const to = new Date(from.getTime() + 24 * 60 * 60 * 1000)
   return { from, to }
 }
@@ -50,7 +51,7 @@ function avgSeconds(rows: { from: string | null; to: string | null }[]): number 
 /**
  * GET /api/v1/admin/metrics?from=ISO&to=ISO
  *
- * Agregados operativos para el dashboard del admin. Default: hoy en TZ Lima.
+ * Agregados operativos para el dashboard del admin. Default: hoy en TZ San Jacinto.
  * Calcula promedios por etapa solo sobre pedidos con timestamps válidos
  * (excluye nulls). Las métricas son sobre pedidos creados en el rango.
  */
@@ -61,7 +62,8 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url)
   const fromQ = url.searchParams.get('from')
   const toQ = url.searchParams.get('to')
-  const range = fromQ && toQ ? { from: new Date(fromQ), to: new Date(toQ) } : defaultRangeLima()
+  const range =
+    fromQ && toQ ? { from: new Date(fromQ), to: new Date(toQ) } : defaultRangeSanJacinto()
 
   const { data, error } = await auth.auth.supabase
     .from('orders')

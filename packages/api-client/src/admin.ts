@@ -109,6 +109,8 @@ export function adminApi(client: ApiClient) {
   return {
     listTrackingPending: () =>
       client.get<{ items: TrackingPendingRow[] }>('admin/orders/tracking-pending'),
+    listTrackingSent: () =>
+      client.get<{ items: TrackingPendingRow[] }>('admin/orders/tracking-sent'),
     listRestaurants: () => client.get<{ items: RestaurantRow[] }>('admin/restaurants'),
     getRestaurant: (id: string) => client.get<RestaurantRow>(`admin/restaurants/${id}`),
     createRestaurant: (body: Restaurants.CreateRestaurantRequest) =>

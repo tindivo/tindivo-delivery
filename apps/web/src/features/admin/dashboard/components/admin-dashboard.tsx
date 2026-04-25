@@ -61,7 +61,7 @@ export function AdminDashboard() {
       {kpis && (
         <section>
           <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-on-surface-variant mb-3">
-            Métricas del día (Lima)
+            Métricas del día (San Jacinto)
           </h2>
           <div className="grid grid-cols-4 gap-3">
             <KpiCard

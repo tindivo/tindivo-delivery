@@ -190,7 +190,7 @@ export function OrderDetail({ orderId }: Props) {
             <StatusChip status={order.status} />
           </div>
           <p className="text-on-surface-variant text-sm mt-0.5">
-            Creado {fmtDateTime(order.created_at)} (Lima)
+            Creado {fmtDateTime(order.created_at)} (San Jacinto)
           </p>
         </div>
       </header>
@@ -230,7 +230,7 @@ export function OrderDetail({ orderId }: Props) {
                     <Icon name="more_time" size={18} className="text-amber-700" />
                     <span>
                       Extendió <strong>+{o.prep_extension_minutes ?? '?'} min</strong> a las{' '}
-                      <span className="font-mono">{fmtTime(o.prep_extended_at)}</span> (Lima)
+                      <span className="font-mono">{fmtTime(o.prep_extended_at)}</span> (San Jacinto)
                     </span>
                   </div>
                 )}
@@ -239,7 +239,7 @@ export function OrderDetail({ orderId }: Props) {
                     <Icon name="bolt" size={18} className="text-emerald-700" />
                     <span>
                       Marcó <strong>listo antes</strong> a las{' '}
-                      <span className="font-mono">{fmtTime(o.ready_early_at)}</span> (Lima)
+                      <span className="font-mono">{fmtTime(o.ready_early_at)}</span> (San Jacinto)
                     </span>
                   </div>
                 )}
