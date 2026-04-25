@@ -1,5 +1,6 @@
 'use client'
 import 'leaflet/dist/leaflet.css'
+import { SAN_JACINTO_CENTER } from '@tindivo/core'
 import L from 'leaflet'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet'
@@ -12,14 +13,21 @@ type Props = {
   initialZoom?: number
   value?: Coordinates | null
   onChange?: (coords: Coordinates) => void
+  /**
+   * Marker de referencia visual no editable. Útil para mostrar un punto
+   * de orientación (p.ej. la ubicación del restaurante cuando el driver
+   * registra la dirección del cliente). Se renderiza con un ícono gris
+   * distinto al marker editable y NO acepta drag ni emite eventos.
+   */
+  referenceMarker?: Coordinates
   readOnly?: boolean
   className?: string
   height?: number | string
 }
 
-const defaultCenter: Coordinates = { lat: -8.1116, lng: -79.0286 } // Trujillo
+const defaultCenter: Coordinates = SAN_JACINTO_CENTER
 
-// Icono personalizado naranja (evita dependencias de /images/ de leaflet)
+// Icono editable (cliente / selección activa): naranja con pulse.
 const markerIcon = new L.DivIcon({
   className: '',
   html: `<div style="
@@ -47,6 +55,29 @@ const markerIcon = new L.DivIcon({
   iconAnchor: [16, 16],
 })
 
+// Icono de referencia (no editable): gris azulado sin animación, forma
+// cuadrada redondeada para diferenciarlo claramente del marker naranja.
+const referenceIcon = new L.DivIcon({
+  className: '',
+  html: `<div style="
+    width: 28px; height: 28px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  ">
+    <div style="
+      position: relative; width: 22px; height: 22px;
+      background: #475569; border: 3px solid #fff; border-radius: 6px;
+      box-shadow: 0 3px 10px rgba(71,85,105,0.45);
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <div style="
+        width: 8px; height: 8px; background: #fff; border-radius: 2px;
+      "></div>
+    </div>
+  </div>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+})
+
 function ClickCapture({ onSelect }: { onSelect: (c: Coordinates) => void }) {
   useMapEvents({
     click(e) {
@@ -59,12 +90,16 @@ function ClickCapture({ onSelect }: { onSelect: (c: Coordinates) => void }) {
 /**
  * Mapa interactivo Leaflet. El usuario hace click o arrastra el marker
  * para seleccionar un punto. Emite `onChange` con las coordenadas.
+ *
+ * Opcionalmente acepta `referenceMarker` para pintar un segundo punto
+ * de referencia visual (no editable, ícono distinto).
  */
 export function InteractiveMap({
   initialCenter,
   initialZoom = 16,
   value,
   onChange,
+  referenceMarker,
   readOnly = false,
   className,
   height = 400,
@@ -83,7 +118,7 @@ export function InteractiveMap({
       const el = containerRef.current?.querySelector<HTMLElement>('.leaflet-container')
       if (el) {
         const anyEl = el as unknown as { _leaflet_id?: number }
-        if (anyEl._leaflet_id !== undefined) delete anyEl._leaflet_id
+        if (anyEl._leaflet_id !== undefined) anyEl._leaflet_id = undefined
       }
     }
   }, [])
@@ -108,7 +143,12 @@ export function InteractiveMap({
         'w-full rounded-xl overflow-hidden border border-outline-variant/30 shadow-[0_4px_20px_rgba(171,53,0,0.04)]',
         className,
       )}
-      style={{ height }}
+      // `isolation: isolate` crea un nuevo stacking context que contiene
+      // los z-index altos de Leaflet (.leaflet-pane=400, .leaflet-control=1000)
+      // dentro del contenedor del mapa. Sin esto, esos z-index escapan y el
+      // mapa se superpone sobre elementos `position: fixed` del layout
+      // (p.ej. el BottomActionBar).
+      style={{ height, isolation: 'isolate' }}
     >
       {mountKey === null ? (
         <div className="h-full w-full bg-surface-container animate-pulse" />
@@ -126,6 +166,15 @@ export function InteractiveMap({
             maxZoom={19}
           />
           {!readOnly && <ClickCapture onSelect={handleSelect} />}
+          {referenceMarker && (
+            <Marker
+              position={[referenceMarker.lat, referenceMarker.lng]}
+              icon={referenceIcon}
+              draggable={false}
+              interactive={false}
+              keyboard={false}
+            />
+          )}
           {marker && (
             <Marker
               position={[marker.lat, marker.lng]}

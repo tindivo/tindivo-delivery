@@ -1,6 +1,7 @@
 'use client'
 import { ApiError } from '@tindivo/api-client'
 import type { Restaurants } from '@tindivo/contracts'
+import { SAN_JACINTO_CENTER } from '@tindivo/core'
 import { Button, Icon, Input, Label } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
@@ -152,7 +153,7 @@ export function RestaurantForm({ mode, initial }: Props) {
             Toca o arrastra el marcador para marcar la posición precisa del local.
           </p>
           <InteractiveMap
-            initialCenter={coords ?? undefined}
+            initialCenter={coords ?? SAN_JACINTO_CENTER}
             initialZoom={16}
             value={coords}
             onChange={setCoords}

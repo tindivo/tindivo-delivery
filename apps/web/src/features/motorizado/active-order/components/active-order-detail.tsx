@@ -1,4 +1,5 @@
 'use client'
+import { useGeolocatedNavigation } from '@/shared/hooks/use-geolocated-navigation'
 import { useNow } from '@/shared/hooks/use-now'
 import {
   BottomActionBar,
@@ -13,7 +14,6 @@ import {
   type TimelineStep,
   UrgencyBadge,
 } from '@tindivo/ui'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
@@ -31,6 +31,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const received = useMarkReceived(orderId)
   const delivered = useMarkDelivered(orderId)
   const now = useNow(1_000)
+  const { navigate: navigateMaps, isLocating } = useGeolocatedNavigation()
 
   const steps = useMemo<TimelineStep[]>(() => {
     if (!order) return []
@@ -234,14 +235,20 @@ export function ActiveOrderDetail({ orderId }: Props) {
       <BottomActionBar>
         {status === 'heading_to_restaurant' && (
           <>
-            <Link
-              href={buildRestaurantNavUrl(restaurant)}
-              target="_blank"
-              className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
+            <button
+              type="button"
+              onClick={() => navigateMaps(buildRestaurantDestination(restaurant))}
+              disabled={isLocating}
+              className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-60"
             >
-              <Icon name="navigation" size={20} filled />
-              Abrir en Google Maps
-            </Link>
+              <Icon
+                name={isLocating ? 'progress_activity' : 'navigation'}
+                size={20}
+                filled
+                className={isLocating ? 'animate-spin' : undefined}
+              />
+              {isLocating ? 'Ubicando...' : 'Abrir en Google Maps'}
+            </button>
             <Button
               size="lg"
               className="w-full"
@@ -273,17 +280,22 @@ export function ActiveOrderDetail({ orderId }: Props) {
           </Button>
         )}
 
-        {status === 'picked_up' && raw.delivery_maps_url && (
+        {status === 'picked_up' && hasDeliveryCoords(raw) && (
           <>
-            <a
-              href={raw.delivery_maps_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
+            <button
+              type="button"
+              onClick={() => navigateMaps({ lat: raw.delivery_lat, lng: raw.delivery_lng })}
+              disabled={isLocating}
+              className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-60"
             >
-              <Icon name="navigation" size={20} filled />
-              Abrir en Google Maps
-            </a>
+              <Icon
+                name={isLocating ? 'progress_activity' : 'navigation'}
+                size={20}
+                filled
+                className={isLocating ? 'animate-spin' : undefined}
+              />
+              {isLocating ? 'Ubicando...' : 'Abrir en Google Maps'}
+            </button>
             <Button
               size="lg"
               variant="success"
@@ -316,9 +328,33 @@ function paymentLabel(status: string): string {
   }
 }
 
-function buildRestaurantNavUrl(restaurant: { address?: string }): string {
-  if (!restaurant.address) return '#'
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(restaurant.address)}&travelmode=driving`
+/**
+ * Construye el destino para `useGeolocatedNavigation`. Prefiere coordenadas
+ * exactas (más precisas) sobre dirección textual; cae a `address` solo
+ * si el restaurante es legacy y no tiene `coordinates_lat/lng` registradas.
+ */
+function buildRestaurantDestination(restaurant: {
+  address?: string
+  coordinates_lat?: number | null
+  coordinates_lng?: number | null
+}): { lat: number; lng: number } | { address: string } {
+  if (
+    typeof restaurant.coordinates_lat === 'number' &&
+    typeof restaurant.coordinates_lng === 'number'
+  ) {
+    return { lat: restaurant.coordinates_lat, lng: restaurant.coordinates_lng }
+  }
+  return { address: restaurant.address ?? '' }
+}
+
+/**
+ * Verifica que el pedido tenga las coordenadas del cliente (lat/lng
+ * derivadas de delivery_coordinates via columnas generadas en BD).
+ */
+function hasDeliveryCoords(
+  raw: Record<string, unknown>,
+): raw is { delivery_lat: number; delivery_lng: number } {
+  return typeof raw.delivery_lat === 'number' && typeof raw.delivery_lng === 'number'
 }
 
 type PaymentBreakdownProps = {

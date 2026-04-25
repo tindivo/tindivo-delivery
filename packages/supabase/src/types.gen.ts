@@ -1,6 +1,3 @@
-// Tipos generados por `supabase gen types typescript --linked`.
-// NO editar manualmente. Ejecutar `pnpm db:types` en la raíz del monorepo.
-
 export type Json =
   | string
   | number
@@ -333,6 +330,8 @@ export type Database = {
           delivery_address: string | null
           delivery_coordinates: unknown
           delivery_fee: number
+          delivery_lat: number | null
+          delivery_lng: number | null
           delivery_maps_url: string | null
           driver_id: string | null
           estimated_ready_at: string
@@ -374,6 +373,8 @@ export type Database = {
           delivery_address?: string | null
           delivery_coordinates?: unknown
           delivery_fee?: number
+          delivery_lat?: number | null
+          delivery_lng?: number | null
           delivery_maps_url?: string | null
           driver_id?: string | null
           estimated_ready_at: string
@@ -415,6 +416,8 @@ export type Database = {
           delivery_address?: string | null
           delivery_coordinates?: unknown
           delivery_fee?: number
+          delivery_lat?: number | null
+          delivery_lng?: number | null
           delivery_maps_url?: string | null
           driver_id?: string | null
           estimated_ready_at?: string

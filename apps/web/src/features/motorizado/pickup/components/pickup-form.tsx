@@ -1,4 +1,5 @@
 'use client'
+import { SAN_JACINTO_CENTER } from '@tindivo/core'
 import {
   BottomActionBar,
   Button,
@@ -10,7 +11,8 @@ import {
 } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useOrderDetail } from '../../active-order/hooks/use-order-detail'
 import { usePickup } from '../hooks/use-pickup'
 
 // Leaflet toca `window` en su top-level: cargar solo en cliente.
@@ -28,29 +30,25 @@ type Props = { orderId: string }
 
 type Coords = { lat: number; lng: number }
 
-const DEFAULT_CENTER: Coords = { lat: -8.1116, lng: -79.0286 } // Trujillo
-
 export function PickupForm({ orderId }: Props) {
   const router = useRouter()
   const [phone, setPhone] = useState('')
   const [coords, setCoords] = useState<Coords | null>(null)
-  const [initialCenter, setInitialCenter] = useState<Coords>(DEFAULT_CENTER)
   const pickup = usePickup(orderId)
+  const { data: order } = useOrderDetail(orderId)
 
-  useEffect(() => {
-    if (!('geolocation' in navigator)) return
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const here = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        setInitialCenter(here)
-        setCoords(here)
-      },
-      () => {
-        /* ignore */
-      },
-      { enableHighAccuracy: true, timeout: 5000 },
-    )
-  }, [])
+  // Coordenadas del restaurante: se usan como marker de referencia visual
+  // ("brújula") en el mapa. El driver hace clic encima para colocar el
+  // marker del cliente. Las coords del restaurante NO se envían al API.
+  const restaurantCoords = useMemo<Coords | null>(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: payload dinámico anidado
+    const r = (order as any)?.restaurants
+    if (!r) return null
+    const lat = r.coordinates_lat
+    const lng = r.coordinates_lng
+    if (typeof lat !== 'number' || typeof lng !== 'number') return null
+    return { lat, lng }
+  }, [order])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -124,11 +122,22 @@ export function PickupForm({ orderId }: Props) {
               toca o arrastra el marcador
             </span>
           </Label>
+          {restaurantCoords && (
+            <p className="text-xs text-on-surface-variant pl-1 flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="inline-block w-3 h-3 rounded-sm border-2 border-white"
+                style={{ background: '#475569', boxShadow: '0 0 0 1px rgba(71,85,105,0.4)' }}
+              />
+              Marcador gris = ubicación del restaurante (referencia)
+            </p>
+          )}
           <InteractiveMap
-            initialCenter={initialCenter}
+            initialCenter={restaurantCoords ?? SAN_JACINTO_CENTER}
             initialZoom={16}
             value={coords}
             onChange={setCoords}
+            referenceMarker={restaurantCoords ?? undefined}
             height={380}
           />
           {coords && (
