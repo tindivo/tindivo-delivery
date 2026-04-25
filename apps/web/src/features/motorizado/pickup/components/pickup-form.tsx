@@ -127,9 +127,9 @@ export function PickupForm({ orderId }: Props) {
               <span
                 aria-hidden="true"
                 className="inline-block w-3 h-3 rounded-sm border-2 border-white"
-                style={{ background: '#475569', boxShadow: '0 0 0 1px rgba(71,85,105,0.4)' }}
+                style={{ background: '#1D4ED8', boxShadow: '0 0 0 1px rgba(29,78,216,0.45)' }}
               />
-              Marcador gris = ubicación del restaurante (referencia)
+              Marcador azul = ubicación del restaurante (referencia)
             </p>
           )}
           <InteractiveMap

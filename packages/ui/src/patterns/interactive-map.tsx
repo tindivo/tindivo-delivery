@@ -55,27 +55,33 @@ const markerIcon = new L.DivIcon({
   iconAnchor: [16, 16],
 })
 
-// Icono de referencia (no editable): gris azulado sin animación, forma
-// cuadrada redondeada para diferenciarlo claramente del marker naranja.
+// Icono de referencia (no editable): azul intenso con halo, forma cuadrada
+// redondeada para diferenciarlo claramente del marker editable (naranja
+// circular). El azul contrasta fuerte con el cream/orange del tile OSM
+// y con los textos grises de las calles.
 const referenceIcon = new L.DivIcon({
   className: '',
   html: `<div style="
-    width: 28px; height: 28px; position: relative;
+    width: 32px; height: 32px; position: relative;
     display: flex; align-items: center; justify-content: center;
   ">
     <div style="
+      position: absolute; inset: 0;
+      background: rgba(29, 78, 216, 0.22); border-radius: 9999px;
+    "></div>
+    <div style="
       position: relative; width: 22px; height: 22px;
-      background: #475569; border: 3px solid #fff; border-radius: 6px;
-      box-shadow: 0 3px 10px rgba(71,85,105,0.45);
+      background: #1D4ED8; border: 3px solid #fff; border-radius: 7px;
+      box-shadow: 0 4px 12px rgba(29, 78, 216, 0.55);
       display: flex; align-items: center; justify-content: center;
     ">
       <div style="
-        width: 8px; height: 8px; background: #fff; border-radius: 2px;
+        width: 9px; height: 9px; background: #fff; border-radius: 2px;
       "></div>
     </div>
   </div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
 })
 
 function ClickCapture({ onSelect }: { onSelect: (c: Coordinates) => void }) {
