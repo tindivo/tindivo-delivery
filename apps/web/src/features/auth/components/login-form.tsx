@@ -1,6 +1,7 @@
 'use client'
 import { supabase } from '@/lib/supabase/client'
 import { decodeJwtClaims, homePathForRole } from '@/lib/supabase/jwt-claims'
+import { signOutLocal } from '@tindivo/supabase'
 import { Button, Icon, Input, Label } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -33,12 +34,12 @@ export function LoginForm() {
     const claims = decodeJwtClaims(data.session.access_token)
     if (!claims.user_role) {
       setError('Tu cuenta no tiene rol asignado. Contacta al administrador.')
-      await supabase.auth.signOut()
+      await signOutLocal()
       return
     }
     if (!claims.is_active) {
       setError('Tu cuenta está desactivada.')
-      await supabase.auth.signOut()
+      await signOutLocal()
       return
     }
 

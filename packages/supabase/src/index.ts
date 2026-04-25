@@ -1,5 +1,5 @@
 export * from './types.gen'
-export { createBrowserClient } from './browser'
+export { createBrowserClient, signOutLocal } from './browser'
 export { createServerClient, createClientFromJwt, type ServerClient } from './server'
 export { createAdminClient } from './admin'
 // NOTA: updateSupabaseSession se importa explícitamente desde '@tindivo/supabase/middleware'

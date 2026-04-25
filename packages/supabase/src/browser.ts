@@ -28,3 +28,16 @@ export function createBrowserClient(): SupabaseClient<Database> {
 
   return clientSingleton
 }
+
+/**
+ * Cierra sesión SOLO en el dispositivo actual.
+ *
+ * Usa `scope: 'local'` explícitamente porque el default de `supabase-js`
+ * es `'global'`, que invalida TODAS las sesiones del usuario en TODOS
+ * los dispositivos (PWA instalada, otros navegadores). En una app
+ * multi-dispositivo eso no es lo deseado.
+ */
+export async function signOutLocal() {
+  const client = createBrowserClient()
+  return client.auth.signOut({ scope: 'local' })
+}

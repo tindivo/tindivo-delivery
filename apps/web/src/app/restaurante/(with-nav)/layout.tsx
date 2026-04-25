@@ -1,5 +1,5 @@
 'use client'
-import { supabase } from '@/lib/supabase/client'
+import { signOutLocal } from '@tindivo/supabase'
 import { BottomNav, type BottomNavItem, GlassTopBar, IconButton } from '@tindivo/ui'
 import { Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
@@ -17,7 +17,7 @@ export default function RestauranteLayout({ children }: { children: ReactNode })
   const router = useRouter()
 
   async function logout() {
-    await supabase.auth.signOut()
+    await signOutLocal()
     router.replace('/login')
   }
 

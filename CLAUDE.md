@@ -26,6 +26,11 @@ Monorepo Turborepo + pnpm workspaces con:
    (excepto si el usuario lo pide explícitamente).
 8. **Bordes muy redondeados** (1rem/2rem/3rem), glassmorfismo en top bars,
    fondo claro absoluto (no dark mode).
+9. **Logout siempre con `signOutLocal()`** desde `@tindivo/supabase`.
+   NUNCA llamar `supabase.auth.signOut()` directo: el default del SDK es
+   `scope: 'global'` y cierra TODAS las sesiones del usuario en TODOS los
+   dispositivos (PWA instalada + navegador). Usamos `'local'` para que
+   cada dispositivo cierre solo su propia sesión.
 
 ## Flujo de desarrollo
 

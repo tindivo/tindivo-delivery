@@ -62,8 +62,13 @@ if (error) {
 ### 2.3 · Logout
 
 ```typescript
-await supabase.auth.signOut()
-// Limpia la cookie httpOnly. El middleware redirige a /login.
+import { signOutLocal } from '@tindivo/supabase'
+
+await signOutLocal()
+// Limpia la cookie httpOnly de ESTE dispositivo. El middleware redirige
+// a /login. NUNCA usar `supabase.auth.signOut()` directo: el default es
+// `scope: 'global'` y cierra TODAS las sesiones del usuario en TODOS
+// los dispositivos.
 ```
 
 ### 2.4 · Obtener sesión en endpoints

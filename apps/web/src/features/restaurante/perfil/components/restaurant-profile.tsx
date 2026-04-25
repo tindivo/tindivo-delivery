@@ -1,6 +1,6 @@
 'use client'
 import { PushToggleCard } from '@/features/pwa/components/push-toggle-card'
-import { supabase } from '@/lib/supabase/client'
+import { signOutLocal } from '@tindivo/supabase'
 import { Button, Icon, Skeleton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useRestaurantProfile } from '../hooks/use-restaurant-profile'
@@ -21,7 +21,7 @@ export function RestaurantProfileView() {
 
   async function handleLogout() {
     if (!confirm('¿Cerrar sesión?')) return
-    await supabase.auth.signOut()
+    await signOutLocal()
     router.replace('/login')
   }
 
