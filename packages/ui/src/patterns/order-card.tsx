@@ -25,8 +25,9 @@ type Props = {
   highlight?: boolean
   /**
    * ISO string del momento en que debería estar listo.
-   * Si se provee (+ status === 'waiting_driver'), muestra UrgencyBadge en lugar del
-   * chip estático de minutos y aplica tier styling.
+   * Si se provee, muestra UrgencyBadge live con countdown mm:ss en lugar
+   * del chip estático de minutos. El caller decide cuándo activarlo (driver
+   * lo pasa siempre; restaurante solo durante fases activas pre-entrega).
    */
   estimatedReadyAt?: string | Date
   /**
@@ -39,6 +40,13 @@ type Props = {
    * Se usa cuando hay un overdue pendiente — el driver debe atender ese primero.
    */
   disabled?: boolean
+  /**
+   * Si true, intercambia la jerarquía visual del header: el código del pedido
+   * (#shortId) se muestra prominente y el nombre del restaurante secundario.
+   * Útil en el rol restaurante donde el dueño ya sabe el nombre del local pero
+   * necesita identificar pedidos por su código rápido.
+   */
+  prominentCode?: boolean
 }
 
 const TIER_STYLES: Record<
@@ -77,6 +85,7 @@ export function OrderCard({
   estimatedReadyAt,
   now,
   disabled = false,
+  prominentCode = false,
 }: Props) {
   const noCharge = orderAmount === 0
   const money = noCharge
@@ -86,11 +95,14 @@ export function OrderCard({
         currency: 'PEN',
       }).format(orderAmount)
 
-  const showUrgency = estimatedReadyAt && status === 'waiting_driver'
+  const showUrgency = Boolean(estimatedReadyAt)
   const tier: UrgencyTier | null = showUrgency
-    ? computeUrgencyTier(estimatedReadyAt, now ?? new Date())
+    ? computeUrgencyTier(estimatedReadyAt as string | Date, now ?? new Date())
     : null
-  const tierStyle = tier ? TIER_STYLES[tier] : null
+  // El styling de tier (borde rojo, glow) solo aplica cuando el pedido aún
+  // no tiene driver — para evitar gritar "urgente" en cards ya en ruta.
+  const applyTierStyle = tier && status === 'waiting_driver'
+  const tierStyle = applyTierStyle ? TIER_STYLES[tier] : null
 
   const defaultBg = 'linear-gradient(135deg, #ffffff 0%, #fafaf8 100%)'
   const defaultBorder = 'rgba(225, 191, 181, 0.25)'
@@ -134,11 +146,27 @@ export function OrderCard({
 
       <div className="flex items-start justify-between gap-2 pl-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <ColorDot color={restaurantAccentColor} size={10} label={restaurantName} />
-            <span className="font-bold truncate text-on-surface">{restaurantName}</span>
-          </div>
-          <div className="text-xs text-on-surface-variant font-mono tracking-wider">#{shortId}</div>
+          {prominentCode ? (
+            <>
+              <div className="flex items-center gap-2 mb-1">
+                <ColorDot color={restaurantAccentColor} size={10} label={restaurantName} />
+                <span className="font-black truncate text-on-surface font-mono tracking-wider">
+                  #{shortId}
+                </span>
+              </div>
+              <div className="text-xs text-on-surface-variant truncate">{restaurantName}</div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-1">
+                <ColorDot color={restaurantAccentColor} size={10} label={restaurantName} />
+                <span className="font-bold truncate text-on-surface">{restaurantName}</span>
+              </div>
+              <div className="text-xs text-on-surface-variant font-mono tracking-wider">
+                #{shortId}
+              </div>
+            </>
+          )}
         </div>
         <StatusChip status={status} />
       </div>
