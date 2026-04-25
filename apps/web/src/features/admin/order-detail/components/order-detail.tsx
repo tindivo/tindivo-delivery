@@ -177,26 +177,28 @@ export function OrderDetail({ orderId }: Props) {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <header className="flex items-center gap-4">
+      <header className="flex items-center gap-3">
         <Link
           href="/admin"
-          className="rounded-full p-2 hover:bg-surface-container-low transition-colors"
+          className="rounded-full p-2 hover:bg-surface-container-low transition-colors shrink-0"
         >
           <Icon name="arrow_back" />
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="font-black text-2xl tracking-tight">Pedido #{order.short_id}</h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+            <h1 className="font-black text-xl md:text-2xl tracking-tight truncate">
+              Pedido #{order.short_id}
+            </h1>
             <StatusChip status={order.status} />
           </div>
-          <p className="text-on-surface-variant text-sm mt-0.5">
+          <p className="text-on-surface-variant text-xs md:text-sm mt-0.5">
             Creado {fmtDateTime(order.created_at)} (San Jacinto)
           </p>
         </div>
       </header>
 
-      <div className="grid grid-cols-3 gap-5">
-        <div className="col-span-2 space-y-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 space-y-5">
           <Card>
             <CardHeader>
               <CardTitle>Restaurante</CardTitle>

@@ -42,23 +42,25 @@ export function OrdersHistoryList() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Link
           href="/admin/orders"
-          className="rounded-full p-2 hover:bg-surface-container-low transition-colors"
+          className="rounded-full p-2 hover:bg-surface-container-low transition-colors shrink-0"
           aria-label="Volver"
         >
           <Icon name="arrow_back" />
         </Link>
-        <div className="flex-1">
-          <h1 className="bleed-text font-black text-3xl text-on-surface">Historial de pedidos</h1>
-          <p className="text-on-surface-variant text-sm mt-1">
+        <div className="flex-1 min-w-0">
+          <h1 className="bleed-text font-black text-2xl md:text-3xl text-on-surface">
+            Historial de pedidos
+          </h1>
+          <p className="text-on-surface-variant text-xs md:text-sm mt-1">
             Pedidos entregados y cancelados (hora San Jacinto).
           </p>
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <FilterChip
           label={`Todos (${counts.all})`}
           active={filter === 'all'}
@@ -88,8 +90,8 @@ export function OrdersHistoryList() {
           <p className="mt-3 text-on-surface-variant">Sin pedidos en este filtro.</p>
         </div>
       ) : (
-        <div className="rounded-2xl bg-surface-container-lowest border border-outline-variant/15 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="rounded-2xl bg-surface-container-lowest border border-outline-variant/15 overflow-x-auto">
+          <table className="w-full text-sm min-w-[760px]">
             <thead className="bg-surface-container-low text-xs uppercase tracking-wider text-on-surface-variant">
               <tr>
                 <th className="text-left px-4 py-3">Short ID</th>

@@ -1,14 +1,10 @@
-import { AdminSidebar } from '@/features/admin/dashboard/components/admin-sidebar'
+import { AdminShell } from '@/features/admin/dashboard/components/admin-shell'
 import type { ReactNode } from 'react'
 
 /**
  * Guard: el middleware ya validó que solo rol=admin llega aquí.
+ * AdminShell maneja sidebar (desktop) + GlassTopBar/drawer (móvil) + logout.
  */
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-screen">
-      <AdminSidebar />
-      <main className="flex-1 p-8">{children}</main>
-    </div>
-  )
+  return <AdminShell>{children}</AdminShell>
 }

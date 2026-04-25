@@ -12,24 +12,26 @@ export function AdminDashboard() {
   const metrics = computeMetrics(items)
 
   return (
-    <div className="space-y-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="font-black text-3xl tracking-tight text-on-surface">Monitor en vivo</h1>
-          <p className="text-on-surface-variant text-sm mt-1">
+    <div className="space-y-6 md:space-y-8">
+      <header className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="font-black text-2xl md:text-3xl tracking-tight text-on-surface">
+            Monitor en vivo
+          </h1>
+          <p className="text-on-surface-variant text-xs md:text-sm mt-1">
             Pedidos activos en tiempo real — se actualiza automáticamente
           </p>
         </div>
         <Link
           href="/admin/orders"
-          className="inline-flex items-center gap-2 rounded-xl px-4 py-2 bg-surface-container-lowest border border-outline-variant/30 text-sm font-semibold hover:shadow-[0_4px_20px_rgba(171,53,0,0.04)] transition-shadow"
+          className="shrink-0 inline-flex items-center gap-2 rounded-xl px-3 py-2 md:px-4 bg-surface-container-lowest border border-outline-variant/30 text-xs md:text-sm font-semibold hover:shadow-[0_4px_20px_rgba(171,53,0,0.04)] transition-shadow"
         >
           Ver todos
           <Icon name="arrow_forward" size={18} />
         </Link>
       </header>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <MetricCard
           label="Esperando motorizado"
           value={metrics.waiting}
@@ -63,7 +65,7 @@ export function AdminDashboard() {
           <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-on-surface-variant mb-3">
             Métricas del día (San Jacinto)
           </h2>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard
               label="Tiempo prom. aceptación"
               value={fmtDur(kpis.avgAcceptSeconds)}
@@ -103,7 +105,7 @@ export function AdminDashboard() {
           Pedidos activos
         </h2>
         {isLoading ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
@@ -111,7 +113,7 @@ export function AdminDashboard() {
         ) : items.length === 0 ? (
           <Card className="p-8 text-center text-on-surface-variant">No hay pedidos activos.</Card>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas */}
             {items.map((order: any) => (
               <Link key={order.id} href={`/admin/orders/${order.id}`}>

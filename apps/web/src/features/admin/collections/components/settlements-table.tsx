@@ -36,8 +36,8 @@ export function SettlementsTable({ items, isLoading, mode }: Props) {
   const actionable = mode === 'pending' || mode === 'overdue'
 
   return (
-    <div className="rounded-2xl bg-surface-container-lowest border border-outline-variant/15 overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="rounded-2xl bg-surface-container-lowest border border-outline-variant/15 overflow-x-auto">
+      <table className="w-full text-sm min-w-[720px]">
         <thead className="bg-surface-container-low text-xs uppercase tracking-wider text-on-surface-variant">
           <tr>
             <th className="text-left px-4 py-3">Restaurante</th>

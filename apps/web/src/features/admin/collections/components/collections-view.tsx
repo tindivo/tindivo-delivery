@@ -79,14 +79,19 @@ export function CollectionsView() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="bleed-text font-black text-3xl text-on-surface">Cobros</h1>
-          <p className="text-on-surface-variant text-sm mt-1">
+      <header className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="bleed-text font-black text-2xl md:text-3xl text-on-surface">Cobros</h1>
+          <p className="text-on-surface-variant text-xs md:text-sm mt-1">
             Gestiona las liquidaciones semanales de comisión y registra los pagos recibidos.
           </p>
         </div>
-        <Button onClick={handleGenerate} disabled={generate.isPending} size="md">
+        <Button
+          onClick={handleGenerate}
+          disabled={generate.isPending}
+          size="md"
+          className="shrink-0"
+        >
           <Icon name="refresh" />
           {generate.isPending ? 'Generando…' : 'Generar liquidaciones'}
         </Button>

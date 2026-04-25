@@ -30,8 +30,10 @@ export function DisputesList() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="bleed-text font-black text-3xl text-on-surface">Disputas de efectivo</h1>
-        <p className="text-on-surface-variant text-sm mt-1">
+        <h1 className="bleed-text font-black text-2xl md:text-3xl text-on-surface">
+          Disputas de efectivo
+        </h1>
+        <p className="text-on-surface-variant text-xs md:text-sm mt-1">
           Casos donde el monto declarado por el driver y el recibido por el restaurante no
           coincidieron. Resuélvelos con justicia tras consultar a ambas partes.
         </p>
@@ -136,7 +138,7 @@ function DisputeCard({
       </div>
 
       {/* Amounts comparison */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div
           className="rounded-xl p-3"
           style={{
@@ -189,7 +191,7 @@ function DisputeCard({
       )}
 
       {!isOpen ? (
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button size="md" onClick={onOpen}>
             <Icon name="gavel" filled />
             Resolver
@@ -219,7 +221,7 @@ function DisputeCard({
             <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant mb-2">
               Decisión
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <DecisionOption
                 active={decision === 'accept_driver'}
                 label="Driver tenía razón"

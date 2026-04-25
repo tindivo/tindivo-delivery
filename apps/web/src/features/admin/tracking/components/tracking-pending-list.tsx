@@ -45,10 +45,12 @@ export function TrackingPendingList() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="bleed-text font-black text-3xl text-on-surface">Envío de tracking</h1>
-          <p className="text-on-surface-variant text-sm mt-1 max-w-2xl">
+      <header className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="bleed-text font-black text-2xl md:text-3xl text-on-surface">
+            Envío de tracking
+          </h1>
+          <p className="text-on-surface-variant text-xs md:text-sm mt-1 max-w-2xl">
             Pedidos en camino al cliente sin link de tracking enviado. Toca{' '}
             <strong>Enviar por WhatsApp</strong> — abre el chat con el mensaje pre-rellenado. Al
             enviar desde WhatsApp queda registrado quién y cuándo lo envió.
@@ -56,7 +58,7 @@ export function TrackingPendingList() {
         </div>
         <Link
           href="/admin/tracking/historial"
-          className="shrink-0 inline-flex items-center gap-2 rounded-xl px-4 py-2 bg-surface-container-lowest border border-outline-variant/30 text-sm font-semibold hover:shadow-[0_4px_20px_rgba(171,53,0,0.04)] transition-shadow"
+          className="shrink-0 inline-flex items-center gap-2 rounded-xl px-3 py-2 md:px-4 bg-surface-container-lowest border border-outline-variant/30 text-xs md:text-sm font-semibold hover:shadow-[0_4px_20px_rgba(171,53,0,0.04)] transition-shadow"
         >
           <Icon name="history" size={18} />
           Ver enviados
