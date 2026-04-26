@@ -177,14 +177,17 @@ export async function middleware(request: NextRequest) {
 export const config = {
   // Excluimos rutas que NO deben pasar por auth/redirect:
   //  - _next/static, _next/image: assets de Next
-  //  - favicon, manifest.webmanifest: assets PWA
-  //  - sw.js + workbox-*.js: Service Worker (el browser rechaza registrar un
-  //    SW detrás de cualquier redirect, incluido uno del middleware)
+  //  - favicon (ico, png con sufijos como -16, -32): tags <link rel="icon">
+  //  - manifest.webmanifest: manifest PWA, cargado sin sesión por el browser
+  //  - sw.js + workbox-*.js + swe-worker-*.js: Service Worker y su entry de
+  //    @serwist/next (el browser rechaza registrar un SW detrás de cualquier
+  //    redirect; además si lo recibe como text/html explota con
+  //    "Unexpected token '<'" al ejecutarlo como JS)
   //  - icon-*, apple-touch-icon*: íconos del manifest cargados sin sesión
   //  - api/*: route handlers internos del web app (validan su propio auth y
   //    no deben recibir el redirect a /login si la sesión es inválida — el
   //    cliente debe poder llamarlos para CERRAR sesión, justamente)
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|icon-.*|apple-touch-icon.*|api/).*)',
+    '/((?!_next/static|_next/image|favicon|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|swe-worker-.*\\.js|icon-.*|apple-touch-icon.*|api/).*)',
   ],
 }
