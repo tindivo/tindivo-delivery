@@ -83,3 +83,36 @@ pnpm check            # Biome lint + format
 - Value Objects: `PascalCase` sin "VO"/"Id" redundante
 - Tablas DB: `snake_case` (orders, push_subscriptions)
 - Enums DB: `snake_case` valor (`waiting_driver`)
+
+## Sesiones multi-dispositivo: comportamiento verificado
+
+Verificado contra producción (`https://delivery.tindivo.com` + GoTrue de
+`nwcdxmebsozswnjlblip.supabase.co`):
+
+- **Login con la misma cuenta en otro dispositivo NO invalida la sesión existente.**
+  Cada `signInWithPassword` emite un refresh token independiente; los anteriores
+  del mismo usuario siguen válidos hasta su expiración natural o hasta que se
+  haga `signOutLocal()` desde ese dispositivo.
+- **Logout local solo cierra el dispositivo actual.** `signOutLocal()` usa
+  `scope: 'local'` (regla #9), que limpia la cookie `sb-*-auth-token` del cliente
+  y revoca solo el refresh token de esta sesión en GoTrue. Las demás sesiones
+  del usuario en otros dispositivos sobreviven.
+
+### PWA y navegador del mismo origen en el mismo dispositivo COMPARTEN cookie jar
+
+Por diseño de los browsers (Chrome, Safari, Firefox), una PWA instalada en
+modo standalone y el navegador normal del mismo origen comparten:
+
+- `document.cookie` (incluyendo `sb-*-auth-token`).
+- `localStorage`, `sessionStorage`, `IndexedDB`.
+- Service Worker activo.
+
+Por lo tanto **no es posible aislar sesiones** entre browser y PWA del mismo
+origen en el mismo dispositivo sin renunciar a SSR cookie-based o cambiar a
+subdominios distintos. Esto es comportamiento estándar (Twitter, Gmail,
+WhatsApp Web hacen lo mismo).
+
+Para testing multi-rol desde el mismo celular usar:
+- Modo incógnito + modo normal (cookie jars distintos).
+- Dos navegadores distintos (Chrome + Safari).
+- Dos dispositivos físicos.
