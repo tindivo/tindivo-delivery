@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { defaultCache } from '@serwist/next/worker'
-import { Serwist } from 'serwist'
+import { NetworkFirst, type RuntimeCaching, Serwist } from 'serwist'
 
 declare const self: ServiceWorkerGlobalScope & {
   __SW_MANIFEST: (string | { url: string; revision: string | null })[]
@@ -19,12 +19,30 @@ declare const self: ServiceWorkerGlobalScope & {
  * tenga conexión. En iOS 16.4+ requiere que la PWA esté en Home Screen.
  */
 
+// `defaultCache` cachea `/_next/static/*.js` con CacheFirst + maxAgeFrom:'last-used'.
+// En PWA usadas a diario los chunks JS nunca expiran y iOS sirve indefinidamente
+// código viejo (incluso después de un deploy). Forzamos NetworkFirst para que
+// cada navegación pida el bundle más reciente, con fallback a cache si la red
+// falla — el modo offline sigue andando para chunks ya visitados.
+const runtimeCaching: RuntimeCaching[] = defaultCache.map((rule) => {
+  const isNextJsChunk =
+    rule.matcher instanceof RegExp && rule.matcher.source === '\\/_next\\/static.+\\.js$'
+  if (!isNextJsChunk) return rule
+  return {
+    ...rule,
+    handler: new NetworkFirst({
+      cacheName: 'next-static-js-assets',
+      networkTimeoutSeconds: 3,
+    }),
+  }
+})
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching,
 })
 
 serwist.addEventListeners()

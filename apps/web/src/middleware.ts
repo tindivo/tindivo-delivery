@@ -181,7 +181,10 @@ export const config = {
   //  - sw.js + workbox-*.js: Service Worker (el browser rechaza registrar un
   //    SW detrás de cualquier redirect, incluido uno del middleware)
   //  - icon-*, apple-touch-icon*: íconos del manifest cargados sin sesión
+  //  - api/*: route handlers internos del web app (validan su propio auth y
+  //    no deben recibir el redirect a /login si la sesión es inválida — el
+  //    cliente debe poder llamarlos para CERRAR sesión, justamente)
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|icon-.*|apple-touch-icon.*).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|icon-.*|apple-touch-icon.*|api/).*)',
   ],
 }

@@ -9,6 +9,8 @@ declare global {
   }
 }
 
+const SW_RELOAD_GUARD_KEY = 'tindivo-sw-reloaded'
+
 /**
  * Registra el Service Worker de Serwist en el cliente.
  *
@@ -19,6 +21,12 @@ declare global {
  *
  * Fallback: si `window.serwist` todavía no está listo (race condition con
  * el bundle del worker entry), hace un registro manual directo a `/sw.js`.
+ *
+ * Auto-reload tras update: cuando un nuevo SW toma control via `clientsClaim`,
+ * las pestañas siguen ejecutando el JS viejo en memoria. Forzamos un reload
+ * único (con guard sessionStorage anti-loop) para que el bundle nuevo entre
+ * inmediatamente — crítico en iOS PWA donde el código viejo seguía cerrando
+ * sesiones globalmente.
  */
 export function RegisterPWA() {
   useEffect(() => {
@@ -40,6 +48,24 @@ export function RegisterPWA() {
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })
       .catch((err) => console.error('[pwa] manual register failed', err))
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!('serviceWorker' in navigator)) return
+
+    const onControllerChange = () => {
+      // Guard: una sola recarga por sesión de tab. Evita loops si el browser
+      // dispara controllerchange más de una vez (ej. tras skipWaiting + claim).
+      if (sessionStorage.getItem(SW_RELOAD_GUARD_KEY) === '1') return
+      sessionStorage.setItem(SW_RELOAD_GUARD_KEY, '1')
+      window.location.reload()
+    }
+
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
+    }
   }, [])
 
   return null

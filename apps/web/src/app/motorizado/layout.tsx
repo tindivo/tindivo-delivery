@@ -1,5 +1,5 @@
 'use client'
-import { signOutLocal } from '@tindivo/supabase'
+import { fullSignOut } from '@/features/auth/services/sign-out'
 import { BottomNav, type BottomNavItem, GlassTopBar, Icon, IconButton } from '@tindivo/ui'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -16,7 +16,7 @@ export default function MotorizadoLayout({ children }: { children: ReactNode }) 
   const router = useRouter()
 
   async function logout() {
-    await signOutLocal()
+    await fullSignOut()
     router.replace('/login')
   }
 

@@ -1,5 +1,5 @@
 'use client'
-import { signOutLocal } from '@tindivo/supabase'
+import { fullSignOut } from '@/features/auth/services/sign-out'
 import { GlassTopBar, Icon, IconButton } from '@tindivo/ui'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -45,7 +45,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }, [drawerOpen])
 
   async function logout() {
-    await signOutLocal()
+    await fullSignOut()
     router.replace('/login')
   }
 

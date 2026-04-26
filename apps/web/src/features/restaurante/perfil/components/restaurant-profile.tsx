@@ -1,6 +1,6 @@
 'use client'
+import { fullSignOut } from '@/features/auth/services/sign-out'
 import { PushToggleCard } from '@/features/pwa/components/push-toggle-card'
-import { signOutLocal } from '@tindivo/supabase'
 import { Button, Icon, Skeleton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useRestaurantProfile } from '../hooks/use-restaurant-profile'
@@ -21,7 +21,7 @@ export function RestaurantProfileView() {
 
   async function handleLogout() {
     if (!confirm('¿Cerrar sesión?')) return
-    await signOutLocal()
+    await fullSignOut()
     router.replace('/login')
   }
 
