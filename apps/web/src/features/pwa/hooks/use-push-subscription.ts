@@ -129,6 +129,28 @@ export function usePushSubscription() {
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.getSubscription()
       if (sub) {
+        // Validar ownership: el SW puede devolver un endpoint válido pero
+        // asociado en BD a OTRO user (caso B inicia sesión en device de A
+        // sin pasar por fullSignOut). En ese caso re-suscribimos con el
+        // user actual antes de declarar 'subscribed'.
+        if (await hasActiveSession()) {
+          const owned = await api
+            .get<{ owned: boolean }>(`push/me?endpoint=${encodeURIComponent(sub.endpoint)}`)
+            .catch(() => ({ owned: true }))
+          if (!owned.owned) {
+            await sub.unsubscribe().catch(() => null)
+            lastAutoHealAtRef.current = 0
+            void tryAutoHeal().then(() => {
+              void (async () => {
+                const regAfter = await navigator.serviceWorker.ready
+                const subAfter = await regAfter.pushManager.getSubscription()
+                if (subAfter) setStatus('subscribed')
+              })()
+            })
+            setStatus('granted')
+            return 'granted'
+          }
+        }
         setStatus('subscribed')
         return 'subscribed'
       }
@@ -151,6 +173,17 @@ export function usePushSubscription() {
       return 'granted'
     }
   }, [tryAutoHeal])
+
+  /**
+   * Variante de checkStatus que bypassea el debounce de auto-heal. La
+   * usa AutoHealPush en el evento `SIGNED_IN` para que el cambio de
+   * cuenta dispare validación de ownership inmediata sin esperar el
+   * tick de polling.
+   */
+  const forceRefresh = useCallback(async () => {
+    lastAutoHealAtRef.current = 0
+    return checkStatus()
+  }, [checkStatus])
 
   useEffect(() => {
     void checkStatus()
@@ -233,5 +266,5 @@ export function usePushSubscription() {
     }
   }, [checkStatus])
 
-  return { status, loading, subscribe, unsubscribe, refresh: checkStatus }
+  return { status, loading, subscribe, unsubscribe, refresh: checkStatus, forceRefresh }
 }

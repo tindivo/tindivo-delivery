@@ -327,6 +327,11 @@ async function resolveRecipients(
 /**
  * Envía la notificación a una lista de suscripciones con manejo de errores
  * que mantiene saneada la tabla push_subscriptions.
+ *
+ * TTL=86400 (24h): si el dispositivo está dormido (iOS lockscreen, Doze
+ * Android, batería baja) el provider FCM/APNs guarda el push hasta 24h y lo
+ * entrega cuando despierta. El header `topic` colapsa pendientes con mismo
+ * tag (p.ej. dos updates del mismo pedido) para no spammear al despertar.
  */
 async function sendToSubscriptions(
   sb: ReturnType<typeof createServiceRoleClient>,
@@ -339,6 +344,7 @@ async function sendToSubscriptions(
   }>,
   notification: Notification,
   tag: string,
+  requestId: string,
 ): Promise<number> {
   let pushed = 0
   for (const sub of subs) {
@@ -346,15 +352,20 @@ async function sendToSubscriptions(
       await webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         JSON.stringify(notification),
-        { TTL: 60, urgency: 'high', topic: tag },
+        { TTL: 86400, urgency: 'high', topic: tag },
       )
       pushed++
+      console.log(`[send-push:${requestId}] pushed sub=${sub.id.slice(0, 8)} topic=${tag}`)
       await sb
         .from('push_subscriptions')
         .update({ last_success_at: new Date().toISOString(), consecutive_failures: 0 })
         .eq('id', sub.id)
     } catch (err) {
       const code = (err as { statusCode?: number } | null)?.statusCode
+      const msg = (err as Error | null)?.message ?? 'unknown'
+      console.error(
+        `[send-push:${requestId}] failed sub=${sub.id.slice(0, 8)} code=${code ?? '?'} msg=${msg}`,
+      )
       if (code === 410 || code === 404) {
         // Endpoint muerto — limpiar
         await sb.from('push_subscriptions').delete().eq('id', sub.id)
@@ -377,6 +388,9 @@ async function sendToSubscriptions(
 
 Deno.serve(async () => {
   const sb = createServiceRoleClient()
+  // requestId acota cada invocación en los logs. 8 hex chars son suficientes
+  // para correlacionar líneas dentro de un mismo Deno.serve sin pesar.
+  const requestId = crypto.randomUUID().slice(0, 8)
 
   const { data: events, error } = await sb
     .from('domain_events')
@@ -387,11 +401,14 @@ Deno.serve(async () => {
     .limit(50)
 
   if (error) {
+    console.error(`[send-push:${requestId}] events_query_error msg=${error.message}`)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })
   }
+
+  console.log(`[send-push:${requestId}] start events=${events?.length ?? 0}`)
 
   let processed = 0
   let pushed = 0
@@ -416,6 +433,9 @@ Deno.serve(async () => {
     }
 
     const recipients = await resolveRecipients(sb, event)
+    console.log(
+      `[send-push:${requestId}] event=${event.event_type} agg=${event.aggregate_id} recipients=${recipients.length}`,
+    )
     if (recipients.length === 0) {
       await sb
         .from('domain_events')
@@ -442,13 +462,19 @@ Deno.serve(async () => {
         .select('id, endpoint, p256dh, auth, consecutive_failures')
         .in('user_id', userIds)
 
-      if (!subs || subs.length === 0) continue
+      if (!subs || subs.length === 0) {
+        console.log(
+          `[send-push:${requestId}] no_subs role=${role} users=${userIds.length} event=${event.event_type}`,
+        )
+        continue
+      }
 
       const count = await sendToSubscriptions(
         sb,
         subs,
         notification,
         notification.tag ?? event.event_type,
+        requestId,
       )
       pushed += count
     }
@@ -459,6 +485,8 @@ Deno.serve(async () => {
       .eq('id', event.id)
     processed++
   }
+
+  console.log(`[send-push:${requestId}] done processed=${processed} pushed=${pushed}`)
 
   return new Response(JSON.stringify({ processed, pushed }), {
     headers: { 'Content-Type': 'application/json' },

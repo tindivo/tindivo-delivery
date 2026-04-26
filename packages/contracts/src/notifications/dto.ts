@@ -30,3 +30,8 @@ export const PushSubscriptionResponse = z.object({
   createdAt: z.string().datetime(),
 })
 export type PushSubscriptionResponse = z.infer<typeof PushSubscriptionResponse>
+
+export const PushOwnershipResponse = z.object({
+  owned: z.boolean(),
+})
+export type PushOwnershipResponse = z.infer<typeof PushOwnershipResponse>

@@ -164,9 +164,12 @@ export class OrderReadyEarly extends BaseDomainEvent {
 
 /**
  * Emitido cuando un pedido cruza su `appearsInQueueAt` y queda visible para
- * los drivers. No se dispara desde el agregado: lo publica pg_cron vía la
- * función SQL `enqueue_orders_ready_for_drivers()`. La Edge Function
- * send-push lo mapea a una notificación con destino /motorizado/pedidos/{id}/preview.
+ * los drivers. Se dispara desde dos fuentes idempotentes entre sí:
+ *  - Inmediato desde `Order.create()` cuando prepMinutes=0 (push en ≤2s).
+ *  - Diferido por pg_cron `enqueue_orders_ready_for_drivers` cuando el
+ *    appears_in_queue_at futuro alcanza el now (prepMinutes > 0). El cron
+ *    usa NOT EXISTS para no duplicar si el agregado ya lo emitió.
+ * La Edge Function send-push lo mapea a /motorizado/pedidos/{id}/preview.
  */
 export class OrderReadyForDrivers extends BaseDomainEvent {
   readonly eventType = 'OrderReadyForDrivers' as const

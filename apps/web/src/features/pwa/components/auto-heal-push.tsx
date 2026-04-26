@@ -17,7 +17,7 @@ import { usePushSubscription } from '../hooks/use-push-subscription'
  * el hook cuando hay sesión.
  */
 export function AutoHealPush() {
-  const { refresh } = usePushSubscription()
+  const { refresh, forceRefresh } = usePushSubscription()
 
   useEffect(() => {
     let cancelled = false
@@ -31,18 +31,23 @@ export function AutoHealPush() {
       void refresh()
     })()
 
-    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+    // En SIGNED_IN forzamos validación de ownership ya: si A había
+    // dejado una sub viva en este browser y ahora se logueó B, queremos
+    // detectarlo inmediatamente y re-suscribir, no esperar al tick de
+    // polling de 60s.
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) return
       if (typeof Notification === 'undefined') return
       if (Notification.permission !== 'granted') return
-      void refresh()
+      if (event === 'SIGNED_IN') void forceRefresh()
+      else void refresh()
     })
 
     return () => {
       cancelled = true
       authSub.subscription.unsubscribe()
     }
-  }, [refresh])
+  }, [refresh, forceRefresh])
 
   return null
 }

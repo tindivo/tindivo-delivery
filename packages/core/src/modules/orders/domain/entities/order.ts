@@ -16,6 +16,7 @@ import {
   OrderExtended,
   OrderPickedUp,
   OrderReadyEarly,
+  OrderReadyForDrivers,
   OrderReassigned,
   OrderReceived,
   TrackingLinkSent,
@@ -153,6 +154,25 @@ export class Order extends AggregateRoot<OrderId> {
         estimatedReadyAt: estimatedReadyAt.toISOString(),
       }),
     )
+
+    // Si el pedido entra inmediatamente en la bandeja del driver
+    // (prepMinutes=0 → appearsInQueueAt = now), emitir OrderReadyForDrivers
+    // ya, sin esperar al pg_cron `enqueue_orders_ready_for_drivers` de 1
+    // minuto. Esto baja la latencia del push de hasta 60s a ≤2s. El cron
+    // mantiene defensa en profundidad: si por algún motivo este path no
+    // se ejecuta, el cron emite el evento después con su NOT EXISTS
+    // idempotente (no se duplica el push).
+    if (appearsInQueueAt.getTime() <= now.getTime()) {
+      order.raise(
+        new OrderReadyForDrivers({
+          orderId: id.value,
+          shortId: shortId.value,
+          restaurantId: input.restaurantId.value,
+          orderAmount: input.payment.orderAmount.amount,
+          appearsInQueueAt: appearsInQueueAt.toISOString(),
+        }),
+      )
+    }
 
     return Result.ok(order)
   }

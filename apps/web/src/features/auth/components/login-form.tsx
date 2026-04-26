@@ -1,7 +1,7 @@
 'use client'
+import { fullSignOut } from '@/features/auth/services/sign-out'
 import { supabase } from '@/lib/supabase/client'
 import { decodeJwtClaims, homePathForRole } from '@/lib/supabase/jwt-claims'
-import { signOutLocal } from '@tindivo/supabase'
 import { Button, Icon, Input, Label } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -32,14 +32,18 @@ export function LoginForm() {
     }
 
     const claims = decodeJwtClaims(data.session.access_token)
+    // fullSignOut en lugar de signOutLocal: ambos paths (rol inválido,
+    // cuenta inactiva) deben limpiar la subscription push para no dejar
+    // una fila huérfana en push_subscriptions apuntando al usuario que
+    // acabamos de rechazar.
     if (!claims.user_role) {
       setError('Tu cuenta no tiene rol asignado. Contacta al administrador.')
-      await signOutLocal()
+      await fullSignOut()
       return
     }
     if (!claims.is_active) {
       setError('Tu cuenta está desactivada.')
-      await signOutLocal()
+      await fullSignOut()
       return
     }
 
