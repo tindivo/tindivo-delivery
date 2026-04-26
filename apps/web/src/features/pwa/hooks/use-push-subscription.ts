@@ -1,11 +1,26 @@
 'use client'
 import { api } from '@/lib/api/client'
+import { supabase } from '@/lib/supabase/client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 type Status = 'unsupported' | 'default' | 'granted' | 'denied' | 'subscribed'
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
 const AUTO_HEAL_MIN_INTERVAL_MS = 60_000
+
+/**
+ * Indica si hay sesión Supabase activa. Lo usamos como guard antes de cualquier
+ * fetch al backend protegido por requireAuth — sin sesión esos endpoints
+ * devuelven 401 (o HTML de Vercel/CORS en edge cases) y ensucian la consola
+ * con `Unexpected token '<'` cuando el ApiClient intenta parsear la response.
+ *
+ * `getSession()` resuelve desde memoria/cookies sin hit de red, así que el
+ * costo de invocarlo en cada checkStatus es despreciable.
+ */
+async function hasActiveSession(): Promise<boolean> {
+  const { data } = await supabase.auth.getSession()
+  return !!data.session
+}
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -44,6 +59,11 @@ export function usePushSubscription() {
       console.error('[push] NEXT_PUBLIC_VAPID_PUBLIC_KEY no configurada')
       return false
     }
+    // Guard de sesión: el endpoint requiere Bearer token. Sin sesión activa
+    // la request va sin Authorization y termina en 401, que el ApiClient
+    // tropieza al intentar parsear si el body no es JSON válido.
+    if (!(await hasActiveSession())) return false
+
     const reg = await navigator.serviceWorker.ready
     let sub = await reg.pushManager.getSubscription()
     if (!sub) {
@@ -114,7 +134,10 @@ export function usePushSubscription() {
       }
       // Permiso granted + sub=null → browser rotó el endpoint. Auto-heal
       // silencioso porque no necesitamos pedir permiso (ya está granted).
+      // Pero solo si hay sesión: sin auth el POST a /push/subscribe es
+      // rechazado y ensucia la consola con SyntaxError al parsear la response.
       setStatus('granted')
+      if (!(await hasActiveSession())) return 'granted'
       void tryAutoHeal().then(() => {
         void (async () => {
           const regAfter = await navigator.serviceWorker.ready

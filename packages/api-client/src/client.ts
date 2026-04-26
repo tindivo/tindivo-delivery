@@ -65,13 +65,33 @@ export class ApiClient {
 
     if (res.status === 204) return undefined as T
 
-    const text = await res.text()
-    const data = text ? (JSON.parse(text) as unknown) : null
+    // Verificar Content-Type ANTES de parsear: una response HTML (404 page de
+    // Next.js, deployment protection challenge de Vercel, redirect HTTP, error
+    // de CORS preflight) explotaría JSON.parse con `Unexpected token '<'` y
+    // contaminaría la consola con un SyntaxError sin stack útil en producción.
+    const contentType = res.headers.get('content-type') ?? ''
+    const isJson = contentType.includes('application/json') || contentType.includes('+json')
+
+    let data: unknown = null
+    if (isJson) {
+      const text = await res.text()
+      if (text) {
+        try {
+          data = JSON.parse(text)
+        } catch {
+          // Servidor dijo JSON pero entregó algo malformado — degradamos a null.
+          data = null
+        }
+      }
+    } else {
+      // Drenar el body para evitar leaks de conexión, pero NO parsear.
+      await res.text().catch(() => null)
+    }
 
     if (!res.ok) {
       const problem = (data as ProblemDetails | null) ?? {
         type: 'about:blank',
-        title: `HTTP ${res.status}`,
+        title: `HTTP ${res.status}${isJson ? '' : ' (non-JSON response)'}`,
         status: res.status,
         code: 'INTERNAL_ERROR' as const,
       }
