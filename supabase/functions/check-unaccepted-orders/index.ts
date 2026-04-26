@@ -11,6 +11,16 @@ import { createServiceRoleClient } from '../_shared/supabase.ts'
 
 const THRESHOLD_SECONDS = 90
 
+type StuckOrder = {
+  id: string
+  short_id: string | null
+  restaurants: { name: string | null } | null
+}
+
+type ExistingAlert = {
+  payload: { orderId?: string } | null
+}
+
 Deno.serve(async () => {
   const sb = createServiceRoleClient()
   const cutoff = new Date(Date.now() - THRESHOLD_SECONDS * 1000).toISOString()
@@ -20,6 +30,7 @@ Deno.serve(async () => {
     .select('id, short_id, restaurants(name)')
     .eq('status', 'waiting_driver')
     .lte('appears_in_queue_at', cutoff)
+    .returns<StuckOrder[]>()
 
   if (!stuck || stuck.length === 0) {
     return new Response(JSON.stringify({ alerts: 0 }), {
@@ -33,14 +44,13 @@ Deno.serve(async () => {
     .select('payload')
     .eq('type', 'order.unaccepted-90s')
     .is('resolved_at', null)
+    .returns<ExistingAlert[]>()
 
-  const existingIds = new Set(
-    (existingAlerts ?? []).map((a: any) => (a.payload as any)?.orderId).filter(Boolean),
-  )
+  const existingIds = new Set((existingAlerts ?? []).map((a) => a.payload?.orderId).filter(Boolean))
 
   const newAlerts = stuck
-    .filter((o: any) => !existingIds.has(o.id))
-    .map((o: any) => ({
+    .filter((o) => !existingIds.has(o.id))
+    .map((o) => ({
       type: 'order.unaccepted-90s',
       payload: {
         orderId: o.id,

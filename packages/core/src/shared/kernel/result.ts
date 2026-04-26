@@ -24,6 +24,6 @@ export const Result = {
     return new Failure(error)
   },
   okVoid(): Result<void, never> {
-    return new Success(undefined as void)
+    return new Success(undefined as undefined)
   },
 }

@@ -3,7 +3,7 @@ import type { ValueObject } from './value-object'
 /**
  * Base para entidades — identidad estable, mutabilidad controlada.
  */
-export abstract class Entity<Id extends ValueObject<any>> {
+export abstract class Entity<Id extends ValueObject<object>> {
   protected readonly _id: Id
 
   protected constructor(id: Id) {

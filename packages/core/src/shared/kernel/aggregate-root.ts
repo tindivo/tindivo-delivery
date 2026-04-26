@@ -6,7 +6,7 @@ import type { ValueObject } from './value-object'
  * Aggregate Root — única entrada de consistencia para el agregado.
  * Acumula eventos de dominio que se publican al persistir.
  */
-export abstract class AggregateRoot<Id extends ValueObject<any>> extends Entity<Id> {
+export abstract class AggregateRoot<Id extends ValueObject<object>> extends Entity<Id> {
   private _events: DomainEvent[] = []
 
   protected raise(event: DomainEvent): void {
