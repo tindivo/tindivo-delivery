@@ -101,7 +101,7 @@ function TrackingCard({ row }: { row: TrackingPendingRow }) {
   const host =
     typeof window !== 'undefined'
       ? window.location.origin
-      : (process.env.NEXT_PUBLIC_APP_URL ?? 'https://tindivo-beta.vercel.app')
+      : (process.env.NEXT_PUBLIC_APP_URL ?? 'https://delivery.tindivo.com')
   const trackingUrl = `${host}/pedidos/${row.short_id}`
 
   const restaurantName = row.restaurants?.name ?? 'tu restaurante'

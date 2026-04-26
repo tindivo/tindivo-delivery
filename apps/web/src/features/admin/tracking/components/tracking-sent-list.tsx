@@ -22,7 +22,7 @@ function fmtDateTime(iso: string | null): string {
 
 function getOrigin(): string {
   if (typeof window !== 'undefined') return window.location.origin
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'https://tindivo-beta.vercel.app'
+  return process.env.NEXT_PUBLIC_APP_URL ?? 'https://delivery.tindivo.com'
 }
 
 function buildTrackingMessage(row: TrackingPendingRow, trackingUrl: string): string {
