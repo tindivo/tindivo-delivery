@@ -13,7 +13,10 @@ export const metadata: Metadata = {
   applicationName: 'Tindivo',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    // 'default' deja que iOS reserve espacio para la status bar (hora,
+    // batería, señal). Con 'black-translucent' el contenido se renderiza
+    // detrás del notch y el back button del GlassTopBar quedaba intocable.
+    statusBarStyle: 'default',
     title: 'Tindivo',
   },
   icons: {
@@ -42,7 +45,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Tindivo" />
         <link
           rel="stylesheet"
