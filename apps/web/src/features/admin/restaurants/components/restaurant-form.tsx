@@ -31,6 +31,7 @@ type Props = {
     address: string
     yape_number: string | null
     qr_url: string | null
+    qr_url_secondary: string | null
     accent_color: string
     coordinates_lat: number | null
     coordinates_lng: number | null
@@ -49,6 +50,9 @@ export function RestaurantForm({ mode, initial }: Props) {
   const [yapeNumber, setYapeNumber] = useState(initial?.yape_number ?? '')
   const [accentColor, setAccentColor] = useState(initial?.accent_color ?? 'FF6B35')
   const [qrUrl, setQrUrl] = useState<string | null>(initial?.qr_url ?? null)
+  const [qrUrlSecondary, setQrUrlSecondary] = useState<string | null>(
+    initial?.qr_url_secondary ?? null,
+  )
   const [coords, setCoords] = useState<Coords | null>(
     initial?.coordinates_lat != null && initial?.coordinates_lng != null
       ? { lat: initial.coordinates_lat, lng: initial.coordinates_lng }
@@ -88,6 +92,7 @@ export function RestaurantForm({ mode, initial }: Props) {
         address,
         yapeNumber: yapeNumber || undefined,
         qrUrl: qrUrl || undefined,
+        qrUrlSecondary: qrUrlSecondary || undefined,
         accentColor,
         coordinates: coords,
         commissionPerOrder: commissionRounded,
@@ -107,6 +112,7 @@ export function RestaurantForm({ mode, initial }: Props) {
         address,
         yapeNumber: yapeNumber || undefined,
         qrUrl: qrUrl ?? null,
+        qrUrlSecondary: qrUrlSecondary ?? null,
         accentColor,
         coordinates: coords,
         commissionPerOrder: commissionRounded,
@@ -254,11 +260,24 @@ export function RestaurantForm({ mode, initial }: Props) {
             QR Yape / Plin
           </h2>
           <p className="text-xs text-on-surface-variant mt-1">
-            El motorizado mostrará este QR al cliente cuando vaya a entregar un pedido con pago
-            pendiente por Yape.
+            Sube hasta 2 QRs. El motorizado verá el principal por defecto y podrá cambiar al
+            alternativo si el primero no escanea (humedad, daño, error de imagen).
           </p>
         </div>
-        <QrUploader value={qrUrl} onChange={setQrUrl} restaurantId={initial?.id} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>QR principal</Label>
+            <QrUploader value={qrUrl} onChange={setQrUrl} restaurantId={initial?.id} />
+          </div>
+          <div className="space-y-2">
+            <Label>QR alternativo (opcional)</Label>
+            <QrUploader
+              value={qrUrlSecondary}
+              onChange={setQrUrlSecondary}
+              restaurantId={initial?.id}
+            />
+          </div>
+        </div>
       </section>
 
       {mode === 'create' && (

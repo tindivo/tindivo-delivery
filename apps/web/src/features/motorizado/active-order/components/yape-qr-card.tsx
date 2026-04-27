@@ -1,9 +1,10 @@
 'use client'
-import { Icon } from '@tindivo/ui'
+import { Icon, cn } from '@tindivo/ui'
 import { useState } from 'react'
 
 type Props = {
   qrUrl: string | null
+  qrUrlSecondary: string | null
   yapeNumber: string | null
   amount: number
   restaurantName: string
@@ -14,11 +15,25 @@ type Props = {
  * con Yape/Plin pendiente. Expone el QR del restaurante (subido por admin)
  * para que el cliente lo escanee y complete el pago en la puerta.
  *
+ * Si el restaurante tiene 2 QRs (principal + alternativo), muestra tabs:
+ * el motorizado puede cambiar al alternativo si el principal falla al
+ * escanear (humedad, daño, error de imagen). Si solo hay 1 QR, los tabs
+ * se ocultan y se renderiza directamente.
+ *
  * Incluye botón "Ver más grande" que abre el QR en fullscreen para mejor
  * escaneabilidad en cualquier condición de luz.
  */
-export function YapeQrCard({ qrUrl, yapeNumber, amount, restaurantName }: Props) {
+export function YapeQrCard({ qrUrl, qrUrlSecondary, yapeNumber, amount, restaurantName }: Props) {
   const [fullscreen, setFullscreen] = useState(false)
+  // Si solo hay secundario (sin principal) arrancamos en 'secondary' para
+  // no mostrar un slot vacío en la tab principal.
+  const [activeTab, setActiveTab] = useState<'primary' | 'secondary'>(
+    qrUrl ? 'primary' : 'secondary',
+  )
+
+  const hasBoth = Boolean(qrUrl) && Boolean(qrUrlSecondary)
+  const activeQr = activeTab === 'primary' ? qrUrl : qrUrlSecondary
+  const anyQr = qrUrl ?? qrUrlSecondary
 
   return (
     <>
@@ -53,7 +68,39 @@ export function YapeQrCard({ qrUrl, yapeNumber, amount, restaurantName }: Props)
             </div>
           </div>
 
-          {qrUrl ? (
+          {hasBoth && (
+            <div
+              className="flex gap-1 p-1 rounded-xl"
+              style={{ background: 'rgba(255, 255, 255, 0.12)' }}
+            >
+              <button
+                type="button"
+                onClick={() => setActiveTab('primary')}
+                className={cn(
+                  'flex-1 py-2 rounded-lg text-[11px] font-bold uppercase tracking-[0.18em] transition-colors',
+                  activeTab === 'primary'
+                    ? 'bg-white text-purple-900'
+                    : 'text-white/80 hover:text-white',
+                )}
+              >
+                Principal
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('secondary')}
+                className={cn(
+                  'flex-1 py-2 rounded-lg text-[11px] font-bold uppercase tracking-[0.18em] transition-colors',
+                  activeTab === 'secondary'
+                    ? 'bg-white text-purple-900'
+                    : 'text-white/80 hover:text-white',
+                )}
+              >
+                Alternativo
+              </button>
+            </div>
+          )}
+
+          {activeQr ? (
             <>
               <button
                 type="button"
@@ -63,7 +110,7 @@ export function YapeQrCard({ qrUrl, yapeNumber, amount, restaurantName }: Props)
               >
                 <div className="relative" style={{ aspectRatio: '1 / 1' }}>
                   <img
-                    src={qrUrl}
+                    src={activeQr}
                     alt={`QR Yape de ${restaurantName}`}
                     className="w-full h-full object-contain"
                   />
@@ -95,7 +142,7 @@ export function YapeQrCard({ qrUrl, yapeNumber, amount, restaurantName }: Props)
             </div>
           )}
 
-          {yapeNumber && qrUrl && (
+          {yapeNumber && anyQr && (
             <div
               className="text-center text-xs py-2 rounded-lg"
               style={{ background: 'rgba(255, 255, 255, 0.1)' }}
@@ -107,7 +154,7 @@ export function YapeQrCard({ qrUrl, yapeNumber, amount, restaurantName }: Props)
         </div>
       </section>
 
-      {fullscreen && qrUrl && (
+      {fullscreen && activeQr && (
         <button
           type="button"
           onClick={() => setFullscreen(false)}
@@ -116,7 +163,7 @@ export function YapeQrCard({ qrUrl, yapeNumber, amount, restaurantName }: Props)
           aria-label="Cerrar QR"
         >
           <img
-            src={qrUrl}
+            src={activeQr}
             alt={`QR Yape de ${restaurantName}`}
             className="w-full max-w-lg aspect-square object-contain rounded-2xl bg-white p-4"
           />

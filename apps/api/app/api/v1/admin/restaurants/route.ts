@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
       address: input.address,
       yape_number: input.yapeNumber ?? null,
       qr_url: input.qrUrl ?? null,
+      qr_url_secondary: input.qrUrlSecondary ?? null,
       accent_color: input.accentColor,
       coordinates_lat: input.coordinates.lat,
       coordinates_lng: input.coordinates.lng,

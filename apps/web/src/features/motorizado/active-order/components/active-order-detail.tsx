@@ -225,6 +225,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
         {status === 'picked_up' && raw.payment_status === 'pending_yape' && (
           <YapeQrCard
             qrUrl={restaurant.qr_url ?? null}
+            qrUrlSecondary={restaurant.qr_url_secondary ?? null}
             yapeNumber={restaurant.yape_number ?? null}
             amount={Number(raw.order_amount)}
             restaurantName={restaurant.name ?? 'Restaurante'}

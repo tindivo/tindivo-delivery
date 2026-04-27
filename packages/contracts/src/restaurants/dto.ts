@@ -25,6 +25,8 @@ export const CreateRestaurantRequest = z.object({
   // URL pública de Supabase Storage del QR Yape/Plin. El upload se hace
   // desde el cliente directamente a Storage; solo se persiste la URL.
   qrUrl: z.string().url().optional(),
+  // QR alternativo opcional (respaldo si el principal falla al escanear).
+  qrUrlSecondary: z.string().url().optional(),
   accentColor: AccentColorSchema,
   // Ubicación exacta seleccionada por el admin en el mapa (Leaflet).
   coordinates: CoordinatesSchema,
@@ -40,6 +42,7 @@ export const UpdateRestaurantRequest = z.object({
   address: z.string().min(5).max(200).optional(),
   yapeNumber: PhonePeSchema.optional(),
   qrUrl: z.string().url().nullable().optional(),
+  qrUrlSecondary: z.string().url().nullable().optional(),
   accentColor: AccentColorSchema.optional(),
   coordinates: CoordinatesSchema.optional(),
   commissionPerOrder: CommissionPerOrderSchema.optional(),
@@ -59,6 +62,7 @@ export const RestaurantResponse = z.object({
   address: z.string(),
   yapeNumber: PhonePeSchema.nullable(),
   qrUrl: z.string().url().nullable(),
+  qrUrlSecondary: z.string().url().nullable(),
   accentColor: AccentColorSchema,
   coordinates: CoordinatesSchema.nullable(),
   isActive: z.boolean(),

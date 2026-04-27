@@ -16,6 +16,7 @@ export type RestaurantRow = {
   address: string
   yape_number: string | null
   qr_url: string | null
+  qr_url_secondary: string | null
   accent_color: string
   coordinates_lat: number | null
   coordinates_lng: number | null

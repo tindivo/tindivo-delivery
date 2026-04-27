@@ -570,6 +570,7 @@ export type Database = {
           name: string
           phone: string
           qr_url: string | null
+          qr_url_secondary: string | null
           updated_at: string
           user_id: string
           yape_number: string | null
@@ -590,6 +591,7 @@ export type Database = {
           name: string
           phone: string
           qr_url?: string | null
+          qr_url_secondary?: string | null
           updated_at?: string
           user_id: string
           yape_number?: string | null
@@ -610,6 +612,7 @@ export type Database = {
           name?: string
           phone?: string
           qr_url?: string | null
+          qr_url_secondary?: string | null
           updated_at?: string
           user_id?: string
           yape_number?: string | null

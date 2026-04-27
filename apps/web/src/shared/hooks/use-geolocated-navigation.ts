@@ -46,12 +46,31 @@ export function useGeolocatedNavigation() {
           ? buildAddressUrl(destination.address, origin)
           : buildGoogleMapsDirectionsUrl(destination, { origin, travelMode: 'two-wheeler' })
 
-      window.open(url, '_blank', 'noopener,noreferrer')
+      openInNewTab(url)
     },
     [isLocating],
   )
 
   return { navigate, isLocating }
+}
+
+/**
+ * `window.open(_, '_blank')` falla silenciosamente en iOS Safari standalone
+ * (PWA instalada) — el sistema bloquea la apertura sin error. El patrón que
+ * sí respeta el gesto del usuario es disparar un click sintético sobre un
+ * `<a target="_blank">` creado al vuelo: Safari lo trata como navegación
+ * iniciada por el usuario y deep-linkea a Google Maps app si está instalada
+ * (Universal Links). En Android y desktop también funciona.
+ */
+function openInNewTab(url: string): void {
+  const a = document.createElement('a')
+  a.href = url
+  a.target = '_blank'
+  a.rel = 'noopener noreferrer'
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
 }
 
 /**

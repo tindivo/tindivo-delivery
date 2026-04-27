@@ -47,6 +47,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     address?: string
     yape_number?: string | null
     qr_url?: string | null
+    qr_url_secondary?: string | null
     accent_color?: string
     coordinates_lat?: number
     coordinates_lng?: number
@@ -57,6 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (input.address !== undefined) patch.address = input.address
   if (input.yapeNumber !== undefined) patch.yape_number = input.yapeNumber ?? null
   if (input.qrUrl !== undefined) patch.qr_url = input.qrUrl ?? null
+  if (input.qrUrlSecondary !== undefined) patch.qr_url_secondary = input.qrUrlSecondary ?? null
   if (input.accentColor !== undefined) patch.accent_color = input.accentColor
   if (input.coordinates !== undefined) {
     patch.coordinates_lat = input.coordinates.lat
