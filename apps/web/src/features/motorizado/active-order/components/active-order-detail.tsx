@@ -85,11 +85,12 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const raw = order as any
   const status = raw.status as string
   const restaurant = raw.restaurants ?? {}
+  const clientPhone: string | null = raw.client_phone ?? null
 
   return (
     <div
       className="min-h-screen"
-      style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}
+      style={{ paddingBottom: 'calc(220px + env(safe-area-inset-bottom))' }}
     >
       <GlassTopBar
         title="PEDIDO"
@@ -236,6 +237,15 @@ export function ActiveOrderDetail({ orderId }: Props) {
       <BottomActionBar>
         {status === 'heading_to_restaurant' && (
           <>
+            {restaurant.phone && (
+              <a
+                href={`tel:+51${restaurant.phone}`}
+                className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
+              >
+                <Icon name="call" size={20} filled />
+                Llamar al local
+              </a>
+            )}
             <button
               type="button"
               onClick={() => navigateMaps(buildRestaurantDestination(restaurant))}
@@ -263,26 +273,46 @@ export function ActiveOrderDetail({ orderId }: Props) {
         )}
 
         {status === 'waiting_at_restaurant' && (
-          <Button
-            size="lg"
-            className="w-full"
-            disabled={received.isPending}
-            onClick={() => {
-              received.mutate(undefined, {
-                onSuccess: () => router.push(`/motorizado/pedidos/${orderId}/pickup`),
-                // En error igual navega: el siguiente paso (pickup) no depende
-                // del received_at y fallar aquí no debe bloquear al driver.
-                onError: () => router.push(`/motorizado/pedidos/${orderId}/pickup`),
-              })
-            }}
-          >
-            <Icon name="shopping_bag" size={22} filled />
-            Recibí el pedido
-          </Button>
+          <>
+            {restaurant.phone && (
+              <a
+                href={`tel:+51${restaurant.phone}`}
+                className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
+              >
+                <Icon name="call" size={20} filled />
+                Llamar al local
+              </a>
+            )}
+            <Button
+              size="lg"
+              className="w-full"
+              disabled={received.isPending}
+              onClick={() => {
+                received.mutate(undefined, {
+                  onSuccess: () => router.push(`/motorizado/pedidos/${orderId}/pickup`),
+                  // En error igual navega: el siguiente paso (pickup) no depende
+                  // del received_at y fallar aquí no debe bloquear al driver.
+                  onError: () => router.push(`/motorizado/pedidos/${orderId}/pickup`),
+                })
+              }}
+            >
+              <Icon name="shopping_bag" size={22} filled />
+              Recibí el pedido
+            </Button>
+          </>
         )}
 
         {status === 'picked_up' && hasDeliveryCoords(raw) && (
           <>
+            {clientPhone && (
+              <a
+                href={`tel:+51${clientPhone}`}
+                className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
+              >
+                <Icon name="call" size={20} filled />
+                Llamar al cliente
+              </a>
+            )}
             <button
               type="button"
               onClick={() => navigateMaps({ lat: raw.delivery_lat, lng: raw.delivery_lng })}
