@@ -1,6 +1,7 @@
 'use client'
 import { useGeolocatedNavigation } from '@/shared/hooks/use-geolocated-navigation'
 import { useNow } from '@/shared/hooks/use-now'
+import { buildWaMeUrl, normalizeToE164Pe } from '@tindivo/core'
 import {
   BottomActionBar,
   Button,
@@ -86,6 +87,18 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const status = raw.status as string
   const restaurant = raw.restaurants ?? {}
   const clientPhone: string | null = raw.client_phone ?? null
+  const restaurantWaUrl: string | null = restaurant.phone
+    ? buildWaMeUrl(
+        normalizeToE164Pe(restaurant.phone) ?? `51${restaurant.phone}`,
+        `Hola, soy el motorizado del pedido #${raw.short_id}.`,
+      )
+    : null
+  const clientWaUrl: string | null = clientPhone
+    ? buildWaMeUrl(
+        normalizeToE164Pe(clientPhone) ?? `51${clientPhone}`,
+        `Hola, soy el motorizado de tu pedido #${raw.short_id}, voy en camino con tu pedido.`,
+      )
+    : null
 
   return (
     <div
@@ -238,13 +251,26 @@ export function ActiveOrderDetail({ orderId }: Props) {
         {status === 'heading_to_restaurant' && (
           <>
             {restaurant.phone && (
-              <a
-                href={`tel:+51${restaurant.phone}`}
-                className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
-              >
-                <Icon name="call" size={20} filled />
-                Llamar al local
-              </a>
+              <div className="flex w-full gap-2">
+                <a
+                  href={`tel:+51${restaurant.phone}`}
+                  className="flex-1 inline-flex items-center justify-center gap-2 h-12 px-4 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
+                >
+                  <Icon name="call" size={20} filled />
+                  Llamar al local
+                </a>
+                {restaurantWaUrl && (
+                  <a
+                    href={restaurantWaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Chatear por WhatsApp con el local"
+                    className="flex-none w-20 inline-flex items-center justify-center h-12 rounded-xl bg-emerald-500 text-white shadow-[0_4px_20px_rgba(16,185,129,0.25)] transition-all duration-300 active:scale-95"
+                  >
+                    <Icon name="chat" size={22} filled />
+                  </a>
+                )}
+              </div>
             )}
             <button
               type="button"
@@ -275,13 +301,26 @@ export function ActiveOrderDetail({ orderId }: Props) {
         {status === 'waiting_at_restaurant' && (
           <>
             {restaurant.phone && (
-              <a
-                href={`tel:+51${restaurant.phone}`}
-                className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
-              >
-                <Icon name="call" size={20} filled />
-                Llamar al local
-              </a>
+              <div className="flex w-full gap-2">
+                <a
+                  href={`tel:+51${restaurant.phone}`}
+                  className="flex-1 inline-flex items-center justify-center gap-2 h-12 px-4 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
+                >
+                  <Icon name="call" size={20} filled />
+                  Llamar al local
+                </a>
+                {restaurantWaUrl && (
+                  <a
+                    href={restaurantWaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Chatear por WhatsApp con el local"
+                    className="flex-none w-20 inline-flex items-center justify-center h-12 rounded-xl bg-emerald-500 text-white shadow-[0_4px_20px_rgba(16,185,129,0.25)] transition-all duration-300 active:scale-95"
+                  >
+                    <Icon name="chat" size={22} filled />
+                  </a>
+                )}
+              </div>
             )}
             <Button
               size="lg"
@@ -305,13 +344,26 @@ export function ActiveOrderDetail({ orderId }: Props) {
         {status === 'picked_up' && hasDeliveryCoords(raw) && (
           <>
             {clientPhone && (
-              <a
-                href={`tel:+51${clientPhone}`}
-                className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
-              >
-                <Icon name="call" size={20} filled />
-                Llamar al cliente
-              </a>
+              <div className="flex w-full gap-2">
+                <a
+                  href={`tel:+51${clientPhone}`}
+                  className="flex-1 inline-flex items-center justify-center gap-2 h-12 px-4 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
+                >
+                  <Icon name="call" size={20} filled />
+                  Llamar al cliente
+                </a>
+                {clientWaUrl && (
+                  <a
+                    href={clientWaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Chatear por WhatsApp con el cliente"
+                    className="flex-none w-20 inline-flex items-center justify-center h-12 rounded-xl bg-emerald-500 text-white shadow-[0_4px_20px_rgba(16,185,129,0.25)] transition-all duration-300 active:scale-95"
+                  >
+                    <Icon name="chat" size={22} filled />
+                  </a>
+                )}
+              </div>
             )}
             <button
               type="button"
