@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await auth.auth.supabase
     .from('orders')
     .select(
-      '*, restaurants!inner(name, accent_color, address, phone, yape_number, qr_url, coordinates_lat, coordinates_lng)',
+      '*, restaurants!inner(name, accent_color, address, phone, yape_number, qr_url, qr_url_secondary, coordinates_lat, coordinates_lng)',
     )
     .eq('status', 'waiting_driver')
     .order('estimated_ready_at', { ascending: true })
