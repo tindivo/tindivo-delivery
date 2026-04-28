@@ -45,11 +45,11 @@ export async function GET(req: NextRequest) {
   const { data, error } = await auth.auth.supabase
     .from('orders')
     .select(
-      'id, short_id, order_amount, client_pays_with, delivered_at, driver_id, drivers!inner(id, full_name, phone, vehicle_type)',
+      'id, short_id, order_amount, cash_amount, client_pays_with, delivered_at, driver_id, drivers!inner(id, full_name, phone, vehicle_type)',
     )
     .eq('restaurant_id', auth.auth.restaurantId)
     .eq('status', 'delivered')
-    .eq('payment_status', 'pending_cash')
+    .in('payment_status', ['pending_cash', 'pending_mixed'])
     .is('cash_settlement_id', null)
     .order('delivered_at', { ascending: false })
 
@@ -63,10 +63,11 @@ export async function GET(req: NextRequest) {
     const d = (Array.isArray(o.drivers) ? o.drivers[0] : o.drivers) as any
     if (!d) continue
 
-    // El restaurante recibe el monto que el cliente pagó (client_pays_with)
-    // porque adelantó el vuelto al cobrar antes de dar el pedido. Si no se
-    // registró client_pays_with, asumimos pago justo (= order_amount).
-    const cashOwed = Number(o.client_pays_with ?? o.order_amount)
+    // El restaurante recibe del driver:
+    //   - cash puro: client_pays_with ?? order_amount
+    //   - mixto: client_pays_with ?? cash_amount (la parte Yape ya le llegó
+    //     directa al restaurante, no la cobra el driver).
+    const cashOwed = Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
 
     const existing: DriverGroup = byDriver.get(o.driver_id) ?? {
       driverId: o.driver_id,

@@ -19,6 +19,8 @@ const CODE_TO_STATUS: Record<string, number> = {
   DRIVER_CAPACITY_EXCEEDED: 409,
   OUTSIDE_OPERATING_HOURS: 409,
   PREP_TIME_EXTENSION_LIMIT: 409,
+  PAYMENT_CHANGE_NOT_ALLOWED: 409,
+  INVALID_PAYMENT_CHANGE: 400,
   RESTAURANT_BLOCKED: 403,
   INTERNAL_ERROR: 500,
   TRACKING_NOT_AVAILABLE: 404,
@@ -33,6 +35,8 @@ const CODE_TO_TITLE: Record<string, string> = {
   ORDER_ALREADY_ACCEPTED: 'El pedido ya fue aceptado',
   INVALID_STATE_TRANSITION: 'Transición de estado inválida',
   ORDER_NOT_CANCELLABLE: 'Pedido no cancelable',
+  PAYMENT_CHANGE_NOT_ALLOWED: 'Cambio de pago no permitido',
+  INVALID_PAYMENT_CHANGE: 'Datos de pago inválidos',
   INTERNAL_ERROR: 'Error interno',
 }
 

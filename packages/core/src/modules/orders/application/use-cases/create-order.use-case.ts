@@ -14,6 +14,8 @@ export type CreateOrderCommand = {
   prepMinutes: number
   paymentStatus: PaymentStatusValue
   orderAmount: number
+  yapeAmount?: number
+  cashAmount?: number
   clientPaysWith?: number
   clientName?: string
   notes?: string
@@ -47,6 +49,8 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
         cmd.paymentStatus,
         Money.pen(cmd.orderAmount),
         cmd.clientPaysWith != null ? Money.pen(cmd.clientPaysWith) : null,
+        cmd.yapeAmount != null ? Money.pen(cmd.yapeAmount) : null,
+        cmd.cashAmount != null ? Money.pen(cmd.cashAmount) : null,
       )
 
       const result = Order.create({

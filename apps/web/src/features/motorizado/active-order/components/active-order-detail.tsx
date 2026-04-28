@@ -16,11 +16,12 @@ import {
   UrgencyBadge,
 } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
 import { useMarkDelivered } from '../hooks/use-mark-delivered'
 import { useMarkReceived } from '../hooks/use-mark-received'
 import { useOrderDetail } from '../hooks/use-order-detail'
+import { ChangePaymentMethodModal } from './change-payment-method-modal'
 import { YapeQrCard } from './yape-qr-card'
 
 type Props = { orderId: string }
@@ -33,6 +34,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const delivered = useMarkDelivered(orderId)
   const now = useNow(1_000)
   const { navigate: navigateMaps, isLocating } = useGeolocatedNavigation()
+  const [changePaymentOpen, setChangePaymentOpen] = useState(false)
 
   const steps = useMemo<TimelineStep[]>(() => {
     if (!order) return []
@@ -170,9 +172,25 @@ export function ActiveOrderDetail({ orderId }: Props) {
           <PaymentBreakdown
             amount={Number(raw.order_amount)}
             paymentStatus={raw.payment_status}
+            yapeAmount={raw.yape_amount != null ? Number(raw.yape_amount) : null}
+            cashAmount={raw.cash_amount != null ? Number(raw.cash_amount) : null}
             clientPaysWith={raw.client_pays_with != null ? Number(raw.client_pays_with) : null}
             changeToGive={raw.change_to_give != null ? Number(raw.change_to_give) : null}
           />
+        )}
+
+        {/* Cambiar método de pago — solo en picked_up, antes de marcar entregado.
+            Caso real: cliente cambia de idea en la puerta y dice "mejor te pago
+            efectivo" (o viceversa, o decide hacer split mixto). */}
+        {status === 'picked_up' && raw.payment_status !== 'prepaid' && (
+          <button
+            type="button"
+            onClick={() => setChangePaymentOpen(true)}
+            className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-2xl border border-outline-variant/40 bg-surface-container-lowest text-sm font-bold text-on-surface active:scale-[0.98] transition-transform"
+          >
+            <Icon name="swap_horiz" size={18} />
+            Cambiar método de pago
+          </button>
         )}
 
         {/* Cronómetro: arranca en 0:00 al aceptar y crece hasta entrega.
@@ -240,17 +258,32 @@ export function ActiveOrderDetail({ orderId }: Props) {
           </section>
         )}
 
-        {/* QR Yape — mostrar al cliente cuando se va a entregar y el pago es Yape pendiente */}
-        {status === 'picked_up' && raw.payment_status === 'pending_yape' && (
-          <YapeQrCard
-            qrUrl={restaurant.qr_url ?? null}
-            qrUrlSecondary={restaurant.qr_url_secondary ?? null}
-            yapeNumber={restaurant.yape_number ?? null}
-            amount={Number(raw.order_amount)}
-            restaurantName={restaurant.name ?? 'Restaurante'}
-          />
-        )}
+        {/* QR Yape — al entregar cuando hay parte (o todo) por Yape pendiente.
+            En pending_mixed muestra solo la porción yape_amount. */}
+        {status === 'picked_up' &&
+          (raw.payment_status === 'pending_yape' || raw.payment_status === 'pending_mixed') && (
+            <YapeQrCard
+              qrUrl={restaurant.qr_url ?? null}
+              qrUrlSecondary={restaurant.qr_url_secondary ?? null}
+              yapeNumber={restaurant.yape_number ?? null}
+              amount={
+                raw.payment_status === 'pending_mixed'
+                  ? Number(raw.yape_amount)
+                  : Number(raw.order_amount)
+              }
+              restaurantName={restaurant.name ?? 'Restaurante'}
+            />
+          )}
       </main>
+
+      {changePaymentOpen && (
+        <ChangePaymentMethodModal
+          orderId={orderId}
+          orderAmount={Number(raw.order_amount)}
+          currentStatus={raw.payment_status}
+          onClose={() => setChangePaymentOpen(false)}
+        />
+      )}
 
       <BottomActionBar>
         {status === 'heading_to_restaurant' && (
@@ -411,6 +444,8 @@ function paymentLabel(status: string): string {
       return 'Cobrar Yape'
     case 'pending_cash':
       return 'Cobrar efectivo'
+    case 'pending_mixed':
+      return 'Yape + Efectivo'
     default:
       return status
   }
@@ -448,6 +483,8 @@ function hasDeliveryCoords(
 type PaymentBreakdownProps = {
   amount: number
   paymentStatus: string
+  yapeAmount: number | null
+  cashAmount: number | null
   clientPaysWith: number | null
   changeToGive: number | null
 }
@@ -461,6 +498,8 @@ type PaymentBreakdownProps = {
 function PaymentBreakdown({
   amount,
   paymentStatus,
+  yapeAmount,
+  cashAmount,
   clientPaysWith,
   changeToGive,
 }: PaymentBreakdownProps) {
@@ -510,6 +549,92 @@ function PaymentBreakdown({
           </div>
           <Icon name="qr_code_2" size={28} className="text-on-surface-variant/40" filled />
         </div>
+      </section>
+    )
+  }
+
+  if (paymentStatus === 'pending_mixed') {
+    const hasChange = clientPaysWith != null && changeToGive != null && changeToGive > 0
+    const yapePart = yapeAmount ?? 0
+    const cashPart = cashAmount ?? 0
+    return (
+      <section className="rounded-[24px] p-5 bg-surface-container-lowest border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-on-surface-variant">
+            Cobro mixto
+          </div>
+          <span className="text-[11px] font-bold text-on-surface-variant font-mono tabular-nums">
+            Total S/ {amount.toFixed(2)}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(124, 58, 237, 0.08)' }}>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-purple-700">
+              <Icon name="qr_code_2" size={12} filled />
+              Yape
+            </div>
+            <div
+              className="bleed-text text-2xl font-black mt-1 font-mono tabular-nums"
+              style={{ color: '#5B21B6' }}
+            >
+              S/ {yapePart.toFixed(2)}
+            </div>
+            <div className="text-[10px] text-on-surface-variant mt-0.5">QR abajo</div>
+          </div>
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(255, 107, 53, 0.08)' }}>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-orange-700">
+              <Icon name="payments" size={12} filled />
+              Efectivo
+            </div>
+            <div className="bleed-text text-2xl font-black mt-1 font-mono tabular-nums text-on-surface">
+              S/ {cashPart.toFixed(2)}
+            </div>
+            <div className="text-[10px] text-on-surface-variant mt-0.5">cobrar en mano</div>
+          </div>
+        </div>
+
+        {clientPaysWith != null && (
+          <div className="rounded-2xl p-3 flex items-center justify-between bg-surface-container">
+            <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+              Paga (efectivo) con
+            </div>
+            <div className="font-bold font-mono tabular-nums" style={{ color: '#1E40AF' }}>
+              S/ {clientPaysWith.toFixed(2)}
+            </div>
+          </div>
+        )}
+
+        {hasChange && (
+          <div
+            className="relative overflow-hidden rounded-2xl p-4"
+            style={{
+              background: 'linear-gradient(135deg, #065F46 0%, #10B981 100%)',
+              color: '#ffffff',
+              boxShadow: '0 12px 28px -10px rgba(5, 150, 105, 0.45)',
+            }}
+          >
+            <div className="relative flex items-center gap-3">
+              <span
+                className="inline-flex items-center justify-center w-10 h-10 rounded-xl"
+                style={{ background: 'rgba(255, 255, 255, 0.2)' }}
+              >
+                <Icon name="shopping_bag" size={20} filled />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85">
+                  Vuelto a dar
+                </div>
+                <div
+                  className="bleed-text text-2xl font-black font-mono tabular-nums leading-tight"
+                  style={{ letterSpacing: '-0.02em' }}
+                >
+                  S/ {(changeToGive as number).toFixed(2)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     )
   }

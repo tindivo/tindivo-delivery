@@ -227,3 +227,39 @@ export class TrackingLinkSent extends BaseDomainEvent {
     this.payload = payload
   }
 }
+
+/**
+ * Emitido cuando el motorizado cambia el método de pago de un pedido en
+ * status=picked_up (caso real: cliente cambia de idea en la puerta y
+ * dice "mejor te pago efectivo" en vez de Yape, o viceversa).
+ *
+ * El payload guarda snapshots del estado previo y nuevo para auditoría
+ * y reconstrucción del historial. El monto del pedido (`orderAmount`)
+ * NO cambia — solo cambia cómo se cobra.
+ */
+export class PaymentMethodChanged extends BaseDomainEvent {
+  readonly eventType = 'PaymentMethodChanged' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    driverId: string
+    previousStatus: string
+    newStatus: string
+    previousYapeAmount: number | null
+    previousCashAmount: number | null
+    previousClientPaysWith: number | null
+    previousChangeToGive: number | null
+    newYapeAmount: number | null
+    newCashAmount: number | null
+    newClientPaysWith: number | null
+    newChangeToGive: number | null
+    changedAt: string
+  }
+
+  constructor(payload: PaymentMethodChanged['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}

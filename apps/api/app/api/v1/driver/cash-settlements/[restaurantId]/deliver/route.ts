@@ -41,13 +41,16 @@ export async function POST(
   const admin = createAdminClient()
 
   // 1) Pedidos pendientes de liquidación para este (driver, restaurant)
+  // Incluimos pending_cash (todo en efectivo) y pending_mixed (parte en
+  // efectivo). Para mixed, cash_amount marca el monto físico que pasó por
+  // las manos del driver — el resto fue por Yape directo al restaurante.
   const { data: pendingOrders, error: ordersErr } = await auth.auth.supabase
     .from('orders')
-    .select('id, order_amount, client_pays_with')
+    .select('id, order_amount, cash_amount, client_pays_with')
     .eq('driver_id', auth.auth.driverId)
     .eq('restaurant_id', restaurantId)
     .eq('status', 'delivered')
-    .eq('payment_status', 'pending_cash')
+    .in('payment_status', ['pending_cash', 'pending_mixed'])
     .is('cash_settlement_id', null)
 
   if (ordersErr) return problemCode('INTERNAL_ERROR', 500, ordersErr.message)
@@ -59,10 +62,13 @@ export async function POST(
     )
   }
 
-  // total_cash debe reflejar lo que el cliente pagó al driver (client_pays_with),
-  // no solo el monto del pedido: así el restaurante recupera el vuelto adelantado.
+  // total_cash refleja lo que físicamente pasó por las manos del driver:
+  //   - cash puro: client_pays_with ?? order_amount
+  //   - mixto: client_pays_with ?? cash_amount (la parte Yape NO entra)
   const totalCash = Number(
-    pendingOrders.reduce((s, o) => s + Number(o.client_pays_with ?? o.order_amount), 0).toFixed(2),
+    pendingOrders
+      .reduce((s, o) => s + Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount), 0)
+      .toFixed(2),
   )
   const orderCount = pendingOrders.length
 

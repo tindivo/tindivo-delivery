@@ -350,6 +350,7 @@ export type Database = {
           cancel_reason: string | null
           cancel_reason_code: string | null
           cancelled_at: string | null
+          cash_amount: number | null
           cash_settlement_id: string | null
           change_to_give: number | null
           client_name: string | null
@@ -386,6 +387,7 @@ export type Database = {
           tracking_link_sent_by: string | null
           updated_at: string
           waiting_at: string | null
+          yape_amount: number | null
         }
         Insert: {
           accept_countdown_seconds?: number | null
@@ -394,6 +396,7 @@ export type Database = {
           cancel_reason?: string | null
           cancel_reason_code?: string | null
           cancelled_at?: string | null
+          cash_amount?: number | null
           cash_settlement_id?: string | null
           change_to_give?: number | null
           client_name?: string | null
@@ -403,7 +406,7 @@ export type Database = {
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates?: unknown
-          delivery_fee?: number
+          delivery_fee: number
           delivery_lat?: number | null
           delivery_lng?: number | null
           delivery_maps_url?: string | null
@@ -430,6 +433,7 @@ export type Database = {
           tracking_link_sent_by?: string | null
           updated_at?: string
           waiting_at?: string | null
+          yape_amount?: number | null
         }
         Update: {
           accept_countdown_seconds?: number | null
@@ -438,6 +442,7 @@ export type Database = {
           cancel_reason?: string | null
           cancel_reason_code?: string | null
           cancelled_at?: string | null
+          cash_amount?: number | null
           cash_settlement_id?: string | null
           change_to_give?: number | null
           client_name?: string | null
@@ -474,6 +479,7 @@ export type Database = {
           tracking_link_sent_by?: string | null
           updated_at?: string
           waiting_at?: string | null
+          yape_amount?: number | null
         }
         Relationships: [
           {
@@ -758,6 +764,7 @@ export type Database = {
       enqueue_overdue_orders: { Args: never; Returns: undefined }
       generate_short_id: { Args: never; Returns: string }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
+      prune_stale_push_subscriptions: { Args: never; Returns: undefined }
     }
     Enums: {
       cash_settlement_status:
@@ -774,7 +781,11 @@ export type Database = {
         | "picked_up"
         | "delivered"
         | "cancelled"
-      payment_status: "prepaid" | "pending_yape" | "pending_cash"
+      payment_status:
+        | "prepaid"
+        | "pending_yape"
+        | "pending_cash"
+        | "pending_mixed"
       settlement_status: "pending" | "paid" | "overdue"
       user_role: "admin" | "restaurant" | "driver"
       vehicle_type: "moto" | "bicicleta" | "pie" | "auto"
@@ -921,7 +932,12 @@ export const Constants = {
         "delivered",
         "cancelled",
       ],
-      payment_status: ["prepaid", "pending_yape", "pending_cash"],
+      payment_status: [
+        "prepaid",
+        "pending_yape",
+        "pending_cash",
+        "pending_mixed",
+      ],
       settlement_status: ["pending", "paid", "overdue"],
       user_role: ["admin", "restaurant", "driver"],
       vehicle_type: ["moto", "bicicleta", "pie", "auto"],

@@ -37,6 +37,10 @@ export class Money extends ValueObject<Props> {
     return toMinorUnits(this.amount) >= toMinorUnits(other.amount)
   }
 
+  override equals(other: Money): boolean {
+    return toMinorUnits(this.amount) === toMinorUnits(other.amount)
+  }
+
   isZero(): boolean {
     return toMinorUnits(this.amount) === 0
   }

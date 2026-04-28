@@ -13,7 +13,7 @@ export const OrderStatus = z.enum([
 ])
 export type OrderStatus = z.infer<typeof OrderStatus>
 
-export const PaymentStatus = z.enum(['prepaid', 'pending_yape', 'pending_cash'])
+export const PaymentStatus = z.enum(['prepaid', 'pending_yape', 'pending_cash', 'pending_mixed'])
 export type PaymentStatus = z.infer<typeof PaymentStatus>
 
 export const SettlementStatus = z.enum(['pending', 'paid', 'overdue'])

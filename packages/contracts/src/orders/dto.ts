@@ -17,6 +17,8 @@ export const CreateOrderRequest = z
     prepMinutes: z.number().int().min(5).max(120),
     paymentStatus: PaymentStatus,
     orderAmount: MoneyPenSchema,
+    yapeAmount: MoneyPenSchema.optional(),
+    cashAmount: MoneyPenSchema.optional(),
     clientPaysWith: MoneyPenSchema.optional(),
     clientName: z.string().trim().min(1).max(80).optional(),
     notes: z.string().max(300).optional(),
@@ -30,7 +32,67 @@ export const CreateOrderRequest = z
       path: ['clientPaysWith'],
     },
   )
+  .refine(
+    (v) => {
+      if (v.paymentStatus !== 'pending_mixed') {
+        return v.yapeAmount === undefined && v.cashAmount === undefined
+      }
+      if (v.yapeAmount === undefined || v.cashAmount === undefined) return false
+      if (v.yapeAmount <= 0 || v.cashAmount <= 0) return false
+      return Math.round((v.yapeAmount + v.cashAmount) * 100) === Math.round(v.orderAmount * 100)
+    },
+    {
+      message:
+        'pending_mixed requiere yapeAmount y cashAmount > 0 que sumen orderAmount; otros estados no aceptan estos campos',
+      path: ['yapeAmount'],
+    },
+  )
+  .refine(
+    (v) =>
+      v.paymentStatus !== 'pending_mixed' ||
+      v.clientPaysWith === undefined ||
+      (v.cashAmount !== undefined && v.clientPaysWith >= v.cashAmount),
+    {
+      message: 'clientPaysWith debe ser ≥ cashAmount en pending_mixed',
+      path: ['clientPaysWith'],
+    },
+  )
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequest>
+
+export const ChangePaymentMethodRequest = z
+  .object({
+    paymentStatus: PaymentStatus.refine((s) => s !== 'prepaid', {
+      message: 'No se permite convertir a prepaid desde el motorizado',
+    }),
+    yapeAmount: MoneyPenSchema.optional(),
+    cashAmount: MoneyPenSchema.optional(),
+    clientPaysWith: MoneyPenSchema.optional(),
+  })
+  .refine(
+    (v) => {
+      if (v.paymentStatus !== 'pending_mixed') {
+        return v.yapeAmount === undefined && v.cashAmount === undefined
+      }
+      if (v.yapeAmount === undefined || v.cashAmount === undefined) return false
+      return v.yapeAmount > 0 && v.cashAmount > 0
+    },
+    {
+      message:
+        'pending_mixed requiere yapeAmount y cashAmount > 0; otros estados no aceptan estos campos',
+      path: ['yapeAmount'],
+    },
+  )
+  .refine(
+    (v) =>
+      v.paymentStatus !== 'pending_mixed' ||
+      v.clientPaysWith === undefined ||
+      (v.cashAmount !== undefined && v.clientPaysWith >= v.cashAmount),
+    {
+      message: 'clientPaysWith debe ser ≥ cashAmount en pending_mixed',
+      path: ['clientPaysWith'],
+    },
+  )
+export type ChangePaymentMethodRequest = z.infer<typeof ChangePaymentMethodRequest>
 
 export const RequestExtensionRequest = z.object({
   additionalMinutes: z.union([z.literal(5), z.literal(10)]),
@@ -91,6 +153,8 @@ export const OrderSummaryResponse = z.object({
   orderAmount: MoneyPenSchema,
   deliveryFee: MoneyPenSchema,
   paymentStatus: PaymentStatus,
+  yapeAmount: MoneyPenSchema.nullable(),
+  cashAmount: MoneyPenSchema.nullable(),
   prepMinutes: z.number().int(),
   estimatedReadyAt: TimestampSchema,
   appearsInQueueAt: TimestampSchema,
@@ -165,3 +229,14 @@ export const PickedUpResponse = z.object({
   trackingUrl: z.string().url(),
 })
 export type PickedUpResponse = z.infer<typeof PickedUpResponse>
+
+export const ChangePaymentMethodResponse = z.object({
+  id: UuidSchema,
+  paymentStatus: PaymentStatus,
+  orderAmount: MoneyPenSchema,
+  yapeAmount: MoneyPenSchema.nullable(),
+  cashAmount: MoneyPenSchema.nullable(),
+  clientPaysWith: MoneyPenSchema.nullable(),
+  changeToGive: MoneyPenSchema.nullable(),
+})
+export type ChangePaymentMethodResponse = z.infer<typeof ChangePaymentMethodResponse>

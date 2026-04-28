@@ -174,6 +174,34 @@ export function RestaurantOrderDetail({ orderId }: Props) {
               </>
             )}
           </div>
+          {order.payment_status === 'pending_mixed' && (
+            <div className="mt-3 flex items-center gap-3 text-xs">
+              <span
+                className="px-2.5 py-1 rounded-full font-bold font-mono tabular-nums"
+                style={{ background: 'rgba(124, 58, 237, 0.1)', color: '#5B21B6' }}
+              >
+                Yape S/ {Number(order.yape_amount ?? 0).toFixed(2)}
+              </span>
+              <span
+                className="px-2.5 py-1 rounded-full font-bold font-mono tabular-nums"
+                style={{ background: 'rgba(255, 107, 53, 0.1)', color: '#9A3412' }}
+              >
+                Efectivo S/ {Number(order.cash_amount ?? 0).toFixed(2)}
+              </span>
+            </div>
+          )}
+          {Array.isArray(order.payment_changes) && order.payment_changes.length > 0 && (
+            <div
+              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
+              style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#92400E' }}
+            >
+              <Icon name="swap_horiz" size={14} />
+              <span>
+                Método modificado por motorizado ·{' '}
+                {formatChangeAt(order.payment_changes[0].occurred_at)}
+              </span>
+            </div>
+          )}
         </section>
 
         {/* Countdown del prep_time — único timer que ve el restaurante.
@@ -388,9 +416,21 @@ function paymentLabel(status: string): string {
       return 'Cobrar Yape'
     case 'pending_cash':
       return 'Cobrar efectivo'
+    case 'pending_mixed':
+      return 'Yape + Efectivo'
     default:
       return status
   }
+}
+
+function formatChangeAt(iso: string): string {
+  return new Date(iso).toLocaleString('es-PE', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 }
 
 function formatDeliveryTime(iso: string): string {

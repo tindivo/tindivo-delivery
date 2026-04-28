@@ -70,3 +70,19 @@ export class RestaurantBlocked extends DomainError {
     super({ restaurantId, reason })
   }
 }
+
+export class InvalidPaymentChange extends DomainError {
+  readonly code = 'INVALID_PAYMENT_CHANGE'
+  readonly message = 'El cambio de método de pago no es válido'
+  constructor(reason: string) {
+    super({ reason })
+  }
+}
+
+export class PaymentChangeNotAllowed extends DomainError {
+  readonly code = 'PAYMENT_CHANGE_NOT_ALLOWED'
+  readonly message = 'El método de pago solo puede cambiarse cuando el pedido está en picked_up'
+  constructor(status: OrderStatusValue) {
+    super({ status })
+  }
+}

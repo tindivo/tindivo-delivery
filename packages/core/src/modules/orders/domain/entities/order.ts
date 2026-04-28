@@ -2,9 +2,11 @@ import { AggregateRoot } from '../../../../shared/kernel/aggregate-root'
 import { Result } from '../../../../shared/kernel/result'
 import {
   DriverCapacityExceeded,
+  InvalidPaymentChange,
   InvalidStateTransition,
   NoPrepTimeToReduce,
   OrderNotCancellable,
+  PaymentChangeNotAllowed,
   PrepTimeExtensionLimit,
 } from '../errors/order-errors'
 import {
@@ -19,6 +21,7 @@ import {
   OrderReadyForDrivers,
   OrderReassigned,
   OrderReceived,
+  PaymentMethodChanged,
   TrackingLinkSent,
 } from '../events/order-events'
 import { CancellationPolicy, type Role } from '../policies/cancellation.policy'
@@ -473,6 +476,54 @@ export class Order extends AggregateRoot<OrderId> {
   editClientPhone(newPhone: string, now: Date): void {
     this._state.clientPhone = newPhone
     this._state.updatedAt = now
+  }
+
+  /**
+   * Cambia el método de pago en el último minuto. Caso real: el cliente
+   * dijo que pagaría por Yape pero al recibir cambia de opinión y paga
+   * efectivo (o viceversa, o decide hacer split mixto).
+   *
+   * Reglas:
+   *  - Solo permitido en `status=picked_up` (motorizado físicamente con
+   *    el cliente). Antes no tiene sentido; después ya hay settlement.
+   *  - El `orderAmount` NO puede cambiar — solo se altera cómo se cobra.
+   *  - Emite `PaymentMethodChanged` con snapshot previo y nuevo.
+   */
+  changePaymentMethod(
+    newPayment: PaymentIntent,
+    now: Date,
+  ): Result<void, PaymentChangeNotAllowed | InvalidPaymentChange> {
+    if (this._state.status.value !== 'picked_up')
+      return Result.fail(new PaymentChangeNotAllowed(this._state.status.value))
+
+    if (!newPayment.orderAmount.equals(this._state.payment.orderAmount))
+      return Result.fail(
+        new InvalidPaymentChange('orderAmount no puede cambiar al modificar el método de pago'),
+      )
+
+    const previous = this._state.payment
+
+    this._state.payment = newPayment
+    this._state.updatedAt = now
+
+    this.raise(
+      new PaymentMethodChanged({
+        orderId: this.id.value,
+        driverId: this._state.driverId?.value ?? '',
+        previousStatus: previous.status,
+        newStatus: newPayment.status,
+        previousYapeAmount: previous.yapeAmount?.amount ?? null,
+        previousCashAmount: previous.cashAmount?.amount ?? null,
+        previousClientPaysWith: previous.clientPaysWith?.amount ?? null,
+        previousChangeToGive: previous.changeToGive?.amount ?? null,
+        newYapeAmount: newPayment.yapeAmount?.amount ?? null,
+        newCashAmount: newPayment.cashAmount?.amount ?? null,
+        newClientPaysWith: newPayment.clientPaysWith?.amount ?? null,
+        newChangeToGive: newPayment.changeToGive?.amount ?? null,
+        changedAt: now.toISOString(),
+      }),
+    )
+    return Result.okVoid()
   }
 
   logTrackingLinkSent(actorUserId: string, now: Date): void {

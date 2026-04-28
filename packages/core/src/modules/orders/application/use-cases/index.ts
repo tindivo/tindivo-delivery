@@ -4,6 +4,12 @@ export type { AcceptOrderCommand, AcceptOrderResult } from './accept-order.use-c
 export { CancelOrderUseCase } from './cancel-order.use-case'
 export type { CancelOrderCommand, CancelOrderResult } from './cancel-order.use-case'
 
+export { ChangePaymentMethodUseCase } from './change-payment-method.use-case'
+export type {
+  ChangePaymentMethodCommand,
+  ChangePaymentMethodResult,
+} from './change-payment-method.use-case'
+
 export { CreateOrderUseCase } from './create-order.use-case'
 export type { CreateOrderCommand, CreateOrderResult } from './create-order.use-case'
 

@@ -29,6 +29,11 @@ export function ordersApi(client: ApiClient) {
     markPickedUp: (id: string, body: Orders.MarkPickedUpRequest) =>
       client.post<Orders.PickedUpResponse>(`driver/orders/${id}/picked-up`, body),
     markDelivered: (id: string) => client.post<void>(`driver/orders/${id}/delivered`),
+    changePaymentMethod: (id: string, body: Orders.ChangePaymentMethodRequest) =>
+      client.post<Orders.ChangePaymentMethodResponse>(
+        `driver/orders/${id}/change-payment-method`,
+        body,
+      ),
 
     // Admin
     listAdminOrders: (query?: Partial<Orders.AdminOrderFiltersRequest>) =>

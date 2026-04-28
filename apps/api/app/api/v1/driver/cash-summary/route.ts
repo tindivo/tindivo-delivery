@@ -34,15 +34,16 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response
   if (!auth.auth.driverId) return problemCode('FORBIDDEN', 403)
 
-  // Bucket 1: pedidos pending_cash delivered que aún no están liquidados
+  // Bucket 1: pedidos delivered con efectivo pendiente que aún no están
+  // liquidados. Incluye pending_cash (todo cash) y pending_mixed (parte cash).
   const { data: unsettledOrders, error: ordersErr } = await auth.auth.supabase
     .from('orders')
     .select(
-      'id, order_amount, client_pays_with, restaurant_id, restaurants!inner(name, accent_color)',
+      'id, order_amount, cash_amount, client_pays_with, restaurant_id, restaurants!inner(name, accent_color)',
     )
     .eq('driver_id', auth.auth.driverId)
     .eq('status', 'delivered')
-    .eq('payment_status', 'pending_cash')
+    .in('payment_status', ['pending_cash', 'pending_mixed'])
     .is('cash_settlement_id', null)
 
   if (ordersErr) return problemCode('INTERNAL_ERROR', 500, ordersErr.message)
@@ -71,10 +72,11 @@ export async function GET(req: NextRequest) {
       settlementId: null,
       settlementStatus: null,
     }
-    // El driver debe entregar al restaurante el monto que pagó el cliente
-    // (client_pays_with), no el order_amount: el restaurante adelantó el vuelto
-    // y al recibir client_pays_with recupera el vuelto + cobra el pedido.
-    const cashOwed = Number(o.client_pays_with ?? o.order_amount)
+    // El driver entrega lo que físicamente pasó por sus manos:
+    //   - cash puro: client_pays_with ?? order_amount
+    //   - mixto: client_pays_with ?? cash_amount (la parte Yape va directa al
+    //     restaurante y no requiere liquidación con el driver).
+    const cashOwed = Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
     existing.totalCash = Number((existing.totalCash + cashOwed).toFixed(2))
     existing.orderCount += 1
     byRestaurant.set(o.restaurant_id, existing)

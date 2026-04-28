@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCreateOrder } from '../hooks/use-create-order'
 
-type Payment = 'prepaid' | 'pending_yape' | 'pending_cash'
+type Payment = 'prepaid' | 'pending_yape' | 'pending_cash' | 'pending_mixed'
 
 const PREP_MINUTES = [10, 15, 20, 30, 45, 60] as const
 type PrepMinutes = (typeof PREP_MINUTES)[number]
@@ -46,6 +46,13 @@ const paymentOptions: {
     icon: 'payments',
     gradient: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
   },
+  {
+    value: 'pending_mixed',
+    label: 'Yape + Efectivo',
+    hint: 'Cliente paga parte por Yape y parte cash',
+    icon: 'splitscreen',
+    gradient: 'linear-gradient(135deg, #7C3AED 0%, #FF6B35 100%)',
+  },
 ]
 
 export function NewOrderForm() {
@@ -56,6 +63,8 @@ export function NewOrderForm() {
   const [payment, setPayment] = useState<Payment>('pending_cash')
   const [amount, setAmount] = useState<string>('')
   const [paysWith, setPaysWith] = useState<string>('')
+  const [yapePart, setYapePart] = useState<string>('')
+  const [cashPart, setCashPart] = useState<string>('')
   const [clientName, setClientName] = useState<string>('')
 
   const carouselRef = useRef<HTMLDivElement>(null)
@@ -69,14 +78,26 @@ export function NewOrderForm() {
 
   const amountNum = parseMoney(amount)
   const paysWithNum = parseMoney(paysWith)
+  const yapePartNum = parseMoney(yapePart)
+  const cashPartNum = parseMoney(cashPart)
+  const splitSumCents = Math.round((yapePartNum + cashPartNum) * 100)
+  const orderAmountCents = Math.round(amountNum * 100)
+  const splitSumsCorrect = payment !== 'pending_mixed' || splitSumCents === orderAmountCents
+  const splitBothPositive = payment !== 'pending_mixed' || (yapePartNum > 0 && cashPartNum > 0)
+
+  const cashTarget = payment === 'pending_mixed' ? cashPartNum : amountNum
   const change = useMemo(() => {
-    if (payment !== 'pending_cash') return 0
-    return Math.max(paysWithNum - amountNum, 0)
-  }, [payment, amountNum, paysWithNum])
+    if (payment === 'pending_cash') return Math.max(paysWithNum - amountNum, 0)
+    if (payment === 'pending_mixed') return Math.max(paysWithNum - cashPartNum, 0)
+    return 0
+  }, [payment, amountNum, paysWithNum, cashPartNum])
 
   const needsAmount = payment !== 'prepaid'
   const canSubmit =
-    (!needsAmount || amountNum > 0) && (payment !== 'pending_cash' || paysWithNum >= amountNum)
+    (!needsAmount || amountNum > 0) &&
+    (payment !== 'pending_cash' || paysWithNum >= amountNum) &&
+    (payment !== 'pending_mixed' ||
+      (splitBothPositive && splitSumsCorrect && paysWithNum >= cashPartNum))
 
   useEffect(() => {
     const idx = PREP_MINUTES.indexOf(prepMinutes)
@@ -91,7 +112,10 @@ export function NewOrderForm() {
       prepMinutes,
       paymentStatus: payment,
       orderAmount: needsAmount ? amountNum : 0,
-      clientPaysWith: payment === 'pending_cash' ? paysWithNum : undefined,
+      yapeAmount: payment === 'pending_mixed' ? yapePartNum : undefined,
+      cashAmount: payment === 'pending_mixed' ? cashPartNum : undefined,
+      clientPaysWith:
+        payment === 'pending_cash' || payment === 'pending_mixed' ? paysWithNum : undefined,
       clientName: clientName.trim() || undefined,
     }
     createOrder.mutate(body, {
@@ -392,14 +416,68 @@ export function NewOrderForm() {
           </section>
         )}
 
-        {/* Pays with (cash only) */}
-        {payment === 'pending_cash' && (
+        {/* Split de pago mixto (yape + cash) */}
+        {payment === 'pending_mixed' && (
+          <section key="mixed-section" className="space-y-3 tindivo-reveal">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span className="text-sm font-semibold text-on-surface">División del pago</span>
+              <span className="text-[10px] text-on-surface-variant">
+                deben sumar S/ {amountNum.toFixed(2)}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="yapePart"
+                  className="text-[11px] font-bold tracking-wide uppercase text-purple-700"
+                >
+                  Yape
+                </label>
+                <MoneyInput
+                  id="yapePart"
+                  value={yapePart}
+                  onChange={(e) => setYapePart(e.target.value)}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="cashPart"
+                  className="text-[11px] font-bold tracking-wide uppercase text-orange-700"
+                >
+                  Efectivo
+                </label>
+                <MoneyInput
+                  id="cashPart"
+                  value={cashPart}
+                  onChange={(e) => setCashPart(e.target.value)}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+            </div>
+            {amountNum > 0 && yapePartNum + cashPartNum > 0 && !splitSumsCorrect && (
+              <div className="text-xs font-semibold text-red-600 px-1">
+                La suma actual es S/ {(yapePartNum + cashPartNum).toFixed(2)} — debe ser S/{' '}
+                {amountNum.toFixed(2)}.
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Pays with (cash only y mixed) */}
+        {(payment === 'pending_cash' || payment === 'pending_mixed') && (
           <section key="cash-section" className="space-y-3 tindivo-reveal">
             <div className="flex items-center gap-2 px-1">
               <label htmlFor="paysWith" className="text-sm font-semibold text-on-surface">
                 Cliente paga con
               </label>
-              <span className="text-[10px] text-on-surface-variant">para calcular vuelto</span>
+              <span className="text-[10px] text-on-surface-variant">
+                {payment === 'pending_mixed'
+                  ? `billete sobre la parte efectivo (S/ ${cashTarget.toFixed(2)})`
+                  : 'para calcular vuelto'}
+              </span>
             </div>
             <MoneyInput
               id="paysWith"
