@@ -84,6 +84,7 @@ export function MyActiveOrdersList() {
             <motion.li key={order.id} variants={listItem} exit={{ opacity: 0, scale: 0.9 }} layout>
               <OrderCard
                 shortId={order.short_id}
+                clientName={order.client_name ?? null}
                 restaurantName={order.restaurants?.name ?? 'Restaurante'}
                 restaurantAccentColor={order.restaurants?.accent_color ?? 'ab3500'}
                 status={order.status}

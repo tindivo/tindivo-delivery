@@ -134,6 +134,11 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 <h1 className="font-black text-lg text-on-surface">{restaurant.name}</h1>
               </div>
               <p className="text-xs text-on-surface-variant font-mono">#{raw.short_id}</p>
+              {raw.client_name && (
+                <p className="text-xs text-on-surface mt-0.5 font-semibold">
+                  Cliente: {raw.client_name}
+                </p>
+              )}
             </div>
             <StatusChip status={status as never} />
           </div>

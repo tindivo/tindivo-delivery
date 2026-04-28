@@ -45,6 +45,7 @@ export type OrderProps = {
   appearsInQueueAt: Date
   estimatedReadyAt: Date
   clientPhone: string | null
+  clientName: string | null
   deliveryCoordinates: Coordinates | null
   deliveryMapsUrl: string | null
   deliveryAddress: string | null
@@ -74,6 +75,7 @@ export type CreateOrderInput = {
   prepTime: PrepTime
   payment: PaymentIntent
   deliveryFee: Money
+  clientName?: string
   notes?: string
   now?: Date
 }
@@ -118,6 +120,7 @@ export class Order extends AggregateRoot<OrderId> {
       appearsInQueueAt,
       estimatedReadyAt,
       clientPhone: null,
+      clientName: input.clientName?.trim() || null,
       deliveryCoordinates: null,
       deliveryMapsUrl: null,
       deliveryAddress: null,
@@ -208,6 +211,9 @@ export class Order extends AggregateRoot<OrderId> {
   }
   get clientPhone(): string | null {
     return this._state.clientPhone
+  }
+  get clientName(): string | null {
+    return this._state.clientName
   }
   get deliveryCoordinates(): Coordinates | null {
     return this._state.deliveryCoordinates

@@ -145,7 +145,9 @@ export function RestaurantOrderDetail({ orderId }: Props) {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <ColorDot color={order.restaurants?.accent_color ?? 'ab3500'} />
-                <h1 className="font-black text-base text-on-surface">Mi pedido</h1>
+                <h1 className="font-black text-base text-on-surface">
+                  {order.client_name ?? 'Mi pedido'}
+                </h1>
               </div>
               <p className="text-xs text-on-surface-variant font-mono">#{order.short_id}</p>
             </div>

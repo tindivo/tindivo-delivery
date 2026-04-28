@@ -100,7 +100,16 @@ function TrackingRow({ row }: { row: TrackingPendingRow }) {
 
   return (
     <tr className="border-t border-outline-variant/10 hover:bg-surface-container-low/50">
-      <td className="px-4 py-3 font-mono text-xs">#{row.short_id}</td>
+      <td className="px-4 py-3 text-xs">
+        {row.client_name ? (
+          <div>
+            <div className="font-semibold">{row.client_name}</div>
+            <div className="font-mono text-on-surface-variant/70">#{row.short_id}</div>
+          </div>
+        ) : (
+          <span className="font-mono">#{row.short_id}</span>
+        )}
+      </td>
       <td className="px-4 py-3 font-semibold">
         <span className="flex items-center gap-2">
           <span

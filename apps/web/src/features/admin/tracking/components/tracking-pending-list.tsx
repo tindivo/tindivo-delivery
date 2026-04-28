@@ -141,6 +141,12 @@ function TrackingCard({ row }: { row: TrackingPendingRow }) {
           </div>
           <div className="flex items-center gap-3 mt-1 text-xs text-on-surface-variant flex-wrap">
             <span className="font-mono">#{row.short_id}</span>
+            {row.client_name && (
+              <>
+                <span>·</span>
+                <span className="font-semibold text-on-surface">{row.client_name}</span>
+              </>
+            )}
             <span>·</span>
             <span>
               <Icon name="two_wheeler" size={12} className="inline align-middle mr-1" />

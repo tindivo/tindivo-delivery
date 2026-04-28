@@ -18,6 +18,7 @@ export const CreateOrderRequest = z
     paymentStatus: PaymentStatus,
     orderAmount: MoneyPenSchema,
     clientPaysWith: MoneyPenSchema.optional(),
+    clientName: z.string().trim().min(1).max(80).optional(),
     notes: z.string().max(300).optional(),
   })
   .refine(
@@ -94,6 +95,7 @@ export const OrderSummaryResponse = z.object({
   estimatedReadyAt: TimestampSchema,
   appearsInQueueAt: TimestampSchema,
   clientPhone: PhonePeSchema.nullable(),
+  clientName: z.string().nullable(),
   trackingLinkSentAt: TimestampSchema.nullable(),
   createdAt: TimestampSchema,
 })

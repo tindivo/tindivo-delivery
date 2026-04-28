@@ -109,7 +109,16 @@ export function OrdersHistoryList() {
                   key={o.id}
                   className="border-t border-outline-variant/10 hover:bg-surface-container-low/50"
                 >
-                  <td className="px-4 py-3 font-mono text-xs">#{o.short_id}</td>
+                  <td className="px-4 py-3 text-xs">
+                    {o.client_name ? (
+                      <div>
+                        <div className="font-semibold">{o.client_name}</div>
+                        <div className="font-mono text-on-surface-variant/70">#{o.short_id}</div>
+                      </div>
+                    ) : (
+                      <span className="font-mono">#{o.short_id}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-semibold">{o.restaurants?.name ?? '—'}</td>
                   <td className="px-4 py-3 text-on-surface-variant">
                     {o.drivers?.full_name ?? '—'}

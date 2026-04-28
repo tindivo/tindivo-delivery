@@ -53,6 +53,7 @@ type Recipient = { userId: string; role: Role }
 
 type OrderContext = {
   short_id: string | null
+  client_name: string | null
   order_amount: number | string | null
   restaurants: { name: string | null } | null
 } | null
@@ -82,6 +83,11 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
     const shortId = order?.short_id ?? ''
     const amount = order?.order_amount ? fmtPEN(order.order_amount) : ''
     const tag = `order-${shortId || event.aggregate_id}`
+    // Etiqueta humana del pedido para el restaurante: nombre del cliente si
+    // se ingresó al crear, sino fallback al #shortId. Para el driver se usa
+    // siempre #shortId (el driver no necesariamente conoce al cliente).
+    const clientName = order?.client_name?.trim() || null
+    const restaurantOrderLabel = clientName ?? (shortId ? `#${shortId}` : 'tu pedido')
 
     switch (event.event_type) {
       case 'OrderCreated':
@@ -113,7 +119,7 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
         if (role !== 'restaurant') return null
         return {
           title: 'Motorizado en camino',
-          body: `Tu pedido #${shortId} fue aceptado`,
+          body: `Pedido de ${restaurantOrderLabel} fue aceptado`,
           url: `/restaurante/pedidos/${event.aggregate_id}`,
           tag,
         }
@@ -122,7 +128,7 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
         if (role !== 'restaurant') return null
         return {
           title: 'Motorizado en el local',
-          body: `Recogiendo pedido #${shortId}`,
+          body: `Recogiendo pedido de ${restaurantOrderLabel}`,
           url: `/restaurante/pedidos/${event.aggregate_id}`,
           tag,
         }
@@ -131,17 +137,16 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
         if (role !== 'restaurant') return null
         return {
           title: 'Pedido entregado',
-          body: `#${shortId} completado`,
+          body: `Pedido de ${restaurantOrderLabel} completado`,
           url: `/restaurante/pedidos/${event.aggregate_id}`,
           tag,
         }
 
       case 'OrderCancelled': {
-        const base = `#${shortId} ha sido cancelado`
         if (role === 'driver') {
           return {
             title: 'Pedido cancelado',
-            body: base,
+            body: `#${shortId} ha sido cancelado`,
             url: `/motorizado/pedidos/${event.aggregate_id}`,
             tag,
           }
@@ -149,7 +154,7 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
         if (role === 'restaurant') {
           return {
             title: 'Pedido cancelado',
-            body: base,
+            body: `Pedido de ${restaurantOrderLabel} ha sido cancelado`,
             url: `/restaurante/pedidos/${event.aggregate_id}`,
             tag,
           }
@@ -419,7 +424,7 @@ Deno.serve(async () => {
     if (event.aggregate_type === 'Order') {
       const { data } = await sb
         .from('orders')
-        .select('short_id, order_amount, restaurants(name)')
+        .select('short_id, client_name, order_amount, restaurants(name)')
         .eq('id', event.aggregate_id)
         .maybeSingle<OrderContext>()
       context = data

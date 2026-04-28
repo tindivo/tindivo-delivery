@@ -81,6 +81,7 @@ export function RestaurantHistory() {
             <li key={order.id}>
               <OrderCard
                 shortId={order.short_id}
+                clientName={order.client_name ?? null}
                 restaurantName={profile.data?.name ?? 'Mi restaurante'}
                 restaurantAccentColor={accent}
                 status={order.status}

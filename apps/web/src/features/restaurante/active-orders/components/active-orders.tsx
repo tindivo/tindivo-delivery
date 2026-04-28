@@ -90,6 +90,7 @@ export function ActiveOrders() {
             <li key={order.id}>
               <OrderCard
                 shortId={order.short_id}
+                clientName={order.client_name ?? null}
                 restaurantName={order.restaurants?.name ?? 'Pedido'}
                 restaurantAccentColor={order.restaurants?.accent_color ?? 'ab3500'}
                 status={order.status}

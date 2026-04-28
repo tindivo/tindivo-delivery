@@ -352,6 +352,7 @@ export type Database = {
           cancelled_at: string | null
           cash_settlement_id: string | null
           change_to_give: number | null
+          client_name: string | null
           client_pays_with: number | null
           client_phone: string | null
           created_at: string
@@ -395,6 +396,7 @@ export type Database = {
           cancelled_at?: string | null
           cash_settlement_id?: string | null
           change_to_give?: number | null
+          client_name?: string | null
           client_pays_with?: number | null
           client_phone?: string | null
           created_at?: string
@@ -438,6 +440,7 @@ export type Database = {
           cancelled_at?: string | null
           cash_settlement_id?: string | null
           change_to_give?: number | null
+          client_name?: string | null
           client_pays_with?: number | null
           client_phone?: string | null
           created_at?: string

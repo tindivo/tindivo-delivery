@@ -187,11 +187,12 @@ export function OrderDetail({ orderId }: Props) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 md:gap-3 flex-wrap">
             <h1 className="font-black text-xl md:text-2xl tracking-tight truncate">
-              Pedido #{order.short_id}
+              {order.client_name ? order.client_name : `Pedido #${order.short_id}`}
             </h1>
             <StatusChip status={order.status} />
           </div>
           <p className="text-on-surface-variant text-xs md:text-sm mt-0.5">
+            {order.client_name && <span className="font-mono mr-2">#{order.short_id} ·</span>}
             Creado {fmtDateTime(order.created_at)} (San Jacinto)
           </p>
         </div>

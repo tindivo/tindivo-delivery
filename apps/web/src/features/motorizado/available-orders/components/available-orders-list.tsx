@@ -104,6 +104,7 @@ export function AvailableOrdersList() {
                     >
                       <OrderCard
                         shortId={order.short_id}
+                        clientName={order.client_name ?? null}
                         restaurantName={order.restaurants?.name ?? 'Restaurante'}
                         restaurantAccentColor={order.restaurants?.accent_color ?? 'ab3500'}
                         status={order.status}

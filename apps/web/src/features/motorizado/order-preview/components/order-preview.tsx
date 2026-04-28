@@ -137,6 +137,11 @@ export function OrderPreview({ orderId }: Props) {
               <span className="truncate">{restaurant.address ?? 'Dirección no disponible'}</span>
             </div>
             <div className="mt-1 text-xs opacity-85 font-mono">#{order.short_id}</div>
+            {order.client_name && (
+              <div className="mt-0.5 text-xs opacity-90 font-semibold">
+                Cliente: {order.client_name}
+              </div>
+            )}
           </div>
         </section>
 

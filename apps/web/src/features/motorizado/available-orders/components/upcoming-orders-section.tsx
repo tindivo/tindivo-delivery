@@ -86,11 +86,13 @@ export function UpcomingOrdersSection({ items, now }: Props) {
                   <div className="flex items-center gap-1.5">
                     <ColorDot color={order.restaurants?.accent_color ?? 'ab3500'} size={8} />
                     <span className="font-semibold text-sm text-on-surface truncate">
-                      {order.restaurants?.name ?? 'Restaurante'}
+                      {order.client_name ?? order.restaurants?.name ?? 'Restaurante'}
                     </span>
                   </div>
-                  <div className="text-[11px] text-on-surface-variant font-mono mt-0.5">
-                    #{order.short_id}
+                  <div className="text-[11px] text-on-surface-variant font-mono mt-0.5 truncate">
+                    {order.client_name
+                      ? `#${order.short_id} · ${order.restaurants?.name ?? ''}`
+                      : `#${order.short_id}`}
                   </div>
                   <div className="text-[11px] text-on-surface-variant mt-1">
                     {noCharge ? 'Solo entregar' : paymentLabel(order.payment_status)}

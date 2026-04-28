@@ -47,6 +47,7 @@ export const OrderMapper = {
       appearsInQueueAt: new Date(row.appears_in_queue_at),
       estimatedReadyAt: new Date(row.estimated_ready_at),
       clientPhone: row.client_phone,
+      clientName: row.client_name,
       deliveryCoordinates: deliveryPoint
         ? Coordinates.of(deliveryPoint.lat, deliveryPoint.lng)
         : null,
@@ -94,6 +95,7 @@ export const OrderMapper = {
       payment_status: p.payment.status,
       client_pays_with: p.payment.clientPaysWith?.amount ?? null,
       change_to_give: p.payment.changeToGive?.amount ?? null,
+      client_name: p.clientName,
       notes: p.notes,
       extension_used: p.extensionUsed,
       ready_early_used: p.readyEarlyUsed,

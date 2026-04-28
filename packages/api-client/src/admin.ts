@@ -80,6 +80,7 @@ export type TrackingPendingRow = {
   short_id: string
   status: string
   client_phone: string
+  client_name: string | null
   delivery_address: string | null
   order_amount: number
   picked_up_at: string | null

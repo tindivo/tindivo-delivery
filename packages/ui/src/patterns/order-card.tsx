@@ -47,6 +47,14 @@ type Props = {
    * necesita identificar pedidos por su código rápido.
    */
   prominentCode?: boolean
+  /**
+   * Nombre del cliente registrado por el restaurante al crear el pedido.
+   * Cuando está presente, reemplaza al `#shortId` como label principal del
+   * card y el código pasa a posición secundaria (más intuitivo para el ojo
+   * humano). Si es null/undefined/vacío, se mantiene el comportamiento
+   * basado en `prominentCode`.
+   */
+  clientName?: string | null
 }
 
 const TIER_STYLES: Record<
@@ -86,7 +94,9 @@ export function OrderCard({
   now,
   disabled = false,
   prominentCode = false,
+  clientName,
 }: Props) {
+  const displayLabel = clientName?.trim() || null
   const noCharge = orderAmount === 0
   const money = noCharge
     ? 'No cobrar'
@@ -146,7 +156,17 @@ export function OrderCard({
 
       <div className="flex items-start justify-between gap-2 pl-2">
         <div className="flex-1 min-w-0">
-          {prominentCode ? (
+          {displayLabel ? (
+            <>
+              <div className="flex items-center gap-2 mb-1">
+                <ColorDot color={restaurantAccentColor} size={10} label={restaurantName} />
+                <span className="font-black truncate text-on-surface">{displayLabel}</span>
+              </div>
+              <div className="text-xs text-on-surface-variant font-mono tracking-wider truncate">
+                #{shortId} · {restaurantName}
+              </div>
+            </>
+          ) : prominentCode ? (
             <>
               <div className="flex items-center gap-2 mb-1">
                 <ColorDot color={restaurantAccentColor} size={10} label={restaurantName} />
