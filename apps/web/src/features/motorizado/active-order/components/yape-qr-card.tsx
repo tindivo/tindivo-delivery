@@ -162,6 +162,21 @@ export function YapeQrCard({ qrUrl, qrUrlSecondary, yapeNumber, amount, restaura
           style={{ background: 'rgba(0, 0, 0, 0.92)' }}
           aria-label="Cerrar QR"
         >
+          {yapeNumber && (
+            <span
+              aria-hidden="true"
+              className="absolute top-6 left-1/2 -translate-x-1/2 inline-flex items-center gap-2 px-4 py-2 rounded-full"
+              style={{
+                background: 'rgba(255, 255, 255, 0.16)',
+                color: '#ffffff',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+              }}
+            >
+              <Icon name="smartphone" size={18} filled />
+              <span className="font-mono font-bold text-sm tracking-wide">+51 {yapeNumber}</span>
+            </span>
+          )}
           <img
             src={activeQr}
             alt={`QR Yape de ${restaurantName}`}
