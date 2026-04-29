@@ -16,12 +16,15 @@ import {
   UrgencyBadge,
 } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
 import { useMarkDelivered } from '../hooks/use-mark-delivered'
+import { useMarkPickedUp } from '../hooks/use-mark-picked-up'
 import { useMarkReceived } from '../hooks/use-mark-received'
 import { useOrderDetail } from '../hooks/use-order-detail'
+import { usePickupDraft } from '../hooks/use-pickup-draft'
 import { ChangePaymentMethodModal } from './change-payment-method-modal'
+import { CustomerDataForm } from './customer-data-form'
 import { YapeQrCard } from './yape-qr-card'
 
 type Props = { orderId: string }
@@ -32,9 +35,35 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const arrived = useMarkArrived(orderId)
   const received = useMarkReceived(orderId)
   const delivered = useMarkDelivered(orderId)
+  const pickedUp = useMarkPickedUp(orderId)
+  const draft = usePickupDraft(orderId)
   const now = useNow(1_000)
   const { navigate: navigateMaps, isLocating } = useGeolocatedNavigation()
   const [changePaymentOpen, setChangePaymentOpen] = useState(false)
+  const receivedFiredRef = useRef(false)
+
+  // Auto-marca received en background al primer mount en waiting_at_restaurant.
+  // Preserva la métrica `received_at` ahora que el botón explícito desaparece:
+  // pasa a significar "el driver llegó al local y la PWA cargó el form".
+  // Idempotente — el dominio ignora si ya estaba seteado.
+  useEffect(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
+    const raw = order as any
+    if (raw?.status !== 'waiting_at_restaurant') return
+    if (raw?.received_at) return
+    if (receivedFiredRef.current) return
+    receivedFiredRef.current = true
+    received.mutate()
+  }, [order, received.mutate])
+
+  const restaurantCoords = useMemo<{ lat: number; lng: number } | null>(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
+    const r = (order as any)?.restaurants
+    const lat = r?.coordinates_lat
+    const lng = r?.coordinates_lng
+    if (typeof lat !== 'number' || typeof lng !== 'number') return null
+    return { lat, lng }
+  }, [order])
 
   const steps = useMemo<TimelineStep[]>(() => {
     if (!order) return []
@@ -240,6 +269,18 @@ export function ActiveOrderDetail({ orderId }: Props) {
           </section>
         )}
 
+        {/* Form de datos del cliente — disponible durante la espera para
+            eliminar el tiempo muerto. Ver use-pickup-draft (localStorage). */}
+        {status === 'waiting_at_restaurant' && (
+          <CustomerDataForm
+            phone={draft.phone}
+            onPhoneChange={draft.setPhone}
+            coords={draft.coords}
+            onCoordsChange={draft.setCoords}
+            restaurantCoords={restaurantCoords}
+          />
+        )}
+
         {/* Cliente: dirección + navegar */}
         {status === 'picked_up' && raw.delivery_maps_url && (
           <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
@@ -363,18 +404,21 @@ export function ActiveOrderDetail({ orderId }: Props) {
             <Button
               size="lg"
               className="w-full"
-              disabled={received.isPending}
+              disabled={pickedUp.isPending || !draft.isValid}
               onClick={() => {
-                received.mutate(undefined, {
-                  onSuccess: () => router.push(`/motorizado/pedidos/${orderId}/pickup`),
-                  // En error igual navega: el siguiente paso (pickup) no depende
-                  // del received_at y fallar aquí no debe bloquear al driver.
-                  onError: () => router.push(`/motorizado/pedidos/${orderId}/pickup`),
-                })
+                if (!draft.coords) return
+                pickedUp.mutate(
+                  { clientPhone: draft.phone, deliveryCoordinates: draft.coords },
+                  { onSuccess: () => draft.clearDraft() },
+                )
               }}
             >
               <Icon name="shopping_bag" size={22} filled />
-              Recibí el pedido
+              {pickedUp.isPending
+                ? 'Confirmando...'
+                : draft.isValid
+                  ? 'Confirmar pickup y partir'
+                  : 'Completa los datos del cliente'}
             </Button>
           </>
         )}
