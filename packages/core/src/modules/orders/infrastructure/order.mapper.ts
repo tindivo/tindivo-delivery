@@ -13,23 +13,24 @@ import { ShortId } from '../domain/value-objects/short-id'
 type OrderRow = Tables<'orders'>
 
 /**
- * Parsea coordenadas de PostGIS desde el cliente supabase-js.
- * Supabase devuelve POINT como string WKT o GeoJSON según config.
- * Aquí asumimos que usamos select con RPC custom o que el driver
- * parsea como GeoJSON {type:'Point',coordinates:[lng,lat]}.
+ * Lee las coordenadas del cliente desde las columnas generadas
+ * `delivery_lat`/`delivery_lng` (double precision derivados via PostGIS de
+ * `delivery_coordinates`). Es más confiable que parsear el WKT/GeoJSON del
+ * tipo geography en la fila — supabase-js puede devolver el geography como
+ * string opaco según el path de query, mientras que las columnas generadas
+ * siempre son numbers nativos.
  */
-function parseGeoPoint(value: unknown): { lat: number; lng: number } | null {
-  if (!value) return null
-  if (typeof value === 'object' && value !== null && 'coordinates' in value) {
-    const coords = (value as { coordinates: [number, number] }).coordinates
-    return { lng: coords[0], lat: coords[1] }
-  }
-  return null
+function readDeliveryPoint(
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+): { lat: number; lng: number } | null {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null
+  return { lat, lng }
 }
 
 export const OrderMapper = {
   toDomain(row: OrderRow): Order {
-    const deliveryPoint = parseGeoPoint(row.delivery_coordinates)
+    const deliveryPoint = readDeliveryPoint(row.delivery_lat, row.delivery_lng)
 
     const props: OrderProps = {
       id: OrderId.of(row.id),

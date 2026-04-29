@@ -110,12 +110,16 @@ export const MarkArrivedRequest = z.object({
 })
 export type MarkArrivedRequest = z.infer<typeof MarkArrivedRequest>
 
-export const MarkPickedUpRequest = z.object({
+/**
+ * Body para POST /driver/orders/:id/customer-data — el driver guarda los
+ * datos del cliente mientras espera en el local. NO transiciona el status.
+ */
+export const SaveCustomerDataRequest = z.object({
   clientPhone: PhonePeSchema,
   deliveryCoordinates: CoordinatesSchema,
   deliveryAddress: z.string().max(200).optional(),
 })
-export type MarkPickedUpRequest = z.infer<typeof MarkPickedUpRequest>
+export type SaveCustomerDataRequest = z.infer<typeof SaveCustomerDataRequest>
 
 export const EditClientPhoneRequest = z.object({
   clientPhone: PhonePeSchema,
@@ -229,6 +233,15 @@ export const PickedUpResponse = z.object({
   trackingUrl: z.string().url(),
 })
 export type PickedUpResponse = z.infer<typeof PickedUpResponse>
+
+export const SaveCustomerDataResponse = z.object({
+  id: UuidSchema,
+  status: OrderStatus,
+  clientPhone: PhonePeSchema,
+  deliveryCoordinates: CoordinatesSchema,
+  deliveryAddress: z.string().nullable(),
+})
+export type SaveCustomerDataResponse = z.infer<typeof SaveCustomerDataResponse>
 
 export const ChangePaymentMethodResponse = z.object({
   id: UuidSchema,

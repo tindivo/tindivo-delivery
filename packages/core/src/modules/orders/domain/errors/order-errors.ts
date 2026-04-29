@@ -86,3 +86,8 @@ export class PaymentChangeNotAllowed extends DomainError {
     super({ status })
   }
 }
+
+export class CustomerDataMissing extends DomainError {
+  readonly code = 'CUSTOMER_DATA_MISSING'
+  readonly message = 'Faltan datos del cliente: completa teléfono y ubicación antes de partir'
+}

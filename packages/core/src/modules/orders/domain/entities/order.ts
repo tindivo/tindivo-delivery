@@ -1,6 +1,7 @@
 import { AggregateRoot } from '../../../../shared/kernel/aggregate-root'
 import { Result } from '../../../../shared/kernel/result'
 import {
+  CustomerDataMissing,
   DriverCapacityExceeded,
   InvalidPaymentChange,
   InvalidStateTransition,
@@ -10,6 +11,7 @@ import {
   PrepTimeExtensionLimit,
 } from '../errors/order-errors'
 import {
+  CustomerDataSaved,
   DriverArrived,
   OrderAccepted,
   OrderCancelled,
@@ -318,20 +320,62 @@ export class Order extends AggregateRoot<OrderId> {
     return Result.okVoid()
   }
 
-  markPickedUp(
+  /**
+   * Persiste los datos del cliente (phone + coords + dirección opcional)
+   * mientras el driver espera que el restaurante tenga listo el pedido.
+   * NO transiciona el status (sigue waiting_at_restaurant); solo deja los
+   * datos listos para que `markPickedUp` los promueva. Idempotente: cada
+   * llamada sobrescribe los valores anteriores y vuelve a emitir el evento.
+   *
+   * Esto reemplaza al draft de localStorage del cliente: la fuente de
+   * verdad es la BD, así que cambios de pedido o de dispositivo no pierden
+   * el progreso del driver.
+   */
+  saveCustomerData(
     clientPhone: string,
     deliveryCoordinates: Coordinates,
     deliveryAddress: string | null,
     now: Date,
   ): Result<void, InvalidStateTransition> {
-    if (!StateTransitionPolicy.canTransition(this._state.status.value, 'picked_up'))
-      return Result.fail(new InvalidStateTransition(this._state.status.value, 'picked_up'))
+    if (this._state.status.value !== 'waiting_at_restaurant')
+      return Result.fail(
+        new InvalidStateTransition(this._state.status.value, 'waiting_at_restaurant'),
+      )
 
-    this._state.status = OrderStatus.pickedUp()
     this._state.clientPhone = clientPhone
     this._state.deliveryCoordinates = deliveryCoordinates
     this._state.deliveryAddress = deliveryAddress
     this._state.deliveryMapsUrl = buildMapsUrl(deliveryCoordinates)
+    this._state.updatedAt = now
+
+    this.raise(
+      new CustomerDataSaved({
+        orderId: this.id.value,
+        driverId: this._state.driverId?.value ?? '',
+        clientPhone,
+        deliveryCoordinates: { lat: deliveryCoordinates.lat, lng: deliveryCoordinates.lng },
+        deliveryAddress,
+        savedAt: now.toISOString(),
+      }),
+    )
+    return Result.okVoid()
+  }
+
+  /**
+   * Transición waiting_at_restaurant → picked_up. Los datos del cliente
+   * (phone + coords) deben estar previamente persistidos via
+   * `saveCustomerData`. Si faltan, retorna CustomerDataMissing — la UI
+   * no debería permitir llegar aquí sin haber guardado primero.
+   */
+  markPickedUp(now: Date): Result<void, InvalidStateTransition | CustomerDataMissing> {
+    if (!StateTransitionPolicy.canTransition(this._state.status.value, 'picked_up'))
+      return Result.fail(new InvalidStateTransition(this._state.status.value, 'picked_up'))
+
+    const phone = this._state.clientPhone
+    const coords = this._state.deliveryCoordinates
+    if (!phone || !coords) return Result.fail(new CustomerDataMissing())
+
+    this._state.status = OrderStatus.pickedUp()
     this._state.pickedUpAt = now
     this._state.updatedAt = now
 
@@ -340,8 +384,8 @@ export class Order extends AggregateRoot<OrderId> {
         orderId: this.id.value,
         driverId: this._state.driverId?.value ?? '',
         pickedUpAt: now.toISOString(),
-        clientPhone,
-        deliveryCoordinates: { lat: deliveryCoordinates.lat, lng: deliveryCoordinates.lng },
+        clientPhone: phone,
+        deliveryCoordinates: { lat: coords.lat, lng: coords.lng },
       }),
     )
     return Result.okVoid()
@@ -471,11 +515,6 @@ export class Order extends AggregateRoot<OrderId> {
       }),
     )
     return Result.okVoid()
-  }
-
-  editClientPhone(newPhone: string, now: Date): void {
-    this._state.clientPhone = newPhone
-    this._state.updatedAt = now
   }
 
   /**

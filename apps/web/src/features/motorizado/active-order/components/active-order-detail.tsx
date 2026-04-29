@@ -22,10 +22,13 @@ import { useMarkDelivered } from '../hooks/use-mark-delivered'
 import { useMarkPickedUp } from '../hooks/use-mark-picked-up'
 import { useMarkReceived } from '../hooks/use-mark-received'
 import { useOrderDetail } from '../hooks/use-order-detail'
-import { usePickupDraft } from '../hooks/use-pickup-draft'
+import { useSaveCustomerData } from '../hooks/use-save-customer-data'
 import { ChangePaymentMethodModal } from './change-payment-method-modal'
+import { ConfirmPickupModal } from './confirm-pickup-modal'
 import { CustomerDataForm } from './customer-data-form'
 import { YapeQrCard } from './yape-qr-card'
+
+const PHONE_REGEX = /^9\d{8}$/
 
 type Props = { orderId: string }
 
@@ -36,15 +39,25 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const received = useMarkReceived(orderId)
   const delivered = useMarkDelivered(orderId)
   const pickedUp = useMarkPickedUp(orderId)
-  const draft = usePickupDraft(orderId)
+  const saveCustomerData = useSaveCustomerData(orderId)
   const now = useNow(1_000)
   const { navigate: navigateMaps, isLocating } = useGeolocatedNavigation()
   const [changePaymentOpen, setChangePaymentOpen] = useState(false)
+  const [confirmPickupOpen, setConfirmPickupOpen] = useState(false)
+  const [pickupError, setPickupError] = useState<string | null>(null)
   const receivedFiredRef = useRef(false)
 
+  // Estado del form mientras el driver edita; vive solo en memoria. La fuente
+  // de verdad son los datos persistidos en BD (order.client_phone +
+  // order.delivery_lat/lng). Sin localStorage — eliminado por bug de iOS al
+  // cambiar entre pedidos (drafts cruzaban entre orders distintos).
+  const [phoneDraft, setPhoneDraft] = useState('')
+  const [coordsDraft, setCoordsDraft] = useState<{ lat: number; lng: number } | null>(null)
+  const [isEditingCustomerData, setIsEditingCustomerData] = useState(false)
+  const draftHydratedRef = useRef<string | null>(null)
+
   // Auto-marca received en background al primer mount en waiting_at_restaurant.
-  // Preserva la métrica `received_at` ahora que el botón explícito desaparece:
-  // pasa a significar "el driver llegó al local y la PWA cargó el form".
+  // Preserva la métrica `received_at` como "driver llegó y la PWA cargó".
   // Idempotente — el dominio ignora si ya estaba seteado.
   useEffect(() => {
     // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
@@ -55,6 +68,25 @@ export function ActiveOrderDetail({ orderId }: Props) {
     receivedFiredRef.current = true
     received.mutate()
   }, [order, received.mutate])
+
+  // Hidrata el form local desde la BD una sola vez por orderId. Si todavía no
+  // hay datos guardados, abre el modo edición; si ya están, muestra el
+  // countdown directamente.
+  useEffect(() => {
+    if (!order) return
+    if (draftHydratedRef.current === orderId) return
+    // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
+    const raw = order as any
+    if (raw.status !== 'waiting_at_restaurant') return
+    draftHydratedRef.current = orderId
+    const phone = typeof raw.client_phone === 'string' ? raw.client_phone : ''
+    const lat = raw.delivery_lat
+    const lng = raw.delivery_lng
+    const coords = typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null
+    setPhoneDraft(phone)
+    setCoordsDraft(coords)
+    setIsEditingCustomerData(!(phone && coords))
+  }, [order, orderId])
 
   const restaurantCoords = useMemo<{ lat: number; lng: number } | null>(() => {
     // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
@@ -118,6 +150,19 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const status = raw.status as string
   const restaurant = raw.restaurants ?? {}
   const clientPhone: string | null = raw.client_phone ?? null
+  const persistedCoords: boolean =
+    typeof raw.delivery_lat === 'number' && typeof raw.delivery_lng === 'number'
+  const hasCustomerData = Boolean(clientPhone) && persistedCoords
+  const phoneValid = PHONE_REGEX.test(phoneDraft)
+  const formValid = phoneValid && coordsDraft !== null
+  const estimatedReadyAt = raw.estimated_ready_at
+    ? new Date(raw.estimated_ready_at as string)
+    : null
+  const remainingMs = estimatedReadyAt ? Math.max(0, estimatedReadyAt.getTime() - now.getTime()) : 0
+  const prepReady = remainingMs <= 0
+  const remainingMinutes = Math.floor(remainingMs / 60_000)
+  const remainingSeconds = Math.floor((remainingMs % 60_000) / 1_000)
+  const remainingLabel = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`
   const restaurantWaUrl: string | null = restaurant.phone
     ? buildWaMeUrl(
         normalizeToE164Pe(restaurant.phone) ?? `51${restaurant.phone}`,
@@ -269,16 +314,80 @@ export function ActiveOrderDetail({ orderId }: Props) {
           </section>
         )}
 
-        {/* Form de datos del cliente — disponible durante la espera para
-            eliminar el tiempo muerto. Ver use-pickup-draft (localStorage). */}
-        {status === 'waiting_at_restaurant' && (
+        {/* Datos del cliente — durante waiting_at_restaurant.
+            - Si todavía no hay datos guardados o el driver pidió editar:
+              muestra el form. El botón "Guardar" persiste en BD sin cambiar
+              status (queda en waiting_at_restaurant).
+            - Si ya hay datos guardados: muestra resumen + countdown del
+              tiempo de prep. El botón "Ya recogí el pedido" transiciona a
+              picked_up (con confirmación si aún no llegó a cero). */}
+        {status === 'waiting_at_restaurant' && isEditingCustomerData && (
           <CustomerDataForm
-            phone={draft.phone}
-            onPhoneChange={draft.setPhone}
-            coords={draft.coords}
-            onCoordsChange={draft.setCoords}
+            phone={phoneDraft}
+            onPhoneChange={(value) => setPhoneDraft(value.replace(/\D/g, '').slice(0, 9))}
+            coords={coordsDraft}
+            onCoordsChange={setCoordsDraft}
             restaurantCoords={restaurantCoords}
           />
+        )}
+
+        {status === 'waiting_at_restaurant' && !isEditingCustomerData && hasCustomerData && (
+          <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
+            <header className="flex items-center justify-between">
+              <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+                {prepReady ? 'Pedido listo' : 'Tiempo de preparación'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditingCustomerData(true)}
+                className="inline-flex items-center gap-1 text-xs font-bold text-primary-container active:scale-95"
+              >
+                <Icon name="edit" size={14} />
+                Editar datos
+              </button>
+            </header>
+
+            <div
+              className="rounded-2xl p-5 text-center"
+              style={{
+                background: prepReady
+                  ? 'linear-gradient(135deg, #065F46 0%, #10B981 100%)'
+                  : 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
+                color: '#ffffff',
+                boxShadow: prepReady
+                  ? '0 12px 28px -10px rgba(5, 150, 105, 0.45)'
+                  : '0 12px 28px -10px rgba(255, 107, 53, 0.45)',
+              }}
+            >
+              <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85 mb-1">
+                {prepReady ? 'Listo para recoger' : 'Falta para que esté listo'}
+              </div>
+              <div
+                className="bleed-text text-5xl font-black font-mono tabular-nums leading-none"
+                style={{ letterSpacing: '-0.02em' }}
+              >
+                {prepReady ? '¡YA!' : remainingLabel}
+              </div>
+              <div className="text-[11px] opacity-90 mt-2">
+                {prepReady
+                  ? 'Cuando tengas el pedido en mano, presiona "Ya recogí el pedido"'
+                  : 'Cuando el restaurante te entregue la comida, presiona "Ya recogí el pedido"'}
+              </div>
+            </div>
+
+            <div className="space-y-1.5 text-sm">
+              <div className="flex items-center gap-2 text-on-surface-variant">
+                <Icon name="call" size={14} />
+                <span className="font-mono">+51 {clientPhone}</span>
+              </div>
+              <div className="flex items-center gap-2 text-on-surface-variant">
+                <Icon name="location_on" size={14} />
+                <span className="font-mono text-xs">
+                  {Number(raw.delivery_lat).toFixed(6)}, {Number(raw.delivery_lng).toFixed(6)}
+                </span>
+              </div>
+            </div>
+          </section>
         )}
 
         {/* Cliente: dirección + navegar */}
@@ -323,6 +432,30 @@ export function ActiveOrderDetail({ orderId }: Props) {
           orderAmount={Number(raw.order_amount)}
           currentStatus={raw.payment_status}
           onClose={() => setChangePaymentOpen(false)}
+        />
+      )}
+
+      {confirmPickupOpen && (
+        <ConfirmPickupModal
+          remainingLabel={remainingLabel}
+          isPending={pickedUp.isPending}
+          errorMessage={pickupError}
+          onCancel={() => {
+            setConfirmPickupOpen(false)
+            setPickupError(null)
+          }}
+          onConfirm={() => {
+            setPickupError(null)
+            pickedUp.mutate(undefined, {
+              onSuccess: () => setConfirmPickupOpen(false),
+              onError: (err) =>
+                setPickupError(
+                  err instanceof Error
+                    ? err.message
+                    : 'No se pudo confirmar el pickup. Intenta de nuevo.',
+                ),
+            })
+          }}
         />
       )}
 
@@ -401,25 +534,58 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 )}
               </div>
             )}
-            <Button
-              size="lg"
-              className="w-full"
-              disabled={pickedUp.isPending || !draft.isValid}
-              onClick={() => {
-                if (!draft.coords) return
-                pickedUp.mutate(
-                  { clientPhone: draft.phone, deliveryCoordinates: draft.coords },
-                  { onSuccess: () => draft.clearDraft() },
-                )
-              }}
-            >
-              <Icon name="shopping_bag" size={22} filled />
-              {pickedUp.isPending
-                ? 'Confirmando...'
-                : draft.isValid
-                  ? 'Confirmar pickup y partir'
-                  : 'Completa los datos del cliente'}
-            </Button>
+
+            {pickupError && !confirmPickupOpen && (
+              <div className="w-full p-3 rounded-2xl bg-red-50 border border-red-200 text-xs font-semibold text-red-800">
+                {pickupError}
+              </div>
+            )}
+
+            {isEditingCustomerData ? (
+              <Button
+                size="lg"
+                className="w-full"
+                disabled={saveCustomerData.isPending || !formValid}
+                onClick={() => {
+                  if (!coordsDraft) return
+                  saveCustomerData.mutate(
+                    { clientPhone: phoneDraft, deliveryCoordinates: coordsDraft },
+                    { onSuccess: () => setIsEditingCustomerData(false) },
+                  )
+                }}
+              >
+                <Icon name="save" size={22} filled />
+                {saveCustomerData.isPending
+                  ? 'Guardando...'
+                  : formValid
+                    ? 'Guardar'
+                    : 'Completa los datos del cliente'}
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                className="w-full"
+                disabled={!hasCustomerData || pickedUp.isPending}
+                onClick={() => {
+                  setPickupError(null)
+                  if (!prepReady) {
+                    setConfirmPickupOpen(true)
+                    return
+                  }
+                  pickedUp.mutate(undefined, {
+                    onError: (err) =>
+                      setPickupError(
+                        err instanceof Error
+                          ? err.message
+                          : 'No se pudo confirmar el pickup. Intenta de nuevo.',
+                      ),
+                  })
+                }}
+              >
+                <Icon name="shopping_bag" size={22} filled />
+                {pickedUp.isPending ? 'Confirmando...' : 'Ya recogí el pedido'}
+              </Button>
+            )}
           </>
         )}
 

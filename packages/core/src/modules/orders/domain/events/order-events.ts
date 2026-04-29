@@ -68,6 +68,33 @@ export class OrderReceived extends BaseDomainEvent {
   }
 }
 
+/**
+ * Emitido cuando el driver guarda los datos del cliente (phone + coords)
+ * mientras espera que el restaurante tenga listo el pedido. NO transiciona
+ * el status (sigue waiting_at_restaurant) — solo persiste los datos para
+ * que estén listos al momento del pickup. Idempotente: cada save vuelve a
+ * emitirlo (incluyendo overwrites).
+ */
+export class CustomerDataSaved extends BaseDomainEvent {
+  readonly eventType = 'CustomerDataSaved' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    driverId: string
+    clientPhone: string
+    deliveryCoordinates: { lat: number; lng: number }
+    deliveryAddress: string | null
+    savedAt: string
+  }
+
+  constructor(payload: CustomerDataSaved['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
 export class OrderPickedUp extends BaseDomainEvent {
   readonly eventType = 'OrderPickedUp' as const
   readonly aggregateType = AGG

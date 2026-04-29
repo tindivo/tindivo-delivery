@@ -36,3 +36,9 @@ export type {
   RequestExtensionCommand,
   RequestExtensionResult,
 } from './request-extension.use-case'
+
+export { SaveCustomerDataUseCase } from './save-customer-data.use-case'
+export type {
+  SaveCustomerDataCommand,
+  SaveCustomerDataResult,
+} from './save-customer-data.use-case'

@@ -9,6 +9,7 @@ import {
   MarkReadyEarlyUseCase,
   MarkReceivedUseCase,
   RequestExtensionUseCase,
+  SaveCustomerDataUseCase,
   SupabaseEventPublisher,
   SupabaseOrderRepository,
   SystemClock,
@@ -75,4 +76,9 @@ export function buildMarkReadyEarlyUseCase(sb: ServerClient) {
 export function buildChangePaymentMethodUseCase(sb: ServerClient) {
   const { orders, events } = deps(sb)
   return new ChangePaymentMethodUseCase(orders, events, clock)
+}
+
+export function buildSaveCustomerDataUseCase(sb: ServerClient) {
+  const { orders, events } = deps(sb)
+  return new SaveCustomerDataUseCase(orders, events, clock)
 }
