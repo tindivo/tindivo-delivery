@@ -589,7 +589,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
           </>
         )}
 
-        {status === 'picked_up' && hasDeliveryCoords(raw) && (
+        {status === 'picked_up' && (
           <>
             {clientPhone && (
               <div className="flex w-full gap-2">
@@ -613,20 +613,22 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 )}
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => navigateMaps({ lat: raw.delivery_lat, lng: raw.delivery_lng })}
-              disabled={isLocating}
-              className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-60"
-            >
-              <Icon
-                name={isLocating ? 'progress_activity' : 'navigation'}
-                size={20}
-                filled
-                className={isLocating ? 'animate-spin' : undefined}
-              />
-              {isLocating ? 'Ubicando...' : 'Abrir en Google Maps'}
-            </button>
+            {hasDeliveryCoords(raw) && (
+              <button
+                type="button"
+                onClick={() => navigateMaps({ lat: raw.delivery_lat, lng: raw.delivery_lng })}
+                disabled={isLocating}
+                className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-60"
+              >
+                <Icon
+                  name={isLocating ? 'progress_activity' : 'navigation'}
+                  size={20}
+                  filled
+                  className={isLocating ? 'animate-spin' : undefined}
+                />
+                {isLocating ? 'Ubicando...' : 'Abrir en Google Maps'}
+              </button>
+            )}
             <Button
               size="lg"
               variant="success"
