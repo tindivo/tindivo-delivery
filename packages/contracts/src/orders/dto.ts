@@ -113,12 +113,24 @@ export type MarkArrivedRequest = z.infer<typeof MarkArrivedRequest>
 /**
  * Body para POST /driver/orders/:id/customer-data — el driver guarda los
  * datos del cliente mientras espera en el local. NO transiciona el status.
+ *
+ * Regla "al menos uno": el driver debe marcar el destino en el mapa
+ * (deliveryCoordinates) o escribir una referencia textual
+ * (deliveryReference). Ambos individualmente son opcionales pero al menos
+ * uno es obligatorio — resuelve el caso de drivers que no logran ubicar
+ * la dirección exacta en el mapa con el tiempo en contra.
  */
-export const SaveCustomerDataRequest = z.object({
-  clientPhone: PhonePeSchema,
-  deliveryCoordinates: CoordinatesSchema,
-  deliveryAddress: z.string().max(200).optional(),
-})
+export const SaveCustomerDataRequest = z
+  .object({
+    clientPhone: PhonePeSchema,
+    deliveryCoordinates: CoordinatesSchema.optional(),
+    deliveryAddress: z.string().max(200).optional(),
+    deliveryReference: z.string().trim().min(1).max(500).optional(),
+  })
+  .refine((v) => v.deliveryCoordinates !== undefined || v.deliveryReference !== undefined, {
+    message: 'Debes marcar el destino en el mapa o escribir una referencia',
+    path: ['deliveryReference'],
+  })
 export type SaveCustomerDataRequest = z.infer<typeof SaveCustomerDataRequest>
 
 export const EditClientPhoneRequest = z.object({
@@ -183,6 +195,7 @@ export const OrderDetailResponse = OrderSummaryResponse.extend({
   deliveryCoordinates: CoordinatesSchema.nullable(),
   deliveryMapsUrl: z.string().url().nullable(),
   deliveryAddress: z.string().nullable(),
+  deliveryReference: z.string().nullable(),
   cancelReason: z.string().nullable(),
   extensionUsed: z.boolean(),
   readyEarlyUsed: z.boolean(),
@@ -229,7 +242,7 @@ export const PickedUpResponse = z.object({
   id: UuidSchema,
   status: OrderStatus,
   pickedUpAt: TimestampSchema,
-  deliveryMapsUrl: z.string().url(),
+  deliveryMapsUrl: z.string().url().nullable(),
   trackingUrl: z.string().url(),
 })
 export type PickedUpResponse = z.infer<typeof PickedUpResponse>
@@ -238,8 +251,9 @@ export const SaveCustomerDataResponse = z.object({
   id: UuidSchema,
   status: OrderStatus,
   clientPhone: PhonePeSchema,
-  deliveryCoordinates: CoordinatesSchema,
+  deliveryCoordinates: CoordinatesSchema.nullable(),
   deliveryAddress: z.string().nullable(),
+  deliveryReference: z.string().nullable(),
 })
 export type SaveCustomerDataResponse = z.infer<typeof SaveCustomerDataResponse>
 

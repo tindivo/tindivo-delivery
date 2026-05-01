@@ -12,23 +12,29 @@ export type SaveCustomerDataCommand = {
   orderId: string
   driverId: string
   clientPhone: string
-  deliveryCoordinates: { lat: number; lng: number }
+  deliveryCoordinates?: { lat: number; lng: number }
   deliveryAddress?: string
+  deliveryReference?: string
 }
 
 export type SaveCustomerDataResult = {
   id: string
   status: string
   clientPhone: string
-  deliveryCoordinates: { lat: number; lng: number }
+  deliveryCoordinates: { lat: number; lng: number } | null
   deliveryAddress: string | null
+  deliveryReference: string | null
 }
 
 /**
- * Persiste los datos del cliente (phone + coords) en BD mientras el driver
- * espera que el restaurante tenga listo el pedido. NO transiciona el status
- * (sigue waiting_at_restaurant). Idempotente — cada save sobrescribe los
- * valores anteriores. La fuente de verdad es la BD: nunca localStorage.
+ * Persiste los datos del cliente (phone + coords/referencia + dirección
+ * opcional) en BD mientras el driver espera que el restaurante tenga listo
+ * el pedido. NO transiciona el status (sigue waiting_at_restaurant).
+ * Idempotente — cada save sobrescribe los valores anteriores. La fuente
+ * de verdad es la BD: nunca localStorage.
+ *
+ * Invariante (validada en el agregado): phone obligatorio + al menos uno
+ * entre coords y reference.
  */
 export class SaveCustomerDataUseCase
   implements UseCase<SaveCustomerDataCommand, SaveCustomerDataResult, DomainError>
@@ -46,12 +52,16 @@ export class SaveCustomerDataUseCase
     if (!order) return Result.fail(new OrderNotFound(cmd.orderId))
 
     const previous = order.status
-    const coords = Coordinates.of(cmd.deliveryCoordinates.lat, cmd.deliveryCoordinates.lng)
+    const coords = cmd.deliveryCoordinates
+      ? Coordinates.of(cmd.deliveryCoordinates.lat, cmd.deliveryCoordinates.lng)
+      : null
+    const reference = cmd.deliveryReference?.trim() || null
 
     const res = order.saveCustomerData(
       cmd.clientPhone,
       coords,
       cmd.deliveryAddress ?? null,
+      reference,
       this.clock.now(),
     )
     if (res.isFailure) return Result.fail(res.error)
@@ -63,8 +73,9 @@ export class SaveCustomerDataUseCase
       id: order.id.value,
       status: order.status.value,
       clientPhone: cmd.clientPhone,
-      deliveryCoordinates: { lat: coords.lat, lng: coords.lng },
+      deliveryCoordinates: coords ? { lat: coords.lat, lng: coords.lng } : null,
       deliveryAddress: cmd.deliveryAddress ?? null,
+      deliveryReference: reference,
     })
   }
 }

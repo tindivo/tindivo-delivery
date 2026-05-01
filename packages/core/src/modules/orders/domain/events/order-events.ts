@@ -69,11 +69,14 @@ export class OrderReceived extends BaseDomainEvent {
 }
 
 /**
- * Emitido cuando el driver guarda los datos del cliente (phone + coords)
- * mientras espera que el restaurante tenga listo el pedido. NO transiciona
- * el status (sigue waiting_at_restaurant) — solo persiste los datos para
- * que estén listos al momento del pickup. Idempotente: cada save vuelve a
- * emitirlo (incluyendo overwrites).
+ * Emitido cuando el driver guarda los datos del cliente (phone + coords y/o
+ * referencia textual) mientras espera que el restaurante tenga listo el
+ * pedido. NO transiciona el status (sigue waiting_at_restaurant) — solo
+ * persiste los datos para que estén listos al momento del pickup.
+ * Idempotente: cada save vuelve a emitirlo (incluyendo overwrites).
+ *
+ * `deliveryCoordinates` y `deliveryReference` son ambos opcionales pero al
+ * menos uno está presente (invariante validada en el agregado).
  */
 export class CustomerDataSaved extends BaseDomainEvent {
   readonly eventType = 'CustomerDataSaved' as const
@@ -83,8 +86,9 @@ export class CustomerDataSaved extends BaseDomainEvent {
     orderId: string
     driverId: string
     clientPhone: string
-    deliveryCoordinates: { lat: number; lng: number }
+    deliveryCoordinates: { lat: number; lng: number } | null
     deliveryAddress: string | null
+    deliveryReference: string | null
     savedAt: string
   }
 
@@ -104,7 +108,8 @@ export class OrderPickedUp extends BaseDomainEvent {
     driverId: string
     pickedUpAt: string
     clientPhone: string
-    deliveryCoordinates: { lat: number; lng: number }
+    deliveryCoordinates: { lat: number; lng: number } | null
+    deliveryReference: string | null
   }
 
   constructor(payload: OrderPickedUp['payload'], metadata?: EventMetadata) {

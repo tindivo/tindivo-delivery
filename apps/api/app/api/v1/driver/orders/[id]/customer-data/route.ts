@@ -9,9 +9,11 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 /**
- * Persiste datos del cliente (phone + coords + dirección opcional) durante
- * waiting_at_restaurant. NO transiciona el status — solo deja los datos
- * listos para que el siguiente POST /picked-up los promueva. Idempotente.
+ * Persiste datos del cliente (phone + coords/referencia + dirección
+ * opcional) durante waiting_at_restaurant. NO transiciona el status —
+ * solo deja los datos listos para que el siguiente POST /picked-up los
+ * promueva. Idempotente. La regla "al menos uno entre coords y reference"
+ * se valida tanto en el contrato Zod como en el agregado.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(req, ['driver'])
@@ -29,6 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     clientPhone: body.data.clientPhone,
     deliveryCoordinates: body.data.deliveryCoordinates,
     deliveryAddress: body.data.deliveryAddress,
+    deliveryReference: body.data.deliveryReference,
   })
 
   if (result.isFailure) return problem(result.error)

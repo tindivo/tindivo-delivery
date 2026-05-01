@@ -49,10 +49,12 @@ export function ActiveOrderDetail({ orderId }: Props) {
 
   // Estado del form mientras el driver edita; vive solo en memoria. La fuente
   // de verdad son los datos persistidos en BD (order.client_phone +
-  // order.delivery_lat/lng). Sin localStorage — eliminado por bug de iOS al
-  // cambiar entre pedidos (drafts cruzaban entre orders distintos).
+  // order.delivery_lat/lng + order.delivery_reference). Sin localStorage —
+  // eliminado por bug de iOS al cambiar entre pedidos (drafts cruzaban entre
+  // orders distintos).
   const [phoneDraft, setPhoneDraft] = useState('')
   const [coordsDraft, setCoordsDraft] = useState<{ lat: number; lng: number } | null>(null)
+  const [referenceDraft, setReferenceDraft] = useState('')
   const [isEditingCustomerData, setIsEditingCustomerData] = useState(false)
   const draftHydratedRef = useRef<string | null>(null)
 
@@ -70,8 +72,8 @@ export function ActiveOrderDetail({ orderId }: Props) {
   }, [order, received.mutate])
 
   // Hidrata el form local desde la BD una sola vez por orderId. Si todavía no
-  // hay datos guardados, abre el modo edición; si ya están, muestra el
-  // countdown directamente.
+  // hay datos guardados (phone + (coords O referencia)), abre el modo edición;
+  // si ya están, muestra el countdown directamente.
   useEffect(() => {
     if (!order) return
     if (draftHydratedRef.current === orderId) return
@@ -83,9 +85,11 @@ export function ActiveOrderDetail({ orderId }: Props) {
     const lat = raw.delivery_lat
     const lng = raw.delivery_lng
     const coords = typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null
+    const reference = typeof raw.delivery_reference === 'string' ? raw.delivery_reference : ''
     setPhoneDraft(phone)
     setCoordsDraft(coords)
-    setIsEditingCustomerData(!(phone && coords))
+    setReferenceDraft(reference)
+    setIsEditingCustomerData(!(phone && (coords || reference.length > 0)))
   }, [order, orderId])
 
   const restaurantCoords = useMemo<{ lat: number; lng: number } | null>(() => {
@@ -152,9 +156,15 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const clientPhone: string | null = raw.client_phone ?? null
   const persistedCoords: boolean =
     typeof raw.delivery_lat === 'number' && typeof raw.delivery_lng === 'number'
-  const hasCustomerData = Boolean(clientPhone) && persistedCoords
+  const persistedReference: string | null =
+    typeof raw.delivery_reference === 'string' && raw.delivery_reference.length > 0
+      ? raw.delivery_reference
+      : null
+  const hasCustomerData = Boolean(clientPhone) && (persistedCoords || persistedReference !== null)
   const phoneValid = PHONE_REGEX.test(phoneDraft)
-  const formValid = phoneValid && coordsDraft !== null
+  const hasMapCoords = coordsDraft !== null
+  const hasReference = referenceDraft.trim().length > 0
+  const formValid = phoneValid && (hasMapCoords || hasReference)
   const estimatedReadyAt = raw.estimated_ready_at
     ? new Date(raw.estimated_ready_at as string)
     : null
@@ -327,6 +337,8 @@ export function ActiveOrderDetail({ orderId }: Props) {
             onPhoneChange={(value) => setPhoneDraft(value.replace(/\D/g, '').slice(0, 9))}
             coords={coordsDraft}
             onCoordsChange={setCoordsDraft}
+            reference={referenceDraft}
+            onReferenceChange={setReferenceDraft}
             restaurantCoords={restaurantCoords}
           />
         )}
@@ -380,18 +392,31 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 <Icon name="call" size={14} />
                 <span className="font-mono">+51 {clientPhone}</span>
               </div>
-              <div className="flex items-center gap-2 text-on-surface-variant">
-                <Icon name="location_on" size={14} />
-                <span className="font-mono text-xs">
-                  {Number(raw.delivery_lat).toFixed(6)}, {Number(raw.delivery_lng).toFixed(6)}
-                </span>
-              </div>
+              {persistedCoords && (
+                <div className="flex items-center gap-2 text-on-surface-variant">
+                  <Icon name="location_on" size={14} />
+                  <span className="font-mono text-xs">
+                    {Number(raw.delivery_lat).toFixed(6)}, {Number(raw.delivery_lng).toFixed(6)}
+                  </span>
+                </div>
+              )}
+              {persistedReference && (
+                <div className="flex items-start gap-2 text-on-surface">
+                  <Icon name="pin_drop" size={14} className="mt-0.5 shrink-0" />
+                  <span className="text-xs leading-snug">{persistedReference}</span>
+                </div>
+              )}
             </div>
           </section>
         )}
 
-        {/* Cliente: dirección + navegar */}
-        {status === 'picked_up' && raw.delivery_maps_url && (
+        {/* Cliente: contacto + referencia textual.
+            Cuando el driver guardó solo la referencia (sin coords) durante
+            waiting_at_restaurant, esta es la única pista visual para ubicar
+            el destino — por eso se destaca con su propia card e ícono
+            pin_drop. La navegación GPS (botón "Abrir en Google Maps") vive
+            en el BottomActionBar y solo aparece si hay coords. */}
+        {status === 'picked_up' && (raw.client_phone || persistedReference) && (
           <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
             <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
               Entregar al cliente
@@ -404,6 +429,19 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 <Icon name="call" size={18} />
                 Llamar: +51 {raw.client_phone}
               </a>
+            )}
+            {persistedReference && (
+              <div className="rounded-2xl border border-outline-variant/30 bg-surface-container/40 p-3 flex items-start gap-2.5">
+                <Icon name="pin_drop" size={20} className="text-primary shrink-0 mt-0.5" filled />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant mb-0.5">
+                    Referencia
+                  </div>
+                  <p className="text-sm text-on-surface leading-snug whitespace-pre-wrap break-words">
+                    {persistedReference}
+                  </p>
+                </div>
+              </div>
             )}
           </section>
         )}
@@ -547,9 +585,13 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 className="w-full"
                 disabled={saveCustomerData.isPending || !formValid}
                 onClick={() => {
-                  if (!coordsDraft) return
+                  const trimmedReference = referenceDraft.trim()
                   saveCustomerData.mutate(
-                    { clientPhone: phoneDraft, deliveryCoordinates: coordsDraft },
+                    {
+                      clientPhone: phoneDraft,
+                      deliveryCoordinates: coordsDraft ?? undefined,
+                      deliveryReference: trimmedReference || undefined,
+                    },
                     { onSuccess: () => setIsEditingCustomerData(false) },
                   )
                 }}

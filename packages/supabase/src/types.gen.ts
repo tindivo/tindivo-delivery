@@ -364,6 +364,7 @@ export type Database = {
           delivery_lat: number | null
           delivery_lng: number | null
           delivery_maps_url: string | null
+          delivery_reference: string | null
           driver_id: string | null
           estimated_ready_at: string
           extension_used: boolean
@@ -410,6 +411,7 @@ export type Database = {
           delivery_lat?: number | null
           delivery_lng?: number | null
           delivery_maps_url?: string | null
+          delivery_reference?: string | null
           driver_id?: string | null
           estimated_ready_at: string
           extension_used?: boolean
@@ -456,6 +458,7 @@ export type Database = {
           delivery_lat?: number | null
           delivery_lng?: number | null
           delivery_maps_url?: string | null
+          delivery_reference?: string | null
           driver_id?: string | null
           estimated_ready_at?: string
           extension_used?: boolean

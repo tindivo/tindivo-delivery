@@ -16,14 +16,19 @@ export type MarkPickedUpResult = {
   id: string
   status: string
   pickedUpAt: string
-  deliveryMapsUrl: string
+  deliveryMapsUrl: string | null
   trackingUrl: string
 }
 
 /**
  * Transición waiting_at_restaurant → picked_up. Asume que los datos del
- * cliente ya fueron persistidos via SaveCustomerDataUseCase; si faltan, el
- * dominio retorna CustomerDataMissing y la UI debe redirigir al form.
+ * cliente ya fueron persistidos via SaveCustomerDataUseCase; si faltan
+ * (no hay phone, o no hay ni coords ni referencia textual), el dominio
+ * retorna CustomerDataMissing y la UI debe redirigir al form.
+ *
+ * `deliveryMapsUrl` puede ser null cuando el driver guardó solo referencia
+ * textual sin marcar coords — en ese caso la UI muestra la referencia
+ * destacada en lugar del botón "Abrir en Google Maps".
  */
 export class MarkPickedUpUseCase
   implements UseCase<MarkPickedUpCommand, MarkPickedUpResult, DomainError>
@@ -47,8 +52,9 @@ export class MarkPickedUpUseCase
     await this.events.publishAll(order.pullEvents())
 
     const coords = order.props.deliveryCoordinates
-    // biome-ignore lint/style/noNonNullAssertion: validated by markPickedUp guard
-    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${coords!.lat},${coords!.lng}&travelmode=driving`
+    const mapsUrl = coords
+      ? `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`
+      : null
     const trackingUrl = `${this.publicAppUrl}/pedidos/${order.shortId.value}`
 
     return Result.ok({

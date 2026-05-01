@@ -54,6 +54,7 @@ export type OrderProps = {
   deliveryCoordinates: Coordinates | null
   deliveryMapsUrl: string | null
   deliveryAddress: string | null
+  deliveryReference: string | null
   extensionUsed: boolean
   readyEarlyUsed: boolean
   notes: string | null
@@ -129,6 +130,7 @@ export class Order extends AggregateRoot<OrderId> {
       deliveryCoordinates: null,
       deliveryMapsUrl: null,
       deliveryAddress: null,
+      deliveryReference: null,
       extensionUsed: false,
       readyEarlyUsed: false,
       notes: input.notes ?? null,
@@ -321,31 +323,36 @@ export class Order extends AggregateRoot<OrderId> {
   }
 
   /**
-   * Persiste los datos del cliente (phone + coords + dirección opcional)
-   * mientras el driver espera que el restaurante tenga listo el pedido.
-   * NO transiciona el status (sigue waiting_at_restaurant); solo deja los
-   * datos listos para que `markPickedUp` los promueva. Idempotente: cada
-   * llamada sobrescribe los valores anteriores y vuelve a emitir el evento.
+   * Persiste los datos del cliente (phone + coords/referencia + dirección
+   * opcional) mientras el driver espera que el restaurante tenga listo el
+   * pedido. NO transiciona el status (sigue waiting_at_restaurant); solo
+   * deja los datos listos para que `markPickedUp` los promueva. Idempotente:
+   * cada llamada sobrescribe los valores anteriores y vuelve a emitir el
+   * evento.
    *
-   * Esto reemplaza al draft de localStorage del cliente: la fuente de
-   * verdad es la BD, así que cambios de pedido o de dispositivo no pierden
-   * el progreso del driver.
+   * Regla de invariante: phone es obligatorio y al menos uno entre coords
+   * y reference debe estar presente. La referencia textual (string libre)
+   * es el fallback cuando el driver no logra ubicar la dirección exacta
+   * en el mapa con el tiempo en contra.
    */
   saveCustomerData(
     clientPhone: string,
-    deliveryCoordinates: Coordinates,
+    deliveryCoordinates: Coordinates | null,
     deliveryAddress: string | null,
+    deliveryReference: string | null,
     now: Date,
-  ): Result<void, InvalidStateTransition> {
+  ): Result<void, InvalidStateTransition | CustomerDataMissing> {
     if (this._state.status.value !== 'waiting_at_restaurant')
       return Result.fail(
         new InvalidStateTransition(this._state.status.value, 'waiting_at_restaurant'),
       )
+    if (!deliveryCoordinates && !deliveryReference) return Result.fail(new CustomerDataMissing())
 
     this._state.clientPhone = clientPhone
     this._state.deliveryCoordinates = deliveryCoordinates
     this._state.deliveryAddress = deliveryAddress
-    this._state.deliveryMapsUrl = buildMapsUrl(deliveryCoordinates)
+    this._state.deliveryReference = deliveryReference
+    this._state.deliveryMapsUrl = deliveryCoordinates ? buildMapsUrl(deliveryCoordinates) : null
     this._state.updatedAt = now
 
     this.raise(
@@ -353,8 +360,11 @@ export class Order extends AggregateRoot<OrderId> {
         orderId: this.id.value,
         driverId: this._state.driverId?.value ?? '',
         clientPhone,
-        deliveryCoordinates: { lat: deliveryCoordinates.lat, lng: deliveryCoordinates.lng },
+        deliveryCoordinates: deliveryCoordinates
+          ? { lat: deliveryCoordinates.lat, lng: deliveryCoordinates.lng }
+          : null,
         deliveryAddress,
+        deliveryReference,
         savedAt: now.toISOString(),
       }),
     )
@@ -363,7 +373,7 @@ export class Order extends AggregateRoot<OrderId> {
 
   /**
    * Transición waiting_at_restaurant → picked_up. Los datos del cliente
-   * (phone + coords) deben estar previamente persistidos via
+   * (phone + coords O referencia) deben estar previamente persistidos via
    * `saveCustomerData`. Si faltan, retorna CustomerDataMissing — la UI
    * no debería permitir llegar aquí sin haber guardado primero.
    */
@@ -373,7 +383,8 @@ export class Order extends AggregateRoot<OrderId> {
 
     const phone = this._state.clientPhone
     const coords = this._state.deliveryCoordinates
-    if (!phone || !coords) return Result.fail(new CustomerDataMissing())
+    const reference = this._state.deliveryReference
+    if (!phone || (!coords && !reference)) return Result.fail(new CustomerDataMissing())
 
     this._state.status = OrderStatus.pickedUp()
     this._state.pickedUpAt = now
@@ -385,7 +396,8 @@ export class Order extends AggregateRoot<OrderId> {
         driverId: this._state.driverId?.value ?? '',
         pickedUpAt: now.toISOString(),
         clientPhone: phone,
-        deliveryCoordinates: { lat: coords.lat, lng: coords.lng },
+        deliveryCoordinates: coords ? { lat: coords.lat, lng: coords.lng } : null,
+        deliveryReference: reference,
       }),
     )
     return Result.okVoid()

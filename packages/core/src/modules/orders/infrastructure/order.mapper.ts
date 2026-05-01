@@ -56,6 +56,7 @@ export const OrderMapper = {
         : null,
       deliveryMapsUrl: row.delivery_maps_url,
       deliveryAddress: row.delivery_address,
+      deliveryReference: row.delivery_reference,
       extensionUsed: row.extension_used,
       readyEarlyUsed: row.ready_early_used,
       notes: row.notes,
@@ -118,7 +119,9 @@ export const OrderMapper = {
       delivery_coordinates: p.deliveryCoordinates
         ? `POINT(${p.deliveryCoordinates.lng} ${p.deliveryCoordinates.lat})`
         : null,
+      delivery_maps_url: p.deliveryMapsUrl,
       delivery_address: p.deliveryAddress,
+      delivery_reference: p.deliveryReference,
       extension_used: p.extensionUsed,
       ready_early_used: p.readyEarlyUsed,
       tracking_link_sent_at: p.trackingLinkSentAt?.toISOString() ?? null,
