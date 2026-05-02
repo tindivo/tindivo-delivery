@@ -168,35 +168,6 @@ export function NewOrderForm() {
           </h2>
         </div>
 
-        {/* Nombre del cliente (opcional) */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <label htmlFor="clientName" className="text-sm font-semibold text-on-surface">
-              Nombre del cliente
-            </label>
-            <span className="text-[10px] font-bold tracking-wider uppercase text-on-surface-variant/60">
-              opcional
-            </span>
-          </div>
-          <input
-            id="clientName"
-            type="text"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            placeholder="Ej: Juan, María Fernanda"
-            maxLength={80}
-            autoComplete="off"
-            autoCapitalize="words"
-            className="w-full px-4 py-3.5 rounded-[20px] text-base font-semibold text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
-            style={{
-              background: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(225, 191, 181, 0.35)',
-              boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
-            }}
-          />
-        </section>
-
         {/* Prep time carousel */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
@@ -320,6 +291,35 @@ export function NewOrderForm() {
               })}
             </div>
           </div>
+        </section>
+
+        {/* Nombre del cliente (opcional) */}
+        <section className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <label htmlFor="clientName" className="text-sm font-semibold text-on-surface">
+              Nombre del cliente
+            </label>
+            <span className="text-[10px] font-bold tracking-wider uppercase text-on-surface-variant/60">
+              opcional
+            </span>
+          </div>
+          <input
+            id="clientName"
+            type="text"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            placeholder="Ej: Juan, María Fernanda"
+            maxLength={80}
+            autoComplete="off"
+            autoCapitalize="words"
+            className="w-full px-4 py-3.5 rounded-[20px] text-base font-semibold text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
+            style={{
+              background: 'rgba(255, 255, 255, 0.85)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(225, 191, 181, 0.35)',
+              boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
+            }}
+          />
         </section>
 
         {/* Payment method */}
