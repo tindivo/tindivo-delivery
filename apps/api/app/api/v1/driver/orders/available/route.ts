@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
       '*, restaurants!inner(name, accent_color, address, phone, yape_number, qr_url, qr_url_secondary, coordinates_lat, coordinates_lng)',
     )
     .eq('status', 'waiting_driver')
+    .is('driver_id', null)
     .order('estimated_ready_at', { ascending: true })
 
   if (error) return problemCode('INTERNAL_ERROR', 500, error.message)

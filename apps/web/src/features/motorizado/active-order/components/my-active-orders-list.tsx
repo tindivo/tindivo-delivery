@@ -6,9 +6,10 @@ import { useMemo } from 'react'
 import { useDriverActiveOrders } from '../hooks/use-driver-active-orders'
 
 const STATUS_ORDER: Record<string, number> = {
-  waiting_at_restaurant: 0,
-  heading_to_restaurant: 1,
-  picked_up: 2,
+  waiting_driver: 0,
+  waiting_at_restaurant: 1,
+  heading_to_restaurant: 2,
+  picked_up: 3,
 }
 
 // El backend devuelve snake_case desde supabase.from('orders').select('*').
@@ -61,7 +62,7 @@ export function MyActiveOrdersList() {
       <EmptyState
         icon="delivery_dining"
         title="Sin pedidos activos"
-        description="Cuando aceptes un pedido aparecerá aquí."
+        description="Cuando se te asigne un pedido aparecerá aquí."
       />
     )
   }
@@ -70,7 +71,7 @@ export function MyActiveOrdersList() {
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 text-[11px] text-on-surface-variant px-1">
         <Icon name="info" size={14} />
-        <span>Tap en cualquier tarjeta para continuar el pedido.</span>
+        <span>Tap en cualquier tarjeta para continuar el pedido asignado.</span>
       </div>
 
       <motion.ul

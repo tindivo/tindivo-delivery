@@ -1,6 +1,12 @@
 export { AcceptOrderUseCase } from './accept-order.use-case'
 export type { AcceptOrderCommand, AcceptOrderResult } from './accept-order.use-case'
 
+export { AutoAssignOrderUseCase } from './auto-assign-order.use-case'
+export type {
+  AutoAssignOrderCommand,
+  AutoAssignOrderResult,
+} from './auto-assign-order.use-case'
+
 export { CancelOrderUseCase } from './cancel-order.use-case'
 export type { CancelOrderCommand, CancelOrderResult } from './cancel-order.use-case'
 

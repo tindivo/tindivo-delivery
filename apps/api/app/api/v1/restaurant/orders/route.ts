@@ -1,8 +1,9 @@
-import { buildCreateOrderUseCase } from '@/lib/core/container'
+import { buildAutoAssignOrderUseCase, buildCreateOrderUseCase } from '@/lib/core/container'
 import { problem, problemCode } from '@/lib/http/problem'
 import { requireAuth } from '@/lib/http/require-auth'
 import { parseJson } from '@/lib/http/validate'
 import { Orders } from '@tindivo/contracts'
+import { createAdminClient } from '@tindivo/supabase'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
@@ -44,6 +45,12 @@ export async function POST(req: NextRequest) {
   })
 
   if (result.isFailure) return problem(result.error)
+
+  const admin = createAdminClient()
+  const autoAssign = buildAutoAssignOrderUseCase(admin)
+  const assignment = await autoAssign.execute({ orderId: result.value.id })
+  if (assignment.isFailure) return problem(assignment.error)
+
   return NextResponse.json(result.value, { status: 201 })
 }
 

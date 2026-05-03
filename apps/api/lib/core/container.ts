@@ -1,5 +1,6 @@
 import {
   AcceptOrderUseCase,
+  AutoAssignOrderUseCase,
   CancelOrderUseCase,
   ChangePaymentMethodUseCase,
   CreateOrderUseCase,
@@ -36,6 +37,11 @@ export function buildCreateOrderUseCase(sb: ServerClient) {
 export function buildAcceptOrderUseCase(sb: ServerClient) {
   const { orders, events } = deps(sb)
   return new AcceptOrderUseCase(orders, events, clock)
+}
+
+export function buildAutoAssignOrderUseCase(sb: ServerClient) {
+  const { orders, events } = deps(sb)
+  return new AutoAssignOrderUseCase(orders, events, clock)
 }
 
 export function buildMarkArrivedUseCase(sb: ServerClient) {

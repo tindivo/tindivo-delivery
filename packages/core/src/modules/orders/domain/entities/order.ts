@@ -14,13 +14,13 @@ import {
   CustomerDataSaved,
   DriverArrived,
   OrderAccepted,
+  OrderAssigned,
   OrderCancelled,
   OrderCreated,
   OrderDelivered,
   OrderExtended,
   OrderPickedUp,
   OrderReadyEarly,
-  OrderReadyForDrivers,
   OrderReassigned,
   OrderReceived,
   PaymentMethodChanged,
@@ -165,25 +165,6 @@ export class Order extends AggregateRoot<OrderId> {
       }),
     )
 
-    // Si el pedido entra inmediatamente en la bandeja del driver
-    // (prepMinutes=0 → appearsInQueueAt = now), emitir OrderReadyForDrivers
-    // ya, sin esperar al pg_cron `enqueue_orders_ready_for_drivers` de 1
-    // minuto. Esto baja la latencia del push de hasta 60s a ≤2s. El cron
-    // mantiene defensa en profundidad: si por algún motivo este path no
-    // se ejecuta, el cron emite el evento después con su NOT EXISTS
-    // idempotente (no se duplica el push).
-    if (appearsInQueueAt.getTime() <= now.getTime()) {
-      order.raise(
-        new OrderReadyForDrivers({
-          orderId: id.value,
-          shortId: shortId.value,
-          restaurantId: input.restaurantId.value,
-          orderAmount: input.payment.orderAmount.amount,
-          appearsInQueueAt: appearsInQueueAt.toISOString(),
-        }),
-      )
-    }
-
     return Result.ok(order)
   }
 
@@ -271,6 +252,25 @@ export class Order extends AggregateRoot<OrderId> {
         driverId: driverId.value,
         acceptedAt: now.toISOString(),
         acceptCountdownSeconds: countdownSeconds,
+      }),
+    )
+    return Result.okVoid()
+  }
+
+  assignTo(driverId: DriverId, reason: string, now: Date): Result<void, InvalidStateTransition> {
+    if (this._state.status.value !== 'waiting_driver') {
+      return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
+    }
+
+    this._state.driverId = driverId
+    this._state.updatedAt = now
+
+    this.raise(
+      new OrderAssigned({
+        orderId: this.id.value,
+        driverId: driverId.value,
+        assignedAt: now.toISOString(),
+        reason,
       }),
     )
     return Result.okVoid()

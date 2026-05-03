@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       '*, restaurants!inner(name, accent_color, address, phone, yape_number, qr_url, qr_url_secondary, coordinates_lat, coordinates_lng)',
     )
     .eq('driver_id', auth.auth.driverId)
-    .in('status', ['heading_to_restaurant', 'waiting_at_restaurant', 'picked_up'])
+    .in('status', ['waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant', 'picked_up'])
     .order('created_at', { ascending: false })
 
   if (error) return problemCode('INTERNAL_ERROR', 500, error.message)

@@ -727,6 +727,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_assigned_orders: { Args: never; Returns: undefined }
       admin_generate_settlements: {
         Args: {
           p_due_date: string

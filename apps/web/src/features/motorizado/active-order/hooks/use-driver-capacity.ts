@@ -1,7 +1,7 @@
 'use client'
 import { useDriverActiveOrders } from './use-driver-active-orders'
 
-export const DRIVER_MAX_CONCURRENT = 3
+export const DRIVER_MAX_CONCURRENT = 5
 
 /**
  * Cuenta los pedidos activos del driver y expone si ya llegó al límite.

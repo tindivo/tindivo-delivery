@@ -104,6 +104,17 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
           tag,
         }
 
+      case 'OrderAssigned':
+        if (role !== 'driver') return null
+        return {
+          title: `Pedido asignado — ${restaurantName}`,
+          body: `${amount} · revisa tu cola`,
+          url: `/motorizado/pedidos/${event.aggregate_id}`,
+          tag: `assigned-${shortId || event.aggregate_id}`,
+          requireInteraction: true,
+          vibrate: [300, 120, 300],
+        }
+
       case 'OrderOverdue':
         if (role !== 'driver') return null
         return {
@@ -263,6 +274,12 @@ async function resolveRecipients(
         }
         break
       }
+
+      case 'OrderAssigned':
+        if (order.drivers?.user_id) {
+          out.push({ userId: order.drivers.user_id, role: 'driver' })
+        }
+        break
 
       case 'OrderAccepted':
       case 'DriverArrived':

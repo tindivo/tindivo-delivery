@@ -42,6 +42,24 @@ export class OrderAccepted extends BaseDomainEvent {
   }
 }
 
+export class OrderAssigned extends BaseDomainEvent {
+  readonly eventType = 'OrderAssigned' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    driverId: string
+    assignedAt: string
+    reason: string
+  }
+
+  constructor(payload: OrderAssigned['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
 export class DriverArrived extends BaseDomainEvent {
   readonly eventType = 'DriverArrived' as const
   readonly aggregateType = AGG

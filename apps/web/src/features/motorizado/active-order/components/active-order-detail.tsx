@@ -107,7 +107,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
     return [
       {
         key: 'accepted',
-        label: 'Aceptado',
+        label: 'Asignado',
         icon: 'check',
         done: true,
       },
@@ -116,7 +116,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
         label: 'En camino al local',
         icon: 'two_wheeler',
         done: ['waiting_at_restaurant', 'picked_up', 'delivered'].includes(s),
-        current: s === 'heading_to_restaurant',
+        current: s === 'heading_to_restaurant' || s === 'waiting_driver',
       },
       {
         key: 'at_restaurant',
@@ -168,11 +168,20 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const estimatedReadyAt = raw.estimated_ready_at
     ? new Date(raw.estimated_ready_at as string)
     : null
+  const activationAt = raw.appears_in_queue_at
+    ? new Date(raw.appears_in_queue_at as string)
+    : estimatedReadyAt
   const remainingMs = estimatedReadyAt ? Math.max(0, estimatedReadyAt.getTime() - now.getTime()) : 0
+  const activationRemainingMs = activationAt
+    ? Math.max(0, activationAt.getTime() - now.getTime())
+    : 0
   const prepReady = remainingMs <= 0
   const remainingMinutes = Math.floor(remainingMs / 60_000)
   const remainingSeconds = Math.floor((remainingMs % 60_000) / 1_000)
   const remainingLabel = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  const activationMinutes = Math.floor(activationRemainingMs / 60_000)
+  const activationSeconds = Math.floor((activationRemainingMs % 60_000) / 1_000)
+  const activationLabel = `${activationMinutes}:${activationSeconds.toString().padStart(2, '0')}`
   const restaurantWaUrl: string | null = restaurant.phone
     ? buildWaMeUrl(
         normalizeToE164Pe(restaurant.phone) ?? `51${restaurant.phone}`,
@@ -306,7 +315,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
         </section>
 
         {/* Restaurante: dirección + navegar */}
-        {(status === 'heading_to_restaurant' || status === 'waiting_at_restaurant') && (
+        {['waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant'].includes(status) && (
           <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
             <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
               Recoger pedido en
@@ -331,6 +340,35 @@ export function ActiveOrderDetail({ orderId }: Props) {
             - Si ya hay datos guardados: muestra resumen + countdown del
               tiempo de prep. El botón "Ya recogí el pedido" transiciona a
               picked_up (con confirmación si aún no llegó a cero). */}
+        {status === 'waiting_driver' && (
+          <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
+            <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+              Pedido asignado
+            </h3>
+            <div
+              className="rounded-2xl p-5 text-center"
+              style={{
+                background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
+                color: '#ffffff',
+                boxShadow: '0 12px 28px -10px rgba(255, 107, 53, 0.45)',
+              }}
+            >
+              <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85 mb-1">
+                Se activa en
+              </div>
+              <div
+                className="bleed-text text-5xl font-black font-mono tabular-nums leading-none"
+                style={{ letterSpacing: '-0.02em' }}
+              >
+                {activationLabel}
+              </div>
+              <div className="text-[11px] opacity-90 mt-2">
+                Te avisaremos cuando toque salir al local.
+              </div>
+            </div>
+          </section>
+        )}
+
         {status === 'waiting_at_restaurant' && isEditingCustomerData && (
           <CustomerDataForm
             phone={phoneDraft}
