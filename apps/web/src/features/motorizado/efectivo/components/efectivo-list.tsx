@@ -156,6 +156,24 @@ export function EfectivoList() {
                   </div>
                 </div>
 
+                {(it.orders ?? []).length > 0 && (
+                  <ul className="space-y-1.5 pt-3 border-t border-outline-variant/15">
+                    {(it.orders ?? []).map((o) => (
+                      <li
+                        key={o.orderId}
+                        className="flex items-center justify-between text-sm gap-3"
+                      >
+                        <span className="truncate text-on-surface">
+                          {o.clientName?.trim() || `#${o.shortId}`}
+                        </span>
+                        <span className="font-bold text-on-surface tabular-nums shrink-0">
+                          {money(o.cashOwed)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
                 {canDeliver ? (
                   <Button
                     variant="primary"

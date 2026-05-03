@@ -5,6 +5,13 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
+type OrderItem = {
+  orderId: string
+  shortId: string
+  clientName: string | null
+  cashOwed: number
+}
+
 type Row = {
   restaurantId: string
   restaurantName: string
@@ -13,6 +20,7 @@ type Row = {
   orderCount: number
   settlementId: string | null
   settlementStatus: string | null
+  orders: OrderItem[]
 }
 
 /**
@@ -39,7 +47,7 @@ export async function GET(req: NextRequest) {
   const { data: unsettledOrders, error: ordersErr } = await auth.auth.supabase
     .from('orders')
     .select(
-      'id, order_amount, cash_amount, client_pays_with, restaurant_id, restaurants!inner(name, accent_color)',
+      'id, short_id, client_name, order_amount, cash_amount, client_pays_with, restaurant_id, restaurants!inner(name, accent_color)',
     )
     .eq('driver_id', auth.auth.driverId)
     .eq('status', 'delivered')
@@ -57,13 +65,37 @@ export async function GET(req: NextRequest) {
     .eq('driver_id', auth.auth.driverId)
     .in('status', ['delivered', 'disputed'])
 
+  // Detalle de pedidos para cada settlement activo (bucket 2): ya están
+  // vinculados via orders.cash_settlement_id. Agrupados por settlementId
+  // para empujarlos al Row correspondiente.
+  const settlementOrdersBySettlementId = new Map<string, OrderItem[]>()
+  const activeSettlementIds = (activeSettlements ?? []).map((s) => s.id)
+  if (activeSettlementIds.length > 0) {
+    const { data: settlementOrders } = await auth.auth.supabase
+      .from('orders')
+      .select('id, short_id, client_name, order_amount, cash_amount, client_pays_with, cash_settlement_id')
+      .in('cash_settlement_id', activeSettlementIds)
+    for (const o of settlementOrders ?? []) {
+      if (!o.cash_settlement_id) continue
+      const cashOwed = Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
+      const list = settlementOrdersBySettlementId.get(o.cash_settlement_id) ?? []
+      list.push({
+        orderId: o.id,
+        shortId: o.short_id,
+        clientName: o.client_name,
+        cashOwed: Number(cashOwed.toFixed(2)),
+      })
+      settlementOrdersBySettlementId.set(o.cash_settlement_id, list)
+    }
+  }
+
   const byRestaurant = new Map<string, Row>()
 
   // Agrupa pedidos sin liquidar (bucket 1)
   for (const o of unsettledOrders ?? []) {
     const r = Array.isArray(o.restaurants) ? o.restaurants[0] : o.restaurants
     if (!r) continue
-    const existing = byRestaurant.get(o.restaurant_id) ?? {
+    const existing: Row = byRestaurant.get(o.restaurant_id) ?? {
       restaurantId: o.restaurant_id,
       restaurantName: r.name,
       accentColor: r.accent_color,
@@ -71,6 +103,7 @@ export async function GET(req: NextRequest) {
       orderCount: 0,
       settlementId: null,
       settlementStatus: null,
+      orders: [],
     }
     // El driver entrega lo que físicamente pasó por sus manos:
     //   - cash puro: client_pays_with ?? order_amount
@@ -79,6 +112,12 @@ export async function GET(req: NextRequest) {
     const cashOwed = Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
     existing.totalCash = Number((existing.totalCash + cashOwed).toFixed(2))
     existing.orderCount += 1
+    existing.orders.push({
+      orderId: o.id,
+      shortId: o.short_id,
+      clientName: o.client_name,
+      cashOwed: Number(cashOwed.toFixed(2)),
+    })
     byRestaurant.set(o.restaurant_id, existing)
   }
 
@@ -89,7 +128,7 @@ export async function GET(req: NextRequest) {
   for (const s of activeSettlements ?? []) {
     const r = Array.isArray(s.restaurants) ? s.restaurants[0] : s.restaurants
     if (!r) continue
-    const existing = byRestaurant.get(s.restaurant_id) ?? {
+    const existing: Row = byRestaurant.get(s.restaurant_id) ?? {
       restaurantId: s.restaurant_id,
       restaurantName: r.name,
       accentColor: r.accent_color,
@@ -97,6 +136,7 @@ export async function GET(req: NextRequest) {
       orderCount: s.order_count,
       settlementId: null,
       settlementStatus: null,
+      orders: [],
     }
     existing.settlementId = s.id
     existing.settlementStatus = s.status
@@ -106,6 +146,13 @@ export async function GET(req: NextRequest) {
     if (existing.totalCash === 0) {
       existing.totalCash = Number(s.delivered_amount ?? s.total_cash)
       existing.orderCount = s.order_count
+    }
+    // Anexar pedidos vinculados al settlement (si existen) al desglose, para
+    // que el driver siga viendo qué pedidos componen el monto incluso después
+    // de declarar la entrega.
+    const settlementOrders = settlementOrdersBySettlementId.get(s.id) ?? []
+    if (settlementOrders.length > 0) {
+      existing.orders.push(...settlementOrders)
     }
     byRestaurant.set(s.restaurant_id, existing)
   }

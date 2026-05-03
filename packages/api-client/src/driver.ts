@@ -14,6 +14,13 @@ export type DriverProfile = {
   email: string
 }
 
+export type CashSummaryOrderItem = {
+  orderId: string
+  shortId: string
+  clientName: string | null
+  cashOwed: number
+}
+
 export type CashSummaryItem = {
   restaurantId: string
   restaurantName: string
@@ -22,6 +29,7 @@ export type CashSummaryItem = {
   orderCount: number
   settlementId: string | null
   settlementStatus: 'pending' | 'delivered' | 'confirmed' | 'disputed' | 'resolved' | null
+  orders: CashSummaryOrderItem[]
 }
 
 export type MarkReceivedResponse = {
