@@ -253,6 +253,7 @@ export type Database = {
           full_name: string
           id: string
           is_active: boolean
+          is_test_account: boolean
           license_plate: string | null
           operating_days: string[]
           phone: string
@@ -267,6 +268,7 @@ export type Database = {
           full_name: string
           id?: string
           is_active?: boolean
+          is_test_account?: boolean
           license_plate?: string | null
           operating_days?: string[]
           phone: string
@@ -281,6 +283,7 @@ export type Database = {
           full_name?: string
           id?: string
           is_active?: boolean
+          is_test_account?: boolean
           license_plate?: string | null
           operating_days?: string[]
           phone?: string
@@ -579,6 +582,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_blocked: boolean
+          is_test_account: boolean
           name: string
           phone: string
           qr_url: string | null
@@ -600,6 +604,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_blocked?: boolean
+          is_test_account?: boolean
           name: string
           phone: string
           qr_url?: string | null
@@ -621,6 +626,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_blocked?: boolean
+          is_test_account?: boolean
           name?: string
           phone?: string
           qr_url?: string | null
@@ -728,6 +734,7 @@ export type Database = {
     }
     Functions: {
       activate_assigned_orders: { Args: never; Returns: undefined }
+      auto_close_drivers_on_schedule_end: { Args: never; Returns: undefined }
       admin_generate_settlements: {
         Args: {
           p_due_date: string

@@ -97,8 +97,8 @@ export async function GET(req: NextRequest) {
       `id, status, payment_status, order_amount, delivery_fee, cash_amount, client_pays_with,
        created_at, accepted_at, delivered_at, accept_countdown_seconds,
        restaurant_id, driver_id,
-       restaurants!inner(name, accent_color),
-       drivers(full_name, vehicle_type)`,
+       restaurants!inner(name, accent_color, is_test_account),
+       drivers(full_name, vehicle_type, is_test_account)`,
     )
     .gte('created_at', range.from.toISOString())
     .lt('created_at', range.to.toISOString())
@@ -119,10 +119,18 @@ export async function GET(req: NextRequest) {
     accept_countdown_seconds: number | null
     restaurant_id: string
     driver_id: string | null
-    restaurants: { name: string; accent_color: string } | null
-    drivers: { full_name: string; vehicle_type: string | null } | null
+    restaurants: { name: string; accent_color: string; is_test_account: boolean } | null
+    drivers: {
+      full_name: string
+      vehicle_type: string | null
+      is_test_account: boolean
+    } | null
   }
-  const rows = (data ?? []) as unknown as Row[]
+  // Excluye pedidos de cuentas marcadas como test (restaurant o driver),
+  // para que el dashboard refleje solo tráfico real de negocio.
+  const rows = ((data ?? []) as unknown as Row[]).filter(
+    (r) => !r.restaurants?.is_test_account && !r.drivers?.is_test_account,
+  )
 
   let delivered = 0
   let cancelled = 0
