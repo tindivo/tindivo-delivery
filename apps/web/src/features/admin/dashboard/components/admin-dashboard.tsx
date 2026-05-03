@@ -2,11 +2,16 @@
 import { Card, Icon, KpiCard, OrderCard, Skeleton } from '@tindivo/ui'
 import Link from 'next/link'
 import { useAdminActiveOrders } from '../hooks/use-admin-active-orders'
+import { useAdminDailySummary } from '../hooks/use-admin-daily-summary'
 import { useAdminMetrics } from '../hooks/use-admin-metrics'
+import { DayKpis } from './day-kpis'
+import { DriversBreakdown } from './drivers-breakdown'
+import { RestaurantsBreakdown } from './restaurants-breakdown'
 
 export function AdminDashboard() {
   const { data, isLoading } = useAdminActiveOrders()
   const { data: kpis } = useAdminMetrics()
+  const { data: summary, isLoading: summaryLoading } = useAdminDailySummary()
   const items = data?.items ?? []
 
   const metrics = computeMetrics(items)
@@ -16,54 +21,80 @@ export function AdminDashboard() {
       <header className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h1 className="font-black text-2xl md:text-3xl tracking-tight text-on-surface">
-            Monitor en vivo
+            Dashboard
           </h1>
           <p className="text-on-surface-variant text-xs md:text-sm mt-1">
-            Pedidos activos en tiempo real — se actualiza automáticamente
+            Resumen del día (hora Perú) — se actualiza automáticamente
           </p>
         </div>
         <Link
           href="/admin/orders"
           className="shrink-0 inline-flex items-center gap-2 rounded-xl px-3 py-2 md:px-4 bg-surface-container-lowest border border-outline-variant/30 text-xs md:text-sm font-semibold hover:shadow-[0_4px_20px_rgba(171,53,0,0.04)] transition-shadow"
         >
-          Ver todos
+          Ver todos los pedidos
           <Icon name="arrow_forward" size={18} />
         </Link>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <MetricCard
-          label="Esperando motorizado"
-          value={metrics.waiting}
-          icon="hourglass_top"
-          variant="danger"
-        />
-        <MetricCard
-          label="En camino al local"
-          value={metrics.headingToRestaurant}
-          icon="two_wheeler"
-          variant="warning"
-        />
-        <MetricCard
-          label="En entrega"
-          value={metrics.inDelivery}
-          icon="delivery_dining"
-          variant="info"
-        />
-        <Link href="/admin/tracking" className="block">
+      <section>
+        <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-on-surface-variant mb-3">
+          KPIs del día
+        </h2>
+        <DayKpis data={summary} isLoading={summaryLoading} />
+      </section>
+
+      <section>
+        <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-on-surface-variant mb-3">
+          Por restaurante
+        </h2>
+        <RestaurantsBreakdown rows={summary?.byRestaurant} isLoading={summaryLoading} />
+      </section>
+
+      <section>
+        <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-on-surface-variant mb-3">
+          Por motorizado
+        </h2>
+        <DriversBreakdown rows={summary?.byDriver} isLoading={summaryLoading} />
+      </section>
+
+      <section>
+        <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-on-surface-variant mb-3">
+          Monitor en vivo
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <MetricCard
-            label="Por enviar tracking"
-            value={metrics.pendingTracking}
-            icon="chat"
-            variant="primary"
+            label="Esperando motorizado"
+            value={metrics.waiting}
+            icon="hourglass_top"
+            variant="danger"
           />
-        </Link>
-      </div>
+          <MetricCard
+            label="En camino al local"
+            value={metrics.headingToRestaurant}
+            icon="two_wheeler"
+            variant="warning"
+          />
+          <MetricCard
+            label="En entrega"
+            value={metrics.inDelivery}
+            icon="delivery_dining"
+            variant="info"
+          />
+          <Link href="/admin/tracking" className="block">
+            <MetricCard
+              label="Por enviar tracking"
+              value={metrics.pendingTracking}
+              icon="chat"
+              variant="primary"
+            />
+          </Link>
+        </div>
+      </section>
 
       {kpis && (
         <section>
           <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-on-surface-variant mb-3">
-            Métricas del día (San Jacinto)
+            Operación detallada
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard

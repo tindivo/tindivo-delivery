@@ -108,6 +108,56 @@ export type AdminMetricsResponse = {
   readyEarlyCount: number
 }
 
+export type AdminDailySummaryRestaurantRow = {
+  restaurantId: string
+  name: string
+  accentColor: string
+  total: number
+  delivered: number
+  cancelled: number
+  gmv: number
+  commission: number
+}
+
+export type AdminDailySummaryDriverRow = {
+  driverId: string
+  fullName: string
+  vehicleType: string | null
+  total: number
+  delivered: number
+  inProgress: number
+  cancelled: number
+  commissionGenerated: number
+}
+
+export type AdminDailySummary = {
+  range: { from: string; to: string }
+  totals: {
+    orders: number
+    delivered: number
+    cancelled: number
+    inProgress: number
+    cancellationPct: number
+  }
+  commercials: {
+    gmv: number
+    commissionRevenue: number
+    avgOrderValue: number | null
+  }
+  operations: {
+    avgTotalSeconds: number | null
+    onTimePct: number | null
+    overdueAcceptedCount: number
+    acceptedTotal: number
+  }
+  cash: {
+    pendingDeliveredToRestaurant: number
+    cashOrdersDelivered: number
+  }
+  byRestaurant: AdminDailySummaryRestaurantRow[]
+  byDriver: AdminDailySummaryDriverRow[]
+}
+
 export function adminApi(client: ApiClient) {
   return {
     listTrackingPending: () =>
@@ -151,6 +201,8 @@ export function adminApi(client: ApiClient) {
 
     getMetrics: (from?: string, to?: string) =>
       client.get<AdminMetricsResponse>('admin/metrics', { query: { from, to } }),
+    getDailySummary: (from?: string, to?: string) =>
+      client.get<AdminDailySummary>('admin/daily-summary', { query: { from, to } }),
 
     getSupportPhone: () =>
       client.get<{ phone: string; updatedAt: string | null }>('admin/settings/support-phone'),
