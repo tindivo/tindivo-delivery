@@ -158,5 +158,28 @@ export function adminApi(client: ApiClient) {
       client.patch<{ phone: string; updatedAt: string | null }>('admin/settings/support-phone', {
         phone,
       }),
+
+    getPlatformSchedule: () =>
+      client.get<{ schedule: PlatformScheduleDto; updatedAt: string | null }>(
+        'admin/settings/platform-schedule',
+      ),
+    updatePlatformSchedule: (body: PlatformScheduleDto) =>
+      client.patch<{ schedule: PlatformScheduleDto; updatedAt: string | null }>(
+        'admin/settings/platform-schedule',
+        body,
+      ),
   }
+}
+
+export type WeekdayCode = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+export type PlatformScheduleDto = {
+  startHHMM: string
+  endHHMM: string
+  days: WeekdayCode[]
+}
+export type PlatformStatusResponse = {
+  isOpen: boolean
+  reason: 'inside_window' | 'outside_window' | 'day_off'
+  nextOpenAt: string | null
+  schedule: PlatformScheduleDto
 }

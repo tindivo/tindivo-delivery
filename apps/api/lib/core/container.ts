@@ -15,6 +15,10 @@ import {
   SupabaseOrderRepository,
   SystemClock,
 } from '@tindivo/core/modules/orders'
+import {
+  CheckPlatformScheduleUseCase,
+  SupabasePlatformSettingsRepository,
+} from '@tindivo/core/modules/platform'
 import type { ServerClient } from '@tindivo/supabase'
 
 const clock = new SystemClock()
@@ -87,4 +91,8 @@ export function buildChangePaymentMethodUseCase(sb: ServerClient) {
 export function buildSaveCustomerDataUseCase(sb: ServerClient) {
   const { orders, events } = deps(sb)
   return new SaveCustomerDataUseCase(orders, events, clock)
+}
+
+export function buildCheckPlatformScheduleUseCase(sb: ServerClient) {
+  return new CheckPlatformScheduleUseCase(new SupabasePlatformSettingsRepository(sb), clock)
 }

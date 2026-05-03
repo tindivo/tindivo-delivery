@@ -1,4 +1,8 @@
-import { buildAutoAssignOrderUseCase, buildCreateOrderUseCase } from '@/lib/core/container'
+import {
+  buildAutoAssignOrderUseCase,
+  buildCheckPlatformScheduleUseCase,
+  buildCreateOrderUseCase,
+} from '@/lib/core/container'
 import { problem, problemCode } from '@/lib/http/problem'
 import { requireAuth } from '@/lib/http/require-auth'
 import { parseJson } from '@/lib/http/validate'
@@ -22,6 +26,17 @@ export async function POST(req: NextRequest) {
 
   if (!auth.auth.restaurantId) {
     return problemCode('FORBIDDEN', 403, 'El usuario no tiene restaurante asociado')
+  }
+
+  // Bloqueo por horario operativo: si la plataforma está cerrada en este
+  // instante, rechazamos antes de tocar BD para evitar pedidos huérfanos.
+  const platformCheck = await buildCheckPlatformScheduleUseCase(auth.auth.supabase).execute()
+  if (platformCheck.isSuccess && !platformCheck.value.isOpen) {
+    const nextOpen = platformCheck.value.nextOpenAt
+    const detail = nextOpen
+      ? `Tindivo está cerrado. Abrimos ${formatNextOpenLima(nextOpen)}.`
+      : 'Tindivo está cerrado en este momento.'
+    return problemCode('PLATFORM_CLOSED', 403, detail)
   }
 
   // Snapshot de la comisión actual del restaurante. Cambios futuros en
@@ -78,4 +93,13 @@ export async function GET(req: NextRequest) {
   if (error) return problemCode('INTERNAL_ERROR', 500, error.message)
 
   return NextResponse.json({ items: data })
+}
+
+function formatNextOpenLima(date: Date): string {
+  return date.toLocaleString('es-PE', {
+    timeZone: 'America/Lima',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }

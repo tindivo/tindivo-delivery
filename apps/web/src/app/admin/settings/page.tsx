@@ -1,3 +1,4 @@
+import { PlatformScheduleForm } from '@/features/admin/settings/components/platform-schedule-form'
 import { SupportPhoneForm } from '@/features/admin/settings/components/support-phone-form'
 
 export default function AdminSettingsPage() {
@@ -9,6 +10,7 @@ export default function AdminSettingsPage() {
           Ajustes globales del sistema. Los cambios se aplican de inmediato a las PWAs.
         </p>
       </header>
+      <PlatformScheduleForm />
       <SupportPhoneForm />
     </div>
   )

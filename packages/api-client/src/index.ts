@@ -19,4 +19,8 @@ export {
   type AdminSettlementRow,
   type RestaurantDebtSummaryRow,
   type AdminMetricsResponse,
+  type PlatformScheduleDto,
+  type PlatformStatusResponse,
+  type WeekdayCode,
 } from './admin'
+export { platformApi } from './platform'

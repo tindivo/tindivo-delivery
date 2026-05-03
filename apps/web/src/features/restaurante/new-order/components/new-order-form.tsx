@@ -1,4 +1,6 @@
 'use client'
+import { PlatformClosedBanner } from '@/features/restaurante/shared/components/platform-closed-banner'
+import { usePlatformStatus } from '@/features/restaurante/shared/hooks/use-platform-status'
 import { useIsDesktop } from '@/shared/hooks/use-is-desktop'
 import type { Orders } from '@tindivo/contracts'
 import { BottomActionBar, Button, GlassTopBar, Icon, IconButton, MoneyInput, cn } from '@tindivo/ui'
@@ -58,6 +60,8 @@ const paymentOptions: {
 export function NewOrderForm() {
   const router = useRouter()
   const createOrder = useCreateOrder()
+  const platformStatus = usePlatformStatus()
+  const isPlatformClosed = platformStatus.data ? !platformStatus.data.isOpen : false
 
   const [prepMinutes, setPrepMinutes] = useState<PrepMinutes>(20)
   const [payment, setPayment] = useState<Payment>('pending_cash')
@@ -153,6 +157,8 @@ export function NewOrderForm() {
         onSubmit={handleSubmit}
         className="pt-20 px-4 max-w-md mx-auto space-y-6"
       >
+        <PlatformClosedBanner />
+
         {/* Hero label */}
         <div className="flex items-center gap-3 px-1 pt-2">
           <span
@@ -549,9 +555,13 @@ export function NewOrderForm() {
           form="new-order-form"
           size="lg"
           className="w-full"
-          disabled={!canSubmit || createOrder.isPending}
+          disabled={!canSubmit || createOrder.isPending || isPlatformClosed}
         >
-          {createOrder.isPending ? 'Creando pedido...' : 'Crear pedido'}
+          {createOrder.isPending
+            ? 'Creando pedido...'
+            : isPlatformClosed
+              ? 'Tindivo cerrado'
+              : 'Crear pedido'}
           <Icon name={createOrder.isPending ? 'progress_activity' : 'arrow_forward'} />
         </Button>
       </BottomActionBar>

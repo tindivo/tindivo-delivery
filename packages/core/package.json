@@ -17,7 +17,8 @@
     "./modules/cash-settlements": "./src/modules/cash-settlements/index.ts",
     "./modules/settlements": "./src/modules/settlements/index.ts",
     "./modules/notifications": "./src/modules/notifications/index.ts",
-    "./modules/users": "./src/modules/users/index.ts"
+    "./modules/users": "./src/modules/users/index.ts",
+    "./modules/platform": "./src/modules/platform/index.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",

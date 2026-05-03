@@ -73,7 +73,9 @@ export async function GET(req: NextRequest) {
   if (activeSettlementIds.length > 0) {
     const { data: settlementOrders } = await auth.auth.supabase
       .from('orders')
-      .select('id, short_id, client_name, order_amount, cash_amount, client_pays_with, cash_settlement_id')
+      .select(
+        'id, short_id, client_name, order_amount, cash_amount, client_pays_with, cash_settlement_id',
+      )
       .in('cash_settlement_id', activeSettlementIds)
     for (const o of settlementOrders ?? []) {
       if (!o.cash_settlement_id) continue
