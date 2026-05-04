@@ -59,6 +59,66 @@ export const CreateOrderRequest = z
   )
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequest>
 
+/**
+ * Body para PATCH /restaurant/orders/:id — el restaurante edita campos del
+ * pedido antes de que el driver lo recoja. Permitido en estados
+ * waiting_driver, heading_to_restaurant, waiting_at_restaurant.
+ *
+ * Todos los campos son opcionales: si solo viene `clientName`, solo se
+ * actualiza el nombre. Si viene `paymentStatus`, deben venir todos los
+ * derivados necesarios para ese método (mismas reglas que CreateOrder).
+ */
+export const EditOrderByRestaurantRequest = z
+  .object({
+    clientName: z.string().trim().min(1).max(80).nullable().optional(),
+    paymentStatus: PaymentStatus.optional(),
+    orderAmount: MoneyPenSchema.optional(),
+    yapeAmount: MoneyPenSchema.optional(),
+    cashAmount: MoneyPenSchema.optional(),
+    clientPaysWith: MoneyPenSchema.optional(),
+  })
+  .refine(
+    (v) =>
+      v.clientName !== undefined ||
+      v.paymentStatus !== undefined ||
+      v.orderAmount !== undefined ||
+      v.yapeAmount !== undefined ||
+      v.cashAmount !== undefined ||
+      v.clientPaysWith !== undefined,
+    { message: 'Debe enviar al menos un campo a editar' },
+  )
+  .refine(
+    (v) => {
+      // Si cambia el método o el monto, el resto de campos derivados se
+      // validan según el método final (efectivo requiere clientPaysWith,
+      // mixto requiere yape+cash, etc.). El UseCase termina la validación.
+      if (v.paymentStatus === 'pending_cash') {
+        return v.clientPaysWith !== undefined && v.orderAmount !== undefined
+          ? v.clientPaysWith >= v.orderAmount
+          : true
+      }
+      return true
+    },
+    {
+      message: 'clientPaysWith debe ser ≥ orderAmount cuando paymentStatus es pending_cash',
+      path: ['clientPaysWith'],
+    },
+  )
+  .refine(
+    (v) => {
+      if (v.paymentStatus !== 'pending_mixed') return true
+      if (v.yapeAmount === undefined || v.cashAmount === undefined || v.orderAmount === undefined)
+        return false
+      if (v.yapeAmount <= 0 || v.cashAmount <= 0) return false
+      return Math.round((v.yapeAmount + v.cashAmount) * 100) === Math.round(v.orderAmount * 100)
+    },
+    {
+      message: 'pending_mixed requiere yapeAmount y cashAmount > 0 que sumen orderAmount',
+      path: ['yapeAmount'],
+    },
+  )
+export type EditOrderByRestaurantRequest = z.infer<typeof EditOrderByRestaurantRequest>
+
 export const ChangePaymentMethodRequest = z
   .object({
     paymentStatus: PaymentStatus.refine((s) => s !== 'prepaid', {

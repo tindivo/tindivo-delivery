@@ -287,6 +287,49 @@ export class TrackingLinkSent extends BaseDomainEvent {
  * y reconstrucción del historial. El monto del pedido (`orderAmount`)
  * NO cambia — solo cambia cómo se cobra.
  */
+/**
+ * Emitido cuando el restaurante edita campos del pedido (nombre del cliente,
+ * método de pago y/o monto) antes de que el pedido sea entregado. Caso real:
+ * el restaurante se equivocó al crear el pedido o el cliente cambió de
+ * opinión sobre el método de pago/monto antes de que el driver lo recoja.
+ *
+ * Permitido en estados: waiting_driver, heading_to_restaurant,
+ * waiting_at_restaurant. NO en picked_up (driver ya tiene la comida y para
+ * eso existe `PaymentMethodChanged`), delivered ni cancelled.
+ *
+ * El payload guarda snapshots previo y nuevo de cada campo para auditoría.
+ */
+export class OrderEditedByRestaurant extends BaseDomainEvent {
+  readonly eventType = 'OrderEditedByRestaurant' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    restaurantId: string
+    previousClientName: string | null
+    newClientName: string | null
+    previousOrderAmount: number
+    newOrderAmount: number
+    previousPaymentStatus: string
+    newPaymentStatus: string
+    previousYapeAmount: number | null
+    previousCashAmount: number | null
+    previousClientPaysWith: number | null
+    previousChangeToGive: number | null
+    newYapeAmount: number | null
+    newCashAmount: number | null
+    newClientPaysWith: number | null
+    newChangeToGive: number | null
+    editedAt: string
+  }
+
+  constructor(payload: OrderEditedByRestaurant['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
 export class PaymentMethodChanged extends BaseDomainEvent {
   readonly eventType = 'PaymentMethodChanged' as const
   readonly aggregateType = AGG

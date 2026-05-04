@@ -7,6 +7,7 @@ import {
   InvalidStateTransition,
   NoPrepTimeToReduce,
   OrderNotCancellable,
+  OrderNotEditable,
   PaymentChangeNotAllowed,
   PrepTimeExtensionLimit,
 } from '../errors/order-errors'
@@ -18,6 +19,7 @@ import {
   OrderCancelled,
   OrderCreated,
   OrderDelivered,
+  OrderEditedByRestaurant,
   OrderExtended,
   OrderPickedUp,
   OrderReadyEarly,
@@ -524,6 +526,78 @@ export class Order extends AggregateRoot<OrderId> {
         orderId: this.id.value,
         newAppearsInQueueAt: now.toISOString(),
         newEstimatedReadyAt: newReadyAt.toISOString(),
+      }),
+    )
+    return Result.okVoid()
+  }
+
+  /**
+   * Edición por el restaurante de campos del pedido (nombre cliente, método
+   * de pago y/o monto) ANTES de que el driver lo recoja. Caso real: el
+   * restaurante se equivocó al crear o el cliente cambió de opinión sobre
+   * cuánto/cómo pagar mientras la comida aún se prepara o sale del local.
+   *
+   * Reglas:
+   *  - Solo permitido en `waiting_driver`, `heading_to_restaurant`,
+   *    `waiting_at_restaurant` (antes de pickup). En `picked_up` el driver
+   *    ya tiene la comida y para esos cambios existe `changePaymentMethod`.
+   *  - El nuevo `PaymentIntent` se construye desde cero con los valores
+   *    proporcionados. La validación cruzada (yape+cash=order, paysWith>=
+   *    cash, etc.) la hace `PaymentIntent.create`.
+   *  - Solo emite el evento si hubo algún cambio efectivo (idempotencia).
+   */
+  editByRestaurant(
+    newClientName: string | null,
+    newPayment: PaymentIntent,
+    now: Date,
+  ): Result<void, OrderNotEditable> {
+    const editableStatuses: ReadonlyArray<string> = [
+      'waiting_driver',
+      'heading_to_restaurant',
+      'waiting_at_restaurant',
+    ]
+    if (!editableStatuses.includes(this._state.status.value))
+      return Result.fail(new OrderNotEditable(this._state.status.value))
+
+    const previous = this._state.payment
+    const previousClientName = this._state.clientName
+
+    const sanitizedClientName = newClientName?.trim() || null
+    const clientNameChanged = sanitizedClientName !== previousClientName
+    const paymentChanged =
+      newPayment.status !== previous.status ||
+      !newPayment.orderAmount.equals(previous.orderAmount) ||
+      (newPayment.yapeAmount?.amount ?? null) !== (previous.yapeAmount?.amount ?? null) ||
+      (newPayment.cashAmount?.amount ?? null) !== (previous.cashAmount?.amount ?? null) ||
+      (newPayment.clientPaysWith?.amount ?? null) !== (previous.clientPaysWith?.amount ?? null)
+
+    if (!clientNameChanged && !paymentChanged) {
+      return Result.okVoid()
+    }
+
+    this._state.clientName = sanitizedClientName
+    this._state.payment = newPayment
+    this._state.updatedAt = now
+
+    this.raise(
+      new OrderEditedByRestaurant({
+        orderId: this.id.value,
+        restaurantId: this._state.restaurantId.value,
+        previousClientName,
+        newClientName: sanitizedClientName,
+        previousOrderAmount: previous.orderAmount.amount,
+        newOrderAmount: newPayment.orderAmount.amount,
+        previousPaymentStatus: previous.status,
+        newPaymentStatus: newPayment.status,
+        previousYapeAmount: previous.yapeAmount?.amount ?? null,
+        previousCashAmount: previous.cashAmount?.amount ?? null,
+        previousClientPaysWith: previous.clientPaysWith?.amount ?? null,
+        previousChangeToGive: previous.changeToGive?.amount ?? null,
+        newYapeAmount: newPayment.yapeAmount?.amount ?? null,
+        newCashAmount: newPayment.cashAmount?.amount ?? null,
+        newClientPaysWith: newPayment.clientPaysWith?.amount ?? null,
+        newChangeToGive: newPayment.changeToGive?.amount ?? null,
+        editedAt: now.toISOString(),
       }),
     )
     return Result.okVoid()

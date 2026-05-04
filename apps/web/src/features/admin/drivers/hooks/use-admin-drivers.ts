@@ -18,6 +18,13 @@ export function useAdminDriver(id: string) {
   })
 }
 
+export function useAdminRestaurantsForAssignment() {
+  return useQuery({
+    queryKey: ['admin', 'restaurants', 'list-for-assignment'],
+    queryFn: () => admin.listRestaurants(),
+  })
+}
+
 export function useCreateDriver() {
   const qc = useQueryClient()
   return useMutation({
@@ -30,6 +37,17 @@ export function useUpdateDriver(id: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: Drivers.UpdateDriverRequest) => admin.updateDriver(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'drivers'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'drivers', id] })
+    },
+  })
+}
+
+export function useSetDriverRestaurants(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: Drivers.SetDriverRestaurantsRequest) => admin.setDriverRestaurants(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'drivers'] })
       qc.invalidateQueries({ queryKey: ['admin', 'drivers', id] })

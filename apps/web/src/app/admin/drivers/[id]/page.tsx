@@ -28,7 +28,20 @@ export default function AdminEditDriverPage({ params }: Props) {
           Editando datos del motorizado.
         </p>
       </header>
-      <DriverForm mode="edit" initial={data} />
+      <DriverForm
+        mode="edit"
+        initial={{
+          id: data.id,
+          full_name: data.full_name,
+          phone: data.phone,
+          vehicle_type: data.vehicle_type,
+          license_plate: data.license_plate,
+          operating_days: data.operating_days,
+          shift_start: data.shift_start,
+          shift_end: data.shift_end,
+          restaurantIds: data.restaurantIds ?? [],
+        }}
+      />
     </div>
   )
 }

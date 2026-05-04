@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -243,6 +241,39 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: true
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_restaurants: {
+        Row: {
+          created_at: string
+          driver_id: string
+          restaurant_id: string
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          restaurant_id: string
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_restaurants_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_restaurants_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },
         ]
@@ -734,7 +765,6 @@ export type Database = {
     }
     Functions: {
       activate_assigned_orders: { Args: never; Returns: undefined }
-      auto_close_drivers_on_schedule_end: { Args: never; Returns: undefined }
       admin_generate_settlements: {
         Args: {
           p_due_date: string
@@ -764,6 +794,7 @@ export type Database = {
           yape_number: string
         }[]
       }
+      auto_close_drivers_on_schedule_end: { Args: never; Returns: undefined }
       current_driver_id: { Args: never; Returns: string }
       current_restaurant_id: { Args: never; Returns: string }
       current_user_role: {
@@ -775,6 +806,7 @@ export type Database = {
       enqueue_overdue_orders: { Args: never; Returns: undefined }
       generate_short_id: { Args: never; Returns: string }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
+      invoke_assign_pending_orders: { Args: never; Returns: undefined }
       prune_stale_push_subscriptions: { Args: never; Returns: undefined }
     }
     Enums: {

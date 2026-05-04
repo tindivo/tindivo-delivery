@@ -17,14 +17,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params
   const { data, error } = await auth.auth.supabase
     .from('drivers')
-    .select('*, users(email), driver_availability(is_available)')
+    .select('*, users(email), driver_availability(is_available), driver_restaurants(restaurant_id)')
     .eq('id', id)
     .maybeSingle()
 
   if (error) return problemCode('INTERNAL_ERROR', 500, error.message)
   if (!data) return problemCode('DRIVER_NOT_FOUND', 404)
 
-  return NextResponse.json(data)
+  // Aplanamos driver_restaurants → restaurantIds[] para la UI.
+  const { driver_restaurants, ...rest } = data as typeof data & {
+    driver_restaurants?: { restaurant_id: string }[]
+  }
+  const restaurantIds = (driver_restaurants ?? []).map((r) => r.restaurant_id)
+  return NextResponse.json({ ...rest, restaurantIds })
 }
 
 /**

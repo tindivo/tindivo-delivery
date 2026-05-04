@@ -91,3 +91,11 @@ export class CustomerDataMissing extends DomainError {
   readonly code = 'CUSTOMER_DATA_MISSING'
   readonly message = 'Faltan datos del cliente: completa teléfono y ubicación antes de partir'
 }
+
+export class OrderNotEditable extends DomainError {
+  readonly code = 'ORDER_NOT_EDITABLE'
+  readonly message = 'El pedido ya no puede editarse en su estado actual'
+  constructor(status: OrderStatusValue) {
+    super({ status })
+  }
+}

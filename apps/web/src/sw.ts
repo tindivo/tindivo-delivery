@@ -84,24 +84,33 @@ self.addEventListener('push', (event) => {
     tag,
     url = '/',
     requireInteraction = false,
-    silent = false,
+    silent,
     vibrate = [200, 100, 200],
   } = payload
 
-  event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon,
-      badge,
-      tag,
-      requireInteraction,
-      silent,
-      data: { url },
-      // `vibrate` solo soportado en Android — browsers lo ignoran silenciosamente
-      // @ts-expect-error vibrate no está en TS lib por variar soporte
-      vibrate,
-    }),
-  )
+  // Log para debug en DevTools del SW (Application > Service Workers).
+  // Permite confirmar entrega cuando el SO suprime la notificación visible
+  // (Doze Mode, iOS engagement signals, etc.).
+  console.log('[sw:push]', { tag, title, body, requireInteraction, hasUrl: !!url })
+
+  // Construimos las options sin pasar `silent` cuando no viene explícito —
+  // declarar `silent: false` puede causar que algunos browsers traten la
+  // notificación como "low priority" y la silencien en background. Omitirlo
+  // permite al UA aplicar el comportamiento por default (con sonido).
+  const options: NotificationOptions = {
+    body,
+    icon,
+    badge,
+    tag,
+    requireInteraction,
+    data: { url },
+    // `vibrate` solo soportado en Android — browsers lo ignoran silenciosamente
+    // @ts-expect-error vibrate no está en TS lib por variar soporte
+    vibrate,
+  }
+  if (typeof silent === 'boolean') options.silent = silent
+
+  event.waitUntil(self.registration.showNotification(title, options))
 })
 
 // ─────────────────────────────────────────────────────────────────────────

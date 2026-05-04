@@ -25,6 +25,25 @@ export const DriverAssignmentPolicy = {
   choose(candidates: readonly DriverAssignmentCandidate[]): AssignmentDecision | null {
     if (candidates.length === 0) return null
 
+    // Prioridad absoluta: cualquier driver ocioso (0 activos + 0 reservados)
+    // gana sobre cualquier driver con carga, sin importar deliveredToday ni
+    // sameRestaurantWindowCount. Razón: un driver libre debería tomar el
+    // pedido nuevo antes que sumarle un segundo a quien ya está moviendo
+    // uno, incluso si "agruparlo con el del mismo restaurante" sería más
+    // eficiente. Entre idle, desempata por menor entregas del día (el que
+    // menos plata hizo hoy) y por driverId asc para determinismo.
+    const idle = candidates.filter((c) => c.activeCount + c.reservedCount === 0)
+    const idleSorted = [...idle].sort((a, b) => {
+      if (a.deliveredToday !== b.deliveredToday) {
+        return a.deliveredToday - b.deliveredToday
+      }
+      return a.driverId.localeCompare(b.driverId)
+    })
+    const bestIdle = idleSorted[0]
+    if (bestIdle) {
+      return { driverId: bestIdle.driverId, reason: 'idle_driver_priority' }
+    }
+
     const minDelivered = Math.min(...candidates.map((c) => c.deliveredToday))
 
     const ranked = candidates

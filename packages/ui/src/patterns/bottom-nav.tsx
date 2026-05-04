@@ -6,6 +6,12 @@ export type BottomNavItem = {
   href: string
   label: string
   icon: string
+  /**
+   * Badge numérico opcional sobre el ícono. Usar para indicar cantidad de
+   * elementos pendientes (ej: cantidad de restaurantes con efectivo por
+   * devolver). 0/null/undefined → no se renderiza.
+   */
+  badge?: number | null
 }
 
 type Props = {
@@ -72,18 +78,34 @@ export function BottomNav({ items }: Props) {
                   }
             }
           >
-            <span
-              className="material-symbols-outlined"
-              aria-hidden="true"
-              style={{
-                fontSize: '24px',
-                lineHeight: 1,
-                fontVariationSettings: active
-                  ? "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24"
-                  : "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24",
-              }}
-            >
-              {item.icon}
+            <span className="relative inline-flex items-center justify-center">
+              <span
+                className="material-symbols-outlined"
+                aria-hidden="true"
+                style={{
+                  fontSize: '24px',
+                  lineHeight: 1,
+                  fontVariationSettings: active
+                    ? "'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24"
+                    : "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24",
+                }}
+              >
+                {item.icon}
+              </span>
+              {typeof item.badge === 'number' && item.badge > 0 && (
+                <span
+                  aria-label={`${item.badge} pendientes`}
+                  className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-black leading-none rounded-full"
+                  style={{
+                    background: active ? '#ffffff' : '#FF6B35',
+                    color: active ? '#FF6B35' : '#ffffff',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+                    border: active ? '1.5px solid #FF6B35' : '1.5px solid #ffffff',
+                  }}
+                >
+                  {item.badge > 9 ? '9+' : item.badge}
+                </span>
+              )}
             </span>
             <span
               className="text-[10px] font-semibold uppercase whitespace-nowrap"

@@ -82,7 +82,12 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
     const restaurantName = order?.restaurants?.name ?? 'Tindivo'
     const shortId = order?.short_id ?? ''
     const amount = order?.order_amount ? fmtPEN(order.order_amount) : ''
-    const tag = `order-${shortId || event.aggregate_id}`
+    // Tag único por evento + pedido para evitar colapso entre eventos
+    // distintos del mismo pedido. FCM/APNs colapsan pushes con mismo tag,
+    // así que `OrderAssigned` y `OrderAccepted` del mismo pedido pisaban
+    // el primero. Manteniendo el shortId en el tag, retries del mismo
+    // evento sí se deduplican (deseado).
+    const tag = `${event.event_type}-${shortId || event.aggregate_id}`
     // Etiqueta humana del pedido para el restaurante: nombre del cliente si
     // se ingresó al crear, sino fallback al #shortId. Para el driver se usa
     // siempre #shortId (el driver no necesariamente conoce al cliente).
@@ -102,6 +107,12 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
           body: `${amount} · listo pronto`,
           url: `/motorizado/pedidos/${event.aggregate_id}/preview`,
           tag,
+          // En Android Chrome con Doze Mode, las notificaciones sin
+          // requireInteraction se marcan como "low priority" y pueden
+          // ocultarse silenciosamente. Para el evento principal de la
+          // bandeja del driver, forzamos persistencia + vibración.
+          requireInteraction: true,
+          vibrate: [300, 120, 300],
         }
 
       case 'OrderAssigned':
@@ -152,6 +163,39 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
           url: `/restaurante/pedidos/${event.aggregate_id}`,
           tag,
         }
+
+      case 'OrderEditedByRestaurant': {
+        // Solo notificamos al driver si ya tiene el pedido asignado: en ese
+        // caso necesita ver el cambio de monto/método/cliente al instante.
+        if (role !== 'driver') return null
+        const payload = event.payload as {
+          newClientName?: string | null
+          previousOrderAmount?: number
+          newOrderAmount?: number
+          previousPaymentStatus?: string
+          newPaymentStatus?: string
+        }
+        const changedAmount =
+          payload.newOrderAmount != null &&
+          payload.previousOrderAmount != null &&
+          payload.newOrderAmount !== payload.previousOrderAmount
+        const changedMethod =
+          payload.newPaymentStatus != null &&
+          payload.previousPaymentStatus != null &&
+          payload.newPaymentStatus !== payload.previousPaymentStatus
+        const parts: string[] = []
+        if (changedAmount) parts.push(`monto S/ ${Number(payload.newOrderAmount).toFixed(2)}`)
+        if (changedMethod) parts.push('método de pago')
+        if (parts.length === 0) parts.push('datos del pedido')
+        return {
+          title: `Pedido actualizado — ${restaurantName}`,
+          body: `El restaurante cambió ${parts.join(' y ')}.`,
+          url: `/motorizado/pedidos/${event.aggregate_id}`,
+          tag: `${event.event_type}-${shortId || event.aggregate_id}`,
+          requireInteraction: true,
+          vibrate: [250, 100, 250],
+        }
+      }
 
       case 'OrderCancelled': {
         if (role === 'driver') {
@@ -276,6 +320,13 @@ async function resolveRecipients(
       }
 
       case 'OrderAssigned':
+        if (order.drivers?.user_id) {
+          out.push({ userId: order.drivers.user_id, role: 'driver' })
+        }
+        break
+
+      case 'OrderEditedByRestaurant':
+        // Avisar al driver SOLO si el pedido ya tiene driver asignado.
         if (order.drivers?.user_id) {
           out.push({ userId: order.drivers.user_id, role: 'driver' })
         }

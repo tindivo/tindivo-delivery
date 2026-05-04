@@ -44,6 +44,7 @@ export type DriverRow = {
   updated_at: string
   users?: { email: string } | null
   driver_availability?: { is_available: boolean } | null
+  restaurantIds?: string[]
 }
 
 export type AdminCashSettlementRow = {
@@ -177,6 +178,11 @@ export function adminApi(client: ApiClient) {
       client.post<DriverRow>('admin/drivers', body),
     updateDriver: (id: string, body: Drivers.UpdateDriverRequest) =>
       client.patch<DriverRow>(`admin/drivers/${id}`, body),
+    setDriverRestaurants: (id: string, body: Drivers.SetDriverRestaurantsRequest) =>
+      client.put<{ driverId: string; restaurantIds: string[] }>(
+        `admin/drivers/${id}/restaurants`,
+        body,
+      ),
 
     listCashSettlements: (status?: 'disputed' | 'delivered' | 'confirmed' | 'resolved' | 'all') =>
       client.get<{ items: AdminCashSettlementRow[] }>('admin/cash-settlements', {

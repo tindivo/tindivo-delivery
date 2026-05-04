@@ -1,6 +1,7 @@
 import type { DomainError } from '../../../../shared/errors/domain-error'
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
+import { MAX_DRIVER_CONCURRENT_ORDERS } from '../../domain/constants'
 import { DriverAssignmentPolicy } from '../../domain/policies/driver-assignment.policy'
 import { DriverId } from '../../domain/value-objects/driver-id'
 import { OrderId } from '../../domain/value-objects/order-id'
@@ -20,7 +21,6 @@ export type AutoAssignOrderResult = {
   reason: string | null
 }
 
-const MAX_ASSIGNED_AND_ACTIVE = 5
 const GROUP_WINDOW_MINUTES = 8
 
 export class AutoAssignOrderUseCase
@@ -41,13 +41,29 @@ export class AutoAssignOrderUseCase
     }
 
     const now = this.clock.now()
+
+    // Asignación diferida: si el pedido todavía no entra en la ventana de
+    // bandeja (10 min antes de estar listo), no fijamos driver. El cron
+    // `assign-pending-orders` reintentará cada minuto y asignará en cuanto
+    // appears_in_queue_at <= now(). Esto libera capacidad de los drivers
+    // para tomar pedidos que sí están entrando ahora en lugar de quedar
+    // "reservados" 20-30 min mientras la comida aún no se prepara.
+    if (order.appearsInQueueAt.getTime() > now.getTime()) {
+      return Result.ok({
+        assigned: false,
+        driverId: null,
+        activated: false,
+        reason: 'deferred_until_queue_window',
+      })
+    }
+
     const candidates = await this.orders.findAssignmentCandidates({
       restaurantId: order.restaurantId.value,
       estimatedReadyAt: order.estimatedReadyAt,
       now,
       todayStart: startOfLimaDay(now),
       windowMinutes: GROUP_WINDOW_MINUTES,
-      maxAssignedAndActive: MAX_ASSIGNED_AND_ACTIVE,
+      maxAssignedAndActive: MAX_DRIVER_CONCURRENT_ORDERS,
     })
 
     const decision = DriverAssignmentPolicy.choose(candidates)
@@ -59,13 +75,9 @@ export class AutoAssignOrderUseCase
     const assigned = order.assignTo(driverId, decision.reason, now)
     if (assigned.isFailure) return Result.fail(assigned.error)
 
-    let activated = false
-    if (order.appearsInQueueAt.getTime() <= now.getTime()) {
-      const activeCount = candidates.find((c) => c.driverId === decision.driverId)?.activeCount ?? 0
-      const accepted = order.acceptBy(driverId, activeCount, MAX_ASSIGNED_AND_ACTIVE, now)
-      if (accepted.isFailure) return Result.fail(accepted.error)
-      activated = true
-    }
+    const activeCount = candidates.find((c) => c.driverId === decision.driverId)?.activeCount ?? 0
+    const accepted = order.acceptBy(driverId, activeCount, MAX_DRIVER_CONCURRENT_ORDERS, now)
+    if (accepted.isFailure) return Result.fail(accepted.error)
 
     await this.orders.saveAutoAssignment(order, OrderStatus.waitingDriver())
     await this.events.publishAll(order.pullEvents())
@@ -73,7 +85,7 @@ export class AutoAssignOrderUseCase
     return Result.ok({
       assigned: true,
       driverId: decision.driverId,
-      activated,
+      activated: true,
       reason: decision.reason,
     })
   }

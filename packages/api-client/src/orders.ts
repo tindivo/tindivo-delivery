@@ -15,6 +15,17 @@ export function ordersApi(client: ApiClient) {
       client.post<void>(`restaurant/orders/${id}/extension`, body),
     cancelByRestaurant: (id: string, body: Orders.CancelOrderRequest) =>
       client.post<void>(`restaurant/orders/${id}/cancel`, body),
+    editRestaurantOrder: (id: string, body: Orders.EditOrderByRestaurantRequest) =>
+      client.patch<{
+        id: string
+        clientName: string | null
+        paymentStatus: string
+        orderAmount: number
+        yapeAmount: number | null
+        cashAmount: number | null
+        clientPaysWith: number | null
+        changeToGive: number | null
+      }>(`restaurant/orders/${id}`, body),
 
     // Driver
     listAvailable: () =>

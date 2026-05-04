@@ -139,10 +139,13 @@ export const OrderMapper = {
       prep_extension_minutes: p.prepExtensionMinutes,
       ready_early_at: p.readyEarlyAt?.toISOString() ?? null,
       payment_status: p.payment.status,
+      order_amount: p.payment.orderAmount.amount,
       yape_amount: p.payment.yapeAmount?.amount ?? null,
       cash_amount: p.payment.cashAmount?.amount ?? null,
       client_pays_with: p.payment.clientPaysWith?.amount ?? null,
       change_to_give: p.payment.changeToGive?.amount ?? null,
+      client_name: p.clientName,
+      notes: p.notes,
     }
   },
 }

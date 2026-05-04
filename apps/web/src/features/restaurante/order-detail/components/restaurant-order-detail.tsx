@@ -19,6 +19,7 @@ import { useCancelRestaurantOrder } from '../hooks/use-cancel-order'
 import { useMarkReadyEarly } from '../hooks/use-mark-ready-early'
 import { useRequestExtension } from '../hooks/use-request-extension'
 import { useRestaurantOrderDetail } from '../hooks/use-restaurant-order-detail'
+import { EditOrderSheet } from './edit-order-sheet'
 
 type Props = { orderId: string }
 
@@ -30,6 +31,7 @@ export function RestaurantOrderDetail({ orderId }: Props) {
   const extend = useRequestExtension(orderId)
   const readyEarly = useMarkReadyEarly(orderId)
   const [showExtension, setShowExtension] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
 
   // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
   const order = data as any
@@ -100,6 +102,10 @@ export function RestaurantOrderDetail({ orderId }: Props) {
   }
 
   const driver = order.drivers ?? null
+  const canEdit =
+    status === 'waiting_driver' ||
+    status === 'heading_to_restaurant' ||
+    status === 'waiting_at_restaurant'
   const canCancel = status === 'waiting_driver' || status === 'heading_to_restaurant'
   const canExtend =
     (status === 'waiting_driver' || status === 'heading_to_restaurant') && !order.extension_used
@@ -335,6 +341,17 @@ export function RestaurantOrderDetail({ orderId }: Props) {
       {isActive && (
         <BottomActionBar>
           <div className="flex flex-col gap-3">
+            {canEdit && (
+              <Button
+                variant="secondary"
+                size="lg"
+                className="w-full"
+                onClick={() => setShowEdit(true)}
+              >
+                <Icon name="edit" />
+                Editar pedido
+              </Button>
+            )}
             {canReadyEarly && (
               <Button
                 variant="secondary"
@@ -403,6 +420,21 @@ export function RestaurantOrderDetail({ orderId }: Props) {
             )}
           </div>
         </BottomActionBar>
+      )}
+
+      {showEdit && canEdit && (
+        <EditOrderSheet
+          orderId={orderId}
+          initial={{
+            clientName: order.client_name ?? null,
+            paymentStatus: order.payment_status,
+            orderAmount: Number(order.order_amount),
+            yapeAmount: order.yape_amount != null ? Number(order.yape_amount) : null,
+            cashAmount: order.cash_amount != null ? Number(order.cash_amount) : null,
+            clientPaysWith: order.client_pays_with != null ? Number(order.client_pays_with) : null,
+          }}
+          onClose={() => setShowEdit(false)}
+        />
       )}
     </div>
   )

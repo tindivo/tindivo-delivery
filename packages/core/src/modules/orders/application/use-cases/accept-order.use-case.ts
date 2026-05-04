@@ -1,6 +1,7 @@
 import type { DomainError } from '../../../../shared/errors/domain-error'
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
+import { MAX_DRIVER_CONCURRENT_ORDERS } from '../../domain/constants'
 import { OrderAlreadyAccepted, OrderNotFound } from '../../domain/errors/order-errors'
 import { DriverId } from '../../domain/value-objects/driver-id'
 import { OrderId } from '../../domain/value-objects/order-id'
@@ -22,8 +23,6 @@ export type AcceptOrderResult = {
 export class AcceptOrderUseCase
   implements UseCase<AcceptOrderCommand, AcceptOrderResult, DomainError>
 {
-  private readonly maxConcurrent = 5
-
   constructor(
     private readonly orders: OrderRepository,
     private readonly events: EventPublisher,
@@ -41,7 +40,12 @@ export class AcceptOrderUseCase
     const previousStatus = order.status
     const activeCount = await this.orders.countActiveByDriver(driverId)
 
-    const accepted = order.acceptBy(driverId, activeCount, this.maxConcurrent, this.clock.now())
+    const accepted = order.acceptBy(
+      driverId,
+      activeCount,
+      MAX_DRIVER_CONCURRENT_ORDERS,
+      this.clock.now(),
+    )
     if (accepted.isFailure) return Result.fail(accepted.error)
 
     await this.orders.save(order, previousStatus)

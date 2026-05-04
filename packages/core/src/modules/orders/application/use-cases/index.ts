@@ -19,6 +19,12 @@ export type {
 export { CreateOrderUseCase } from './create-order.use-case'
 export type { CreateOrderCommand, CreateOrderResult } from './create-order.use-case'
 
+export { EditOrderByRestaurantUseCase } from './edit-order-by-restaurant.use-case'
+export type {
+  EditOrderByRestaurantCommand,
+  EditOrderByRestaurantResult,
+} from './edit-order-by-restaurant.use-case'
+
 export { MarkArrivedUseCase } from './mark-arrived.use-case'
 export type { MarkArrivedCommand, MarkArrivedResult } from './mark-arrived.use-case'
 

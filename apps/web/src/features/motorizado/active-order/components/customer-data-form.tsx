@@ -79,6 +79,27 @@ export function CustomerDataForm({
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="delivery-reference">
+          Referencia de la dirección
+          <span className="ml-2 text-xs font-normal text-on-surface-variant">opcional</span>
+        </Label>
+        <textarea
+          id="delivery-reference"
+          value={reference}
+          onChange={(e) => onReferenceChange(e.target.value.slice(0, 500))}
+          maxLength={500}
+          rows={3}
+          placeholder="Ej: Av. Paseo de la República 3500, dpto 502, a una cuadra del metro Aramburú..."
+          className="w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-2 text-sm text-on-surface focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 resize-none"
+        />
+        <p className="text-xs text-on-surface-variant">
+          {reference.length > 0
+            ? `${reference.length}/500`
+            : 'Escribe aquí si no logras marcar el punto exacto en el mapa'}
+        </p>
+      </div>
+
+      <div className="space-y-2">
         <Label>
           Ubicación de entrega
           <span className="ml-2 text-xs font-normal text-on-surface-variant">
@@ -108,27 +129,6 @@ export function CustomerDataForm({
             {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
           </p>
         )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="delivery-reference">
-          Referencia de la dirección
-          <span className="ml-2 text-xs font-normal text-on-surface-variant">opcional</span>
-        </Label>
-        <textarea
-          id="delivery-reference"
-          value={reference}
-          onChange={(e) => onReferenceChange(e.target.value.slice(0, 500))}
-          maxLength={500}
-          rows={3}
-          placeholder="Ej: Av. Paseo de la República 3500, dpto 502, a una cuadra del metro Aramburú..."
-          className="w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-2 text-sm text-on-surface focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 resize-none"
-        />
-        <p className="text-xs text-on-surface-variant">
-          {reference.length > 0
-            ? `${reference.length}/500`
-            : 'Escribe aquí si no logras marcar el punto exacto en el mapa'}
-        </p>
       </div>
     </section>
   )

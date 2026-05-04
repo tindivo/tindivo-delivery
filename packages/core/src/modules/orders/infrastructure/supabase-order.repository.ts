@@ -71,10 +71,25 @@ export class SupabaseOrderRepository implements OrderRepository {
   async findAssignmentCandidates(
     query: AssignmentCandidateQuery,
   ): Promise<DriverAssignmentCandidate[]> {
+    // Filtrar drivers por restaurante asignado: solo los que tengan una fila
+    // en driver_restaurants apuntando a query.restaurantId pueden ser
+    // candidatos. Si la tabla está vacía (instalación nueva) o el restaurant
+    // no tiene drivers asignados, no habrá candidatos — el admin debe
+    // explicitamente asignar la flota desde /admin/drivers/[id].
+    const { data: assignedRows, error: assignedError } = await this.sb
+      .from('driver_restaurants')
+      .select('driver_id')
+      .eq('restaurant_id', query.restaurantId)
+    if (assignedError) throw new PersistenceError(assignedError.message, assignedError)
+
+    const assignedDriverIds = (assignedRows ?? []).map((r) => r.driver_id)
+    if (assignedDriverIds.length === 0) return []
+
     const { data: drivers, error: driversError } = await this.sb
       .from('drivers')
       .select('id, operating_days, shift_start, shift_end, driver_availability(is_available)')
       .eq('is_active', true)
+      .in('id', assignedDriverIds)
     if (driversError) throw new PersistenceError(driversError.message, driversError)
 
     const eligibleDrivers = (drivers ?? [])

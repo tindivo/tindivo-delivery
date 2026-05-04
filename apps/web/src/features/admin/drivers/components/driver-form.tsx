@@ -4,7 +4,12 @@ import type { Drivers } from '@tindivo/contracts'
 import { Button, Icon, Input, Label, PhoneInputPe } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { useCreateDriver, useUpdateDriver } from '../hooks/use-admin-drivers'
+import {
+  useAdminRestaurantsForAssignment,
+  useCreateDriver,
+  useSetDriverRestaurants,
+  useUpdateDriver,
+} from '../hooks/use-admin-drivers'
 
 type VehicleType = 'moto' | 'bicicleta' | 'pie' | 'auto'
 type DayCode = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
@@ -37,6 +42,7 @@ type Props = {
     operating_days: string[]
     shift_start: string
     shift_end: string
+    restaurantIds?: string[]
   }
 }
 
@@ -44,6 +50,9 @@ export function DriverForm({ mode, initial }: Props) {
   const router = useRouter()
   const create = useCreateDriver()
   const update = useUpdateDriver(initial?.id ?? '')
+  const setRestaurants = useSetDriverRestaurants(initial?.id ?? '')
+  const restaurantsQuery = useAdminRestaurantsForAssignment()
+  const allRestaurants = restaurantsQuery.data?.items ?? []
 
   const [fullName, setFullName] = useState(initial?.full_name ?? '')
   const [phone, setPhone] = useState(initial?.phone ?? '')
@@ -64,9 +73,14 @@ export function DriverForm({ mode, initial }: Props) {
   const [shiftEnd, setShiftEnd] = useState(initial?.shift_end?.slice(0, 5) ?? '23:00')
   const [userEmail, setUserEmail] = useState('')
   const [userPassword, setUserPassword] = useState('')
+  const [restaurantIds, setRestaurantIds] = useState<string[]>(initial?.restaurantIds ?? [])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  const pending = create.isPending || update.isPending
+  const pending = create.isPending || update.isPending || setRestaurants.isPending
+
+  function toggleRestaurant(id: string) {
+    setRestaurantIds((prev) => (prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]))
+  }
 
   function toggleDay(code: DayCode) {
     setOperatingDays((prev) =>
@@ -96,7 +110,13 @@ export function DriverForm({ mode, initial }: Props) {
         userPassword,
       }
       try {
-        await create.mutateAsync(body)
+        const created = await create.mutateAsync(body)
+        // En create, useSetDriverRestaurants está bound al id vacío del props.
+        // Llamamos al endpoint directamente con el id recién generado.
+        if (restaurantIds.length > 0 && created?.id) {
+          const { admin } = await import('@/lib/api/client')
+          await admin.setDriverRestaurants(created.id, { restaurantIds })
+        }
         router.push('/admin/drivers')
       } catch (err) {
         setErrorMsg(humanizeError(err))
@@ -113,6 +133,9 @@ export function DriverForm({ mode, initial }: Props) {
       }
       try {
         await update.mutateAsync(body)
+        if (initial?.id) {
+          await setRestaurants.mutateAsync({ restaurantIds })
+        }
         router.push('/admin/drivers')
       } catch (err) {
         setErrorMsg(humanizeError(err))
@@ -242,6 +265,61 @@ export function DriverForm({ mode, initial }: Props) {
             />
           </div>
         </div>
+      </section>
+
+      <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
+        <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+          Restaurantes asignados
+        </h2>
+        <p className="text-xs text-on-surface-variant -mt-2">
+          Solo los pedidos creados por estos restaurantes podrán auto-asignarse a este motorizado.
+        </p>
+        {restaurantsQuery.isLoading ? (
+          <div className="text-xs text-on-surface-variant">Cargando restaurantes…</div>
+        ) : allRestaurants.length === 0 ? (
+          <div className="text-xs text-on-surface-variant">
+            No hay restaurantes registrados todavía.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {allRestaurants.map((r) => {
+              const checked = restaurantIds.includes(r.id)
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => toggleRestaurant(r.id)}
+                  className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                    checked
+                      ? 'border-primary bg-primary/10'
+                      : 'border-outline-variant/40 hover:bg-surface-container-low'
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex w-4 h-4 rounded items-center justify-center border-2"
+                    style={{
+                      borderColor: checked ? '#FF6B35' : '#cbd5e1',
+                      background: checked ? '#FF6B35' : 'transparent',
+                    }}
+                  >
+                    {checked && <Icon name="check" size={12} className="text-white" filled />}
+                  </span>
+                  <span
+                    className="inline-block w-3 h-3 rounded-full"
+                    style={{ background: `#${r.accent_color}` }}
+                  />
+                  <span className="font-semibold text-sm">{r.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+        <p className="text-[11px] text-on-surface-variant">
+          {restaurantIds.length === 0
+            ? 'Sin restaurantes asignados → este motorizado NO recibirá pedidos por auto-asignación.'
+            : `${restaurantIds.length} ${restaurantIds.length === 1 ? 'restaurante asignado' : 'restaurantes asignados'}.`}
+        </p>
       </section>
 
       {mode === 'create' && (

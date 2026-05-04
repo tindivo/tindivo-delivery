@@ -98,6 +98,34 @@ Verificado contra producción (`https://delivery.tindivo.com` + GoTrue de
   y revoca solo el refresh token de esta sesión en GoTrue. Las demás sesiones
   del usuario en otros dispositivos sobreviven.
 
+## Web Push: limitaciones del SO (verificadas)
+
+El pipeline de push funciona correctamente extremo a extremo (SW registrado en
+root layout, Edge Function `send-push` retorna 200 OK consistente, trigger
+`trg_domain_events_dispatch_push` invoca via pg_net, VAPID configurado).
+La entrega real depende del SO:
+
+- **iOS Safari**: aunque la PWA esté instalada en Home Screen e iOS sea ≥
+  16.4, las push pueden tardar minutos en entregarse en background si la app
+  no fue abierta recientemente (engagement signals de APNs). Abrir la PWA
+  "calienta" el endpoint.
+- **Android Chrome**: con Doze Mode/Battery Optimization, las notificaciones
+  sin `requireInteraction: true` se tratan como "low priority" y el SO puede
+  ocultarlas silenciosamente. Por eso el código añade `requireInteraction +
+  vibrate` a los pushes críticos para drivers (`OrderReadyForDrivers`,
+  `OrderAssigned`, `OrderOverdue`).
+- **Tags**: nunca reutilizar `tag` entre eventos distintos del mismo agregado
+  — colapsa el push anterior en FCM/APNs. Patrón usado:
+  `tag = \`${event_type}-${shortId}\`` (deduplica retries del mismo evento,
+  no eventos diferentes).
+- **`silent: false` explícito**: NO declararlo. Algunos browsers tratan
+  `silent: false` como "informativo". Omitir el campo deja al UA aplicar el
+  default (sonido/vibración).
+
+Para debug en dispositivo: USB debugging Android (`chrome://inspect`) o
+Safari DevTools en macOS contra el iPhone — buscar logs `[sw:push]` en la
+consola del Service Worker.
+
 ### PWA y navegador del mismo origen en el mismo dispositivo COMPARTEN cookie jar
 
 Por diseño de los browsers (Chrome, Safari, Firefox), una PWA instalada en
