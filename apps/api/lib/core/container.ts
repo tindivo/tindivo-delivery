@@ -12,6 +12,7 @@ import {
   MarkReceivedUseCase,
   RequestExtensionUseCase,
   SaveCustomerDataUseCase,
+  SupabaseAssignmentRulesRepository,
   SupabaseEventPublisher,
   SupabaseOrderRepository,
   SystemClock,
@@ -29,6 +30,7 @@ const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3005'
 function deps(sb: ServerClient) {
   return {
     orders: new SupabaseOrderRepository(sb),
+    assignmentRules: new SupabaseAssignmentRulesRepository(sb),
     events: new SupabaseEventPublisher(sb),
     clock,
   }
@@ -40,13 +42,13 @@ export function buildCreateOrderUseCase(sb: ServerClient) {
 }
 
 export function buildAcceptOrderUseCase(sb: ServerClient) {
-  const { orders, events } = deps(sb)
-  return new AcceptOrderUseCase(orders, events, clock)
+  const { orders, assignmentRules, events } = deps(sb)
+  return new AcceptOrderUseCase(orders, assignmentRules, events, clock)
 }
 
 export function buildAutoAssignOrderUseCase(sb: ServerClient) {
-  const { orders, events } = deps(sb)
-  return new AutoAssignOrderUseCase(orders, events, clock)
+  const { orders, assignmentRules, events } = deps(sb)
+  return new AutoAssignOrderUseCase(orders, assignmentRules, events, clock)
 }
 
 export function buildMarkArrivedUseCase(sb: ServerClient) {

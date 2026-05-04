@@ -25,5 +25,7 @@ export {
   type PlatformScheduleDto,
   type PlatformStatusResponse,
   type WeekdayCode,
+  type AssignmentRulesDto,
 } from './admin'
 export { platformApi } from './platform'
+export { customerApi } from './customer'

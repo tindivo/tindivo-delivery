@@ -1,18 +1,20 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { DomainEvent } from '../../../../shared/kernel/domain-event'
 import { Order } from '../../domain/entities/order'
+import {
+  type AssignmentRules,
+  DEFAULT_ASSIGNMENT_RULES,
+} from '../../domain/policies/assignment-rules'
+import type { DriverAssignmentCandidate } from '../../domain/policies/driver-assignment.policy'
 import { Money } from '../../domain/value-objects/money'
 import type { OrderId } from '../../domain/value-objects/order-id'
 import { PaymentIntent } from '../../domain/value-objects/payment-intent'
 import { PrepTime } from '../../domain/value-objects/prep-time'
 import { RestaurantId } from '../../domain/value-objects/restaurant-id'
+import type { AssignmentRulesRepository } from '../ports/assignment-rules.repository'
 import type { Clock } from '../ports/clock'
 import type { EventPublisher } from '../ports/event-publisher'
-import type {
-  AssignmentCandidateQuery,
-  DriverAssignmentCandidate,
-  OrderRepository,
-} from '../ports/order.repository'
+import type { AssignmentCandidateQuery, OrderRepository } from '../ports/order.repository'
 import { AutoAssignOrderUseCase } from './auto-assign-order.use-case'
 
 const RESTAURANT_ID = '11111111-1111-1111-1111-111111111111'
@@ -43,7 +45,10 @@ function buildCandidate(over: Partial<DriverAssignmentCandidate> = {}): DriverAs
     deliveredToday: 0,
     activeCount: 0,
     reservedCount: 0,
+    cancelledTodayCount: 0,
     sameRestaurantWindowCount: 0,
+    distinctRestaurantsInBag: [],
+    shiftStartedAt: null,
     operatingDays: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
     shiftStart: '08:00',
     shiftEnd: '23:00',
@@ -76,6 +81,15 @@ function buildRepo(opts: {
   }
 }
 
+function buildRulesRepo(
+  rules: AssignmentRules = DEFAULT_ASSIGNMENT_RULES,
+): AssignmentRulesRepository {
+  return {
+    read: async () => rules,
+    write: async () => ({ updatedAt: new Date().toISOString() }),
+  }
+}
+
 function buildPublisher(): EventPublisher & { collected: DomainEvent[] } {
   const collected: DomainEvent[] = []
   return {
@@ -95,7 +109,7 @@ describe('AutoAssignOrderUseCase', () => {
     const order = buildOrder(30, NOW)
     const repo = buildRepo({ order, candidates: [buildCandidate()] })
     const publisher = buildPublisher()
-    const useCase = new AutoAssignOrderUseCase(repo, publisher, fixedClock(NOW))
+    const useCase = new AutoAssignOrderUseCase(repo, buildRulesRepo(), publisher, fixedClock(NOW))
 
     const result = await useCase.execute({ orderId: order.id.value })
 
@@ -116,7 +130,7 @@ describe('AutoAssignOrderUseCase', () => {
     const order = buildOrder(10, NOW)
     const repo = buildRepo({ order, candidates: [buildCandidate()] })
     const publisher = buildPublisher()
-    const useCase = new AutoAssignOrderUseCase(repo, publisher, fixedClock(NOW))
+    const useCase = new AutoAssignOrderUseCase(repo, buildRulesRepo(), publisher, fixedClock(NOW))
 
     const result = await useCase.execute({ orderId: order.id.value })
 
@@ -125,6 +139,8 @@ describe('AutoAssignOrderUseCase', () => {
     expect(result.value.assigned).toBe(true)
     expect(result.value.activated).toBe(true)
     expect(result.value.driverId).toBe(DRIVER_ID)
+    // La razón ahora viene del policy (R1_grouping o R4_rotation).
+    expect(['R1_grouping', 'R4_rotation']).toContain(result.value.reason)
     expect(repo.saveAutoAssignmentMock).toHaveBeenCalledOnce()
     // Eventos esperados: OrderAssigned + OrderAccepted
     expect(publisher.collected.map((e) => e.eventType)).toContain('OrderAssigned')
@@ -137,7 +153,7 @@ describe('AutoAssignOrderUseCase', () => {
     const order = buildOrder(30, past)
     const repo = buildRepo({ order, candidates: [buildCandidate()] })
     const publisher = buildPublisher()
-    const useCase = new AutoAssignOrderUseCase(repo, publisher, fixedClock(NOW))
+    const useCase = new AutoAssignOrderUseCase(repo, buildRulesRepo(), publisher, fixedClock(NOW))
 
     const result = await useCase.execute({ orderId: order.id.value })
 
@@ -152,7 +168,7 @@ describe('AutoAssignOrderUseCase', () => {
     const order = buildOrder(10, NOW)
     const repo = buildRepo({ order, candidates: [] })
     const publisher = buildPublisher()
-    const useCase = new AutoAssignOrderUseCase(repo, publisher, fixedClock(NOW))
+    const useCase = new AutoAssignOrderUseCase(repo, buildRulesRepo(), publisher, fixedClock(NOW))
 
     const result = await useCase.execute({ orderId: order.id.value })
 
@@ -181,7 +197,7 @@ describe('AutoAssignOrderUseCase', () => {
 
     const repo = buildRepo({ order, candidates: [buildCandidate()] })
     const publisher = buildPublisher()
-    const useCase = new AutoAssignOrderUseCase(repo, publisher, fixedClock(NOW))
+    const useCase = new AutoAssignOrderUseCase(repo, buildRulesRepo(), publisher, fixedClock(NOW))
 
     const result = await useCase.execute({ orderId: order.id.value })
 
@@ -189,5 +205,26 @@ describe('AutoAssignOrderUseCase', () => {
     if (!result.isSuccess) return
     expect(result.value.assigned).toBe(false)
     expect(result.value.reason).toBeNull()
+  })
+
+  it('aplica el cap dinámico de assignment_rules al asignar', async () => {
+    // Driver con 2 activos y rules.maxOrdersPerDriver=2 → no es candidato.
+    const order = buildOrder(10, NOW)
+    const fullDriver = buildCandidate({ driverId: DRIVER_ID, activeCount: 2 })
+    const repo = buildRepo({ order, candidates: [fullDriver] })
+    const publisher = buildPublisher()
+    const useCase = new AutoAssignOrderUseCase(
+      repo,
+      buildRulesRepo({ ...DEFAULT_ASSIGNMENT_RULES, maxOrdersPerDriver: 2 }),
+      publisher,
+      fixedClock(NOW),
+    )
+
+    const result = await useCase.execute({ orderId: order.id.value })
+
+    expect(result.isSuccess).toBe(true)
+    if (!result.isSuccess) return
+    expect(result.value.assigned).toBe(false)
+    expect(repo.saveAutoAssignmentMock).not.toHaveBeenCalled()
   })
 })

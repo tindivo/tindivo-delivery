@@ -1,11 +1,13 @@
 'use client'
 import { useDriverActiveOrders } from './use-driver-active-orders'
 
-// Mantener sincronizado con MAX_DRIVER_CONCURRENT_ORDERS en
-// packages/core/src/modules/orders/domain/constants.ts. El backend rechaza
-// con DRIVER_CAPACITY_EXCEEDED si se supera; este valor solo deshabilita
-// botones en la UI.
-export const DRIVER_MAX_CONCURRENT = 4
+// Reflejo client-side del default de assignment_rules.maxOrdersPerDriver
+// (DEFAULT_ASSIGNMENT_RULES en packages/core/.../assignment-rules.ts). El
+// backend rechaza con DRIVER_CAPACITY_EXCEEDED leyendo el valor real de
+// app_settings; este número solo deshabilita botones proactivamente. Si el
+// admin ajusta el cap, la UI puede ir levemente desincronizada hasta que
+// se refresque, pero el backend siempre tiene la última palabra.
+export const DRIVER_MAX_CONCURRENT = 3
 
 /**
  * Cuenta los pedidos activos del driver y expone si ya llegó al límite.

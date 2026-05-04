@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -174,6 +176,95 @@ export type Database = {
           },
         ]
       }
+      customer_order_item_modifiers: {
+        Row: {
+          created_at: string
+          group_name: string
+          id: string
+          option_name: string
+          order_item_id: string
+          price_delta: number
+        }
+        Insert: {
+          created_at?: string
+          group_name: string
+          id?: string
+          option_name: string
+          order_item_id: string
+          price_delta?: number
+        }
+        Update: {
+          created_at?: string
+          group_name?: string
+          id?: string
+          option_name?: string
+          order_item_id?: string
+          price_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_order_item_modifiers_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "customer_order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_name: string
+          line_total: number
+          menu_item_id: string | null
+          modifiers_total: number
+          notes: string | null
+          order_id: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_name: string
+          line_total: number
+          menu_item_id?: string | null
+          modifiers_total?: number
+          notes?: string | null
+          order_id: string
+          quantity: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_name?: string
+          line_total?: number
+          menu_item_id?: string | null
+          modifiers_total?: number
+          notes?: string | null
+          order_id?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_order_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       domain_events: {
         Row: {
           aggregate_id: string
@@ -221,18 +312,21 @@ export type Database = {
           driver_id: string
           id: string
           is_available: boolean
+          shift_started_at: string | null
           updated_at: string
         }
         Insert: {
           driver_id: string
           id?: string
           is_available?: boolean
+          shift_started_at?: string | null
           updated_at?: string
         }
         Update: {
           driver_id?: string
           id?: string
           is_available?: boolean
+          shift_started_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -334,6 +428,195 @@ export type Database = {
           },
         ]
       }
+      menu_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_categories_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_items: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean
+          is_featured: boolean
+          name: string
+          prep_minutes: number | null
+          price: number
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          is_featured?: boolean
+          name: string
+          prep_minutes?: number | null
+          price: number
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          is_featured?: boolean
+          name?: string
+          prep_minutes?: number | null
+          price?: number
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_modifier_groups: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          max_selected: number
+          menu_item_id: string
+          min_selected: number
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_selected?: number
+          menu_item_id: string
+          min_selected?: number
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_selected?: number
+          menu_item_id?: string
+          min_selected?: number
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_modifier_groups_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_modifier_options: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          is_available: boolean
+          name: string
+          price_delta: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          is_available?: boolean
+          name: string
+          price_delta?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_available?: boolean
+          name?: string
+          price_delta?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_modifier_options_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "menu_modifier_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_status_history: {
         Row: {
           changed_at: string
@@ -391,6 +674,10 @@ export type Database = {
           client_pays_with: number | null
           client_phone: string | null
           created_at: string
+          customer_address: string | null
+          customer_location_accuracy_m: number | null
+          customer_order_subtotal: number | null
+          customer_phone: string | null
           delivered_at: string | null
           delivery_address: string | null
           delivery_coordinates: unknown
@@ -417,6 +704,7 @@ export type Database = {
           restaurant_coordinates_cache: unknown
           restaurant_id: string
           short_id: string
+          source: Database["public"]["Enums"]["order_source"]
           status: Database["public"]["Enums"]["order_status"]
           tracking_link_sent_at: string | null
           tracking_link_sent_by: string | null
@@ -438,6 +726,10 @@ export type Database = {
           client_pays_with?: number | null
           client_phone?: string | null
           created_at?: string
+          customer_address?: string | null
+          customer_location_accuracy_m?: number | null
+          customer_order_subtotal?: number | null
+          customer_phone?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates?: unknown
@@ -464,6 +756,7 @@ export type Database = {
           restaurant_coordinates_cache?: unknown
           restaurant_id: string
           short_id: string
+          source?: Database["public"]["Enums"]["order_source"]
           status?: Database["public"]["Enums"]["order_status"]
           tracking_link_sent_at?: string | null
           tracking_link_sent_by?: string | null
@@ -485,6 +778,10 @@ export type Database = {
           client_pays_with?: number | null
           client_phone?: string | null
           created_at?: string
+          customer_address?: string | null
+          customer_location_accuracy_m?: number | null
+          customer_order_subtotal?: number | null
+          customer_phone?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates?: unknown
@@ -511,6 +808,7 @@ export type Database = {
           restaurant_coordinates_cache?: unknown
           restaurant_id?: string
           short_id?: string
+          source?: Database["public"]["Enums"]["order_source"]
           status?: Database["public"]["Enums"]["order_status"]
           tracking_link_sent_at?: string | null
           tracking_link_sent_by?: string | null
@@ -806,7 +1104,6 @@ export type Database = {
       enqueue_overdue_orders: { Args: never; Returns: undefined }
       generate_short_id: { Args: never; Returns: string }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
-      invoke_assign_pending_orders: { Args: never; Returns: undefined }
       prune_stale_push_subscriptions: { Args: never; Returns: undefined }
     }
     Enums: {
@@ -817,6 +1114,7 @@ export type Database = {
         | "disputed"
         | "resolved"
       domain_event_status: "pending" | "published" | "failed"
+      order_source: "restaurant_pwa" | "customer_pwa"
       order_status:
         | "waiting_driver"
         | "heading_to_restaurant"
@@ -967,6 +1265,7 @@ export const Constants = {
         "resolved",
       ],
       domain_event_status: ["pending", "published", "failed"],
+      order_source: ["restaurant_pwa", "customer_pwa"],
       order_status: [
         "waiting_driver",
         "heading_to_restaurant",

@@ -87,16 +87,24 @@ export class SupabaseOrderRepository implements OrderRepository {
 
     const { data: drivers, error: driversError } = await this.sb
       .from('drivers')
-      .select('id, operating_days, shift_start, shift_end, driver_availability(is_available)')
+      .select(
+        'id, operating_days, shift_start, shift_end, driver_availability(is_available, shift_started_at)',
+      )
       .eq('is_active', true)
       .in('id', assignedDriverIds)
     if (driversError) throw new PersistenceError(driversError.message, driversError)
 
     const eligibleDrivers = (drivers ?? [])
-      .filter((driver) => {
+      .map((driver) => {
         const availability = Array.isArray(driver.driver_availability)
           ? driver.driver_availability[0]
           : driver.driver_availability
+        return {
+          driver,
+          availability,
+        }
+      })
+      .filter(({ driver, availability }) => {
         return (
           availability?.is_available === true &&
           isWithinDriverShift(
@@ -107,11 +115,14 @@ export class SupabaseOrderRepository implements OrderRepository {
           )
         )
       })
-      .map((driver) => ({
+      .map(({ driver, availability }) => ({
         driverId: driver.id,
         operatingDays: driver.operating_days ?? [],
         shiftStart: driver.shift_start,
         shiftEnd: driver.shift_end,
+        shiftStartedAt: availability?.shift_started_at
+          ? new Date(availability.shift_started_at)
+          : null,
       }))
 
     if (eligibleDrivers.length === 0) return []
@@ -130,7 +141,12 @@ export class SupabaseOrderRepository implements OrderRepository {
         deliveredToday: number
         activeCount: number
         reservedCount: number
+        cancelledTodayCount: number
         sameRestaurantWindowCount: number
+        // Set de restaurant_ids con pedidos activos o reservados en la mochila.
+        // Usado para R2 (cap de restaurantes distintos) — sólo cuentan pedidos
+        // que el driver "está moviendo", no entregados ni cancelados.
+        bag: Set<string>
       }
     >()
     for (const id of driverIds) {
@@ -138,11 +154,13 @@ export class SupabaseOrderRepository implements OrderRepository {
         deliveredToday: 0,
         activeCount: 0,
         reservedCount: 0,
+        cancelledTodayCount: 0,
         sameRestaurantWindowCount: 0,
+        bag: new Set<string>(),
       })
     }
 
-    const windowMs = query.windowMinutes * 60_000
+    const windowMs = query.groupingWindowMinutes * 60_000
     for (const order of orders ?? []) {
       if (!order.driver_id) continue
       const s = stats.get(order.driver_id)
@@ -152,8 +170,12 @@ export class SupabaseOrderRepository implements OrderRepository {
         s.deliveredToday++
       } else if ((ACTIVE_STATUSES as readonly string[]).includes(order.status)) {
         s.activeCount++
+        s.bag.add(order.restaurant_id)
       } else if (order.status === RESERVED_STATUS) {
         s.reservedCount++
+        s.bag.add(order.restaurant_id)
+      } else if (order.status === 'cancelled') {
+        s.cancelledTodayCount++
       }
 
       const readyDelta = Math.abs(
@@ -169,18 +191,18 @@ export class SupabaseOrderRepository implements OrderRepository {
       }
     }
 
-    return eligibleDrivers
-      .map((driver) => {
-        const s = stats.get(driver.driverId)
-        return {
-          ...driver,
-          deliveredToday: s?.deliveredToday ?? 0,
-          activeCount: s?.activeCount ?? 0,
-          reservedCount: s?.reservedCount ?? 0,
-          sameRestaurantWindowCount: s?.sameRestaurantWindowCount ?? 0,
-        }
-      })
-      .filter((driver) => driver.activeCount + driver.reservedCount < query.maxAssignedAndActive)
+    return eligibleDrivers.map((driver) => {
+      const s = stats.get(driver.driverId)
+      return {
+        ...driver,
+        deliveredToday: s?.deliveredToday ?? 0,
+        activeCount: s?.activeCount ?? 0,
+        reservedCount: s?.reservedCount ?? 0,
+        cancelledTodayCount: s?.cancelledTodayCount ?? 0,
+        sameRestaurantWindowCount: s?.sameRestaurantWindowCount ?? 0,
+        distinctRestaurantsInBag: s ? Array.from(s.bag) : [],
+      }
+    })
   }
 
   async findAvailable(nowIso: string): Promise<Order[]> {

@@ -1,3 +1,4 @@
+import { AssignmentRulesForm } from '@/features/admin/settings/components/assignment-rules-form'
 import { PlatformScheduleForm } from '@/features/admin/settings/components/platform-schedule-form'
 import { SupportPhoneForm } from '@/features/admin/settings/components/support-phone-form'
 
@@ -11,6 +12,7 @@ export default function AdminSettingsPage() {
         </p>
       </header>
       <PlatformScheduleForm />
+      <AssignmentRulesForm />
       <SupportPhoneForm />
     </div>
   )

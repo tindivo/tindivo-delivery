@@ -1,10 +1,14 @@
 import type { DomainError } from '../../../../shared/errors/domain-error'
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
-import { MAX_DRIVER_CONCURRENT_ORDERS } from '../../domain/constants'
 import { OrderAlreadyAccepted, OrderNotFound } from '../../domain/errors/order-errors'
+import {
+  type AssignmentRules,
+  DEFAULT_ASSIGNMENT_RULES,
+} from '../../domain/policies/assignment-rules'
 import { DriverId } from '../../domain/value-objects/driver-id'
 import { OrderId } from '../../domain/value-objects/order-id'
+import type { AssignmentRulesRepository } from '../ports/assignment-rules.repository'
 import type { Clock } from '../ports/clock'
 import type { EventPublisher } from '../ports/event-publisher'
 import type { OrderRepository } from '../ports/order.repository'
@@ -25,6 +29,7 @@ export class AcceptOrderUseCase
 {
   constructor(
     private readonly orders: OrderRepository,
+    private readonly assignmentRules: AssignmentRulesRepository,
     private readonly events: EventPublisher,
     private readonly clock: Clock,
   ) {}
@@ -39,11 +44,12 @@ export class AcceptOrderUseCase
 
     const previousStatus = order.status
     const activeCount = await this.orders.countActiveByDriver(driverId)
+    const rules = await this.loadRules()
 
     const accepted = order.acceptBy(
       driverId,
       activeCount,
-      MAX_DRIVER_CONCURRENT_ORDERS,
+      rules.maxOrdersPerDriver,
       this.clock.now(),
     )
     if (accepted.isFailure) return Result.fail(accepted.error)
@@ -57,5 +63,10 @@ export class AcceptOrderUseCase
       // biome-ignore lint/style/noNonNullAssertion: set by acceptBy
       acceptedAt: order.props.acceptedAt!.toISOString(),
     })
+  }
+
+  private async loadRules(): Promise<AssignmentRules> {
+    const stored = await this.assignmentRules.read().catch(() => null)
+    return stored ?? DEFAULT_ASSIGNMENT_RULES
   }
 }

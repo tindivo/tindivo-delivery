@@ -226,6 +226,16 @@ export function adminApi(client: ApiClient) {
         'admin/settings/platform-schedule',
         body,
       ),
+
+    getAssignmentRules: () =>
+      client.get<{ rules: AssignmentRulesDto; updatedAt: string | null }>(
+        'admin/settings/assignment-rules',
+      ),
+    updateAssignmentRules: (body: AssignmentRulesDto) =>
+      client.patch<{ rules: AssignmentRulesDto; updatedAt: string | null }>(
+        'admin/settings/assignment-rules',
+        body,
+      ),
   }
 }
 
@@ -240,4 +250,10 @@ export type PlatformStatusResponse = {
   reason: 'inside_window' | 'outside_window' | 'day_off'
   nextOpenAt: string | null
   schedule: PlatformScheduleDto
+}
+
+export type AssignmentRulesDto = {
+  maxOrdersPerDriver: number
+  maxRestaurantsPerDriver: number
+  groupingWindowMinutes: number
 }

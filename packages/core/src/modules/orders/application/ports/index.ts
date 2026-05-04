@@ -1,4 +1,5 @@
 export type { Clock } from './clock'
 export { SystemClock } from './clock'
 export type { EventPublisher } from './event-publisher'
-export type { OrderRepository } from './order.repository'
+export type { OrderRepository, AssignmentCandidateQuery } from './order.repository'
+export type { AssignmentRulesRepository } from './assignment-rules.repository'

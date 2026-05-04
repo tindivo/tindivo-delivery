@@ -1,11 +1,15 @@
 import type { DomainError } from '../../../../shared/errors/domain-error'
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
-import { MAX_DRIVER_CONCURRENT_ORDERS } from '../../domain/constants'
+import {
+  type AssignmentRules,
+  DEFAULT_ASSIGNMENT_RULES,
+} from '../../domain/policies/assignment-rules'
 import { DriverAssignmentPolicy } from '../../domain/policies/driver-assignment.policy'
 import { DriverId } from '../../domain/value-objects/driver-id'
 import { OrderId } from '../../domain/value-objects/order-id'
 import { OrderStatus } from '../../domain/value-objects/order-status'
+import type { AssignmentRulesRepository } from '../ports/assignment-rules.repository'
 import type { Clock } from '../ports/clock'
 import type { EventPublisher } from '../ports/event-publisher'
 import type { OrderRepository } from '../ports/order.repository'
@@ -21,13 +25,12 @@ export type AutoAssignOrderResult = {
   reason: string | null
 }
 
-const GROUP_WINDOW_MINUTES = 8
-
 export class AutoAssignOrderUseCase
   implements UseCase<AutoAssignOrderCommand, AutoAssignOrderResult, DomainError>
 {
   constructor(
     private readonly orders: OrderRepository,
+    private readonly assignmentRules: AssignmentRulesRepository,
     private readonly events: EventPublisher,
     private readonly clock: Clock,
   ) {}
@@ -57,16 +60,21 @@ export class AutoAssignOrderUseCase
       })
     }
 
+    const rules = await this.loadRules()
+
     const candidates = await this.orders.findAssignmentCandidates({
       restaurantId: order.restaurantId.value,
       estimatedReadyAt: order.estimatedReadyAt,
       now,
       todayStart: startOfLimaDay(now),
-      windowMinutes: GROUP_WINDOW_MINUTES,
-      maxAssignedAndActive: MAX_DRIVER_CONCURRENT_ORDERS,
+      groupingWindowMinutes: rules.groupingWindowMinutes,
     })
 
-    const decision = DriverAssignmentPolicy.choose(candidates)
+    const decision = DriverAssignmentPolicy.choose(
+      { restaurantId: order.restaurantId.value },
+      candidates,
+      rules,
+    )
     if (!decision) {
       return Result.ok({ assigned: false, driverId: null, activated: false, reason: null })
     }
@@ -76,7 +84,7 @@ export class AutoAssignOrderUseCase
     if (assigned.isFailure) return Result.fail(assigned.error)
 
     const activeCount = candidates.find((c) => c.driverId === decision.driverId)?.activeCount ?? 0
-    const accepted = order.acceptBy(driverId, activeCount, MAX_DRIVER_CONCURRENT_ORDERS, now)
+    const accepted = order.acceptBy(driverId, activeCount, rules.maxOrdersPerDriver, now)
     if (accepted.isFailure) return Result.fail(accepted.error)
 
     await this.orders.saveAutoAssignment(order, OrderStatus.waitingDriver())
@@ -88,6 +96,11 @@ export class AutoAssignOrderUseCase
       activated: true,
       reason: decision.reason,
     })
+  }
+
+  private async loadRules(): Promise<AssignmentRules> {
+    const stored = await this.assignmentRules.read().catch(() => null)
+    return stored ?? DEFAULT_ASSIGNMENT_RULES
   }
 }
 

@@ -1,27 +1,21 @@
 import type { Order } from '../../domain/entities/order'
+import type { DriverAssignmentCandidate } from '../../domain/policies/driver-assignment.policy'
 import type { DriverId } from '../../domain/value-objects/driver-id'
 import type { OrderId } from '../../domain/value-objects/order-id'
 import type { OrderStatus } from '../../domain/value-objects/order-status'
 import type { RestaurantId } from '../../domain/value-objects/restaurant-id'
 
-export type DriverAssignmentCandidate = {
-  driverId: string
-  deliveredToday: number
-  activeCount: number
-  reservedCount: number
-  sameRestaurantWindowCount: number
-  operatingDays: string[]
-  shiftStart: string
-  shiftEnd: string
-}
+// Reexport para que callers que importan `DriverAssignmentCandidate` desde
+// el port no necesiten cambiar imports tras unificar el tipo en la policy.
+export type { DriverAssignmentCandidate }
 
 export type AssignmentCandidateQuery = {
   restaurantId: string
   estimatedReadyAt: Date
   now: Date
   todayStart: Date
-  windowMinutes: number
-  maxAssignedAndActive: number
+  /** Ventana de agrupación de R1 (de las assignment_rules). */
+  groupingWindowMinutes: number
 }
 
 export interface OrderRepository {
