@@ -1,4 +1,5 @@
 'use client'
+import { trackingUrl as customerTrackingUrl } from '@/lib/urls/customer'
 import {
   Badge,
   Card,
@@ -170,10 +171,8 @@ export function OrderDetail({ orderId }: Props) {
   // biome-ignore lint/suspicious/noExplicitAny: payload snake_case del API
   const o = order as any
 
-  // El tracking público vive en la misma app, solo cambia el path.
-  const origin =
-    typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_APP_URL ?? '') : window.location.origin
-  const trackingUrl = `${origin}/pedidos/${order.short_id}`
+  // El tracking público vive en `apps/customer` (tindivo.com), no en este host.
+  const trackingUrl = customerTrackingUrl(order.short_id)
 
   return (
     <div className="space-y-6 max-w-5xl">

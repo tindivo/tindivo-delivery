@@ -1,0 +1,39 @@
+{
+  "name": "@tindivo/customer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3002 --turbopack",
+    "build": "next build",
+    "start": "next start -p 3002",
+    "lint": "biome lint ./src",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@serwist/next": "^9.5.7",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.103.3",
+    "@tanstack/react-query": "^5.99.0",
+    "@tindivo/api-client": "workspace:*",
+    "@tindivo/contracts": "workspace:*",
+    "@tindivo/supabase": "workspace:*",
+    "@tindivo/ui": "workspace:*",
+    "motion": "^12.0.0",
+    "next": "^15.1.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "serwist": "^9.5.7",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@tindivo/config": "workspace:*",
+    "@types/node": "^22.10.1",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.8.2"
+  }
+}

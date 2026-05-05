@@ -7,8 +7,9 @@ import { useCallback } from 'react'
 type Setter = (value: Tracking.TrackingResponse) => void
 
 /**
- * Se suscribe al canal tracking:{shortId} y refetchea get_tracking
- * cada vez que hay un cambio en la fila de la orden.
+ * Se suscribe al canal `tracking:{shortId}` y refetchea `get_tracking`
+ * cada vez que hay un cambio en la fila de la orden. La RPC `get_tracking`
+ * tiene grant a `anon`, así que funciona sin sesión.
  */
 export function useRealtimeTracking(shortId: string, setTracking: Setter) {
   const onEvent = useCallback(async () => {

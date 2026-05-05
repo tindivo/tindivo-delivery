@@ -1,5 +1,6 @@
 'use client'
 import { orders } from '@/lib/api/client'
+import { trackingUrl } from '@/lib/urls/customer'
 import { useMutation } from '@tanstack/react-query'
 import type { TrackingPendingRow } from '@tindivo/api-client'
 import { normalizeToE164Pe } from '@tindivo/core'
@@ -96,18 +97,13 @@ function TrackingCard({ row }: { row: TrackingPendingRow }) {
   const urgency = urgencyFor(mins)
   const phoneE164 = normalizeToE164Pe(row.client_phone) ?? row.client_phone
 
-  // Construimos la URL pública del tracking contra el host actual
-  // (Vercel expone NEXT_PUBLIC_APP_URL; fallback a window.origin).
-  const host =
-    typeof window !== 'undefined'
-      ? window.location.origin
-      : (process.env.NEXT_PUBLIC_APP_URL ?? 'https://delivery.tindivo.com')
-  const trackingUrl = `${host}/pedidos/${row.short_id}`
+  // El tracking público vive en `apps/customer` (tindivo.com), no en este host.
+  const url = trackingUrl(row.short_id)
 
   const restaurantName = row.restaurants?.name ?? 'tu restaurante'
   const driverFirstName = row.drivers?.full_name?.split(' ')[0] ?? 'el motorizado'
 
-  const message = `Hola! 👋 Tu pedido #${row.short_id} de ${restaurantName} ya está en camino con ${driverFirstName}.\n\nSigue la entrega en vivo aquí:\n${trackingUrl}\n\n¡Gracias por tu compra!`
+  const message = `Hola! 👋 Tu pedido #${row.short_id} de ${restaurantName} ya está en camino con ${driverFirstName}.\n\nSigue la entrega en vivo aquí:\n${url}\n\n¡Gracias por tu compra!`
 
   return (
     <li

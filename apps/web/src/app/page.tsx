@@ -1,15 +1,13 @@
-export const dynamic = 'force-dynamic'
+import { redirect } from 'next/navigation'
 
 /**
- * Entry point. En producción el middleware atrapa `/` antes de llegar aquí:
- * si hay sesión hace `rewrite` al home del rol, si no hay sesión hace
- * `redirect` a `/login`. Este componente es un fallback defensivo.
+ * Esta ruta nunca se renderiza para usuarios autenticados: el middleware
+ * resuelve `/` con un rewrite hacia el dashboard del rol. Si llegas aquí
+ * sin sesión, la única ruta válida en `apps/web` es `/login`.
  *
- * IMPORTANTE: no emitir `redirect()` server-side aquí porque resultaría en
- * un 3xx que el Service Worker cachearía, y Safari iOS en PWA standalone
- * rechaza responses con `redirected: true` ("Response served by service
- * worker has redirections").
+ * La PWA pública para clientes vive en `apps/customer` (tindivo.com),
+ * no en este host (delivery.tindivo.com).
  */
 export default function HomePage() {
-  return null
+  redirect('/login')
 }

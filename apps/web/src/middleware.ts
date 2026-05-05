@@ -4,16 +4,16 @@ import { type TindivoClaims, decodeJwtClaims, homePathForRole } from './lib/supa
 
 /**
  * Rutas que NO requieren sesión. Todo lo demás exige login.
- * - `/login` — pantalla de autenticación (trata aparte: un usuario ya logueado
- *   rebota a su dashboard en lugar de quedarse aquí).
- * - `/pedidos/:shortId` — tracking público para clientes (link de WhatsApp).
+ *
+ * `apps/web` es el back-office del staff (admin/restaurant/driver) y vive en
+ * `delivery.tindivo.com`. La PWA pública del cliente (marketplace + tracking)
+ * vive en `apps/customer` (`tindivo.com`), no aquí. Por eso `/` y `/pedidos/*`
+ * dejaron de ser rutas públicas en este host.
  */
 const PUBLIC_PATHS = new Set(['/login'])
-const PUBLIC_PREFIXES = ['/pedidos/']
 
 function isPublicPath(pathname: string): boolean {
-  if (PUBLIC_PATHS.has(pathname)) return true
-  return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  return PUBLIC_PATHS.has(pathname)
 }
 
 /**
@@ -29,7 +29,7 @@ const ROLE_PATH_PREFIX: Record<NonNullable<TindivoClaims['user_role']>, string> 
 /**
  * Dado un path, ¿pertenece al área privada de algún rol?
  * Devuelve el rol dueño del path, o `null` si la ruta no corresponde a ningún
- * área rol-específica (ej. `/` o rutas sin matchear).
+ * área rol-específica.
  */
 function ownerRoleOfPath(pathname: string): NonNullable<TindivoClaims['user_role']> | null {
   for (const [role, prefix] of Object.entries(ROLE_PATH_PREFIX) as [
@@ -48,26 +48,16 @@ type RedirectContext = {
   hasSession: boolean
 }
 
-/**
- * Acción de enrutamiento. `rewrite` es resolución interna (sin 3xx); `redirect`
- * emite 307/308. Se usa `rewrite` para `/` autenticado porque Serwist cachea
- * navegaciones y iOS Safari rechaza Responses con `redirected: true` en PWA
- * modo standalone ("Response served by service worker has redirections").
- */
-type RouteAction = { kind: 'redirect'; path: string } | { kind: 'rewrite'; path: string } | null
+type RouteAction = { kind: 'redirect'; path: string } | null
 
 /**
- * Política de enrutamiento: decide si la request actual debe ser desviada
- * antes de tocar el controlador de la página.
- *
- * Reglas (aplicadas en este orden):
+ * Política de enrutamiento del back-office staff:
  *   1. Sin sesión + ruta privada → redirect `/login`
  *   2. Sesión inválida (sin `user_role`) → redirect `/login`
  *   3. Usuario deshabilitado (`is_active = false`) → redirect `/login?suspended=1`
- *   4. Autenticado visitando `/` → **rewrite** al home del rol (sin 3xx, por iOS PWA)
- *   5. Autenticado visitando `/login` → redirect al home del rol
- *   6. Autenticado entrando a área de OTRO rol → redirect a su propia home
- *   7. Cualquier otro caso → null (continuar).
+ *   4. Autenticado visitando `/login` → redirect al home del rol
+ *   5. Autenticado entrando a área de OTRO rol → redirect a su propia home
+ *   6. Cualquier otro caso → null (continuar).
  */
 function resolveRedirect(ctx: RedirectContext): RouteAction {
   const { pathname, role, isActive, hasSession } = ctx
@@ -85,13 +75,6 @@ function resolveRedirect(ctx: RedirectContext): RouteAction {
     return { kind: 'redirect', path: '/login?suspended=1' }
   }
 
-  // `/` autenticado: rewrite interno. Safari iOS en PWA standalone rechaza
-  // responses servidas por el SW con `redirected: true`, y Serwist cachea
-  // navegaciones. Con rewrite no hay 3xx que cachear.
-  if (pathname === '/') {
-    return { kind: 'rewrite', path: homePathForRole(role) }
-  }
-
   if (pathname === '/login') {
     return { kind: 'redirect', path: homePathForRole(role) }
   }
@@ -106,12 +89,6 @@ function resolveRedirect(ctx: RedirectContext): RouteAction {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-
-  // Fast path: tracking público sin tocar Supabase.
-  // `/login` NO lo cortamos acá porque sí queremos redirigir si ya hay sesión.
-  if (isPublicPath(pathname) && pathname !== '/login') {
-    return NextResponse.next()
-  }
 
   let response = NextResponse.next({ request })
 
@@ -154,17 +131,6 @@ export async function middleware(request: NextRequest) {
     const [path, qs] = action.path.split('?')
     url.pathname = path as string
     url.search = qs ? `?${qs}` : ''
-
-    if (action.kind === 'rewrite') {
-      // Preservar cookies acumuladas por Supabase en `response` (token refresh),
-      // sino se pierden al construir el rewrite desde cero.
-      const rewriteResponse = NextResponse.rewrite(url, { request })
-      for (const cookie of response.cookies.getAll()) {
-        rewriteResponse.cookies.set(cookie)
-      }
-      return rewriteResponse
-    }
-
     return NextResponse.redirect(url)
   }
 

@@ -1,4 +1,5 @@
 'use client'
+import { trackingUrl } from '@/lib/urls/customer'
 import type { TrackingPendingRow } from '@tindivo/api-client'
 import { buildWaMeUrl, normalizeToE164Pe } from '@tindivo/core'
 import { EmptyState, Icon, Skeleton, StatusChip } from '@tindivo/ui'
@@ -20,15 +21,10 @@ function fmtDateTime(iso: string | null): string {
   return SAN_JACINTO_DT.format(new Date(iso))
 }
 
-function getOrigin(): string {
-  if (typeof window !== 'undefined') return window.location.origin
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'https://delivery.tindivo.com'
-}
-
-function buildTrackingMessage(row: TrackingPendingRow, trackingUrl: string): string {
+function buildTrackingMessage(row: TrackingPendingRow, url: string): string {
   const restaurantName = row.restaurants?.name ?? 'tu restaurante'
   const driverFirstName = row.drivers?.full_name?.split(' ')[0] ?? 'el motorizado'
-  return `Hola! 👋 Tu pedido #${row.short_id} de ${restaurantName} está en camino con ${driverFirstName}.\n\nSigue la entrega en vivo aquí:\n${trackingUrl}\n\n¡Gracias por tu compra!`
+  return `Hola! 👋 Tu pedido #${row.short_id} de ${restaurantName} está en camino con ${driverFirstName}.\n\nSigue la entrega en vivo aquí:\n${url}\n\n¡Gracias por tu compra!`
 }
 
 export function TrackingSentList() {
@@ -93,9 +89,9 @@ export function TrackingSentList() {
 }
 
 function TrackingRow({ row }: { row: TrackingPendingRow }) {
-  const trackingUrl = `${getOrigin()}/pedidos/${row.short_id}`
+  const url = trackingUrl(row.short_id)
   const phoneE164 = normalizeToE164Pe(row.client_phone) ?? row.client_phone
-  const message = buildTrackingMessage(row, trackingUrl)
+  const message = buildTrackingMessage(row, url)
   const waUrl = buildWaMeUrl(phoneE164, message)
 
   return (
@@ -131,7 +127,7 @@ function TrackingRow({ row }: { row: TrackingPendingRow }) {
       </td>
       <td className="px-4 py-3 text-right">
         <div className="inline-flex items-center gap-2">
-          <CopyLinkButton url={trackingUrl} />
+          <CopyLinkButton url={url} />
           <a
             href={waUrl}
             target="_blank"
