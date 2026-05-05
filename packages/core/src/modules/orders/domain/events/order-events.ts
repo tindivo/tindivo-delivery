@@ -356,3 +356,57 @@ export class PaymentMethodChanged extends BaseDomainEvent {
     this.payload = payload
   }
 }
+
+/**
+ * Emitido cuando un pedido `source='customer_pwa'` se crea y queda esperando
+ * que el restaurante acepte y defina el prep_time real. La Edge Function
+ * send-push lo mapea a un push al restaurante con requireInteraction=true
+ * (el restaurante debe responder en menos de 5 min antes del auto-cancel).
+ */
+export class OrderPendingAcceptance extends BaseDomainEvent {
+  readonly eventType = 'OrderPendingAcceptance' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    shortId: string
+    restaurantId: string
+    orderAmount: number
+    estimatedPrepMinutes: number
+    pendingAcceptanceAt: string
+  }
+
+  constructor(payload: OrderPendingAcceptance['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
+/**
+ * Emitido cuando el restaurante hace click "Aceptar pedido" en un pedido
+ * pending_acceptance. El restaurante define el prep_minutes real (puede ser
+ * distinto al estimado al crear, que era max(items.prep_minutes)). El
+ * agregado recalcula `estimated_ready_at` y `appears_in_queue_at` con este
+ * nuevo prep_minutes y transiciona a `waiting_driver`. Después el endpoint
+ * dispara AutoAssignOrderUseCase para asignar driver inmediato.
+ */
+export class OrderAcceptedByRestaurant extends BaseDomainEvent {
+  readonly eventType = 'OrderAcceptedByRestaurant' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    restaurantId: string
+    acceptedPrepMinutes: number
+    newEstimatedReadyAt: string
+    newAppearsInQueueAt: string
+    acceptedAt: string
+  }
+
+  constructor(payload: OrderAcceptedByRestaurant['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}

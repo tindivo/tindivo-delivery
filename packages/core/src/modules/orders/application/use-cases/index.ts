@@ -1,6 +1,12 @@
 export { AcceptOrderUseCase } from './accept-order.use-case'
 export type { AcceptOrderCommand, AcceptOrderResult } from './accept-order.use-case'
 
+export { AcceptOrderByRestaurantUseCase } from './accept-order-by-restaurant.use-case'
+export type {
+  AcceptOrderByRestaurantCommand,
+  AcceptOrderByRestaurantResult,
+} from './accept-order-by-restaurant.use-case'
+
 export { AutoAssignOrderUseCase } from './auto-assign-order.use-case'
 export type {
   AutoAssignOrderCommand,

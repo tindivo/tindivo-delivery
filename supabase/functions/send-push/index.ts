@@ -146,6 +146,26 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
           tag,
         }
 
+      case 'OrderPendingAcceptance':
+        // Push al restaurante: nuevo pedido del cliente que requiere
+        // aceptación con prep_time. Auto-cancel a los 5 min sin respuesta,
+        // por eso requireInteraction + vibración persistente.
+        if (role !== 'restaurant') return null
+        return {
+          title: `Nuevo pedido del cliente — ${amount}`,
+          body: `${restaurantOrderLabel} · acepta en menos de 5 min antes de que se cancele`,
+          url: `/restaurante`,
+          tag: `pending-${shortId || event.aggregate_id}`,
+          requireInteraction: true,
+          vibrate: [400, 150, 400, 150, 400],
+        }
+
+      case 'OrderAcceptedByRestaurant':
+        // Sin push activo. La transición a waiting_driver dispara el
+        // flujo normal de assign-pending-orders y ya hay push para el
+        // driver via OrderReadyForDrivers cuando entre en bandeja.
+        return null
+
       case 'DriverArrived':
         if (role !== 'restaurant') return null
         return {
@@ -335,6 +355,7 @@ async function resolveRecipients(
       case 'OrderAccepted':
       case 'DriverArrived':
       case 'OrderDelivered':
+      case 'OrderPendingAcceptance':
         if (order.restaurants?.user_id) {
           out.push({ userId: order.restaurants.user_id, role: 'restaurant' })
         }

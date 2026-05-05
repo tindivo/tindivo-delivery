@@ -1,6 +1,7 @@
 import { ValueObject } from '../../../../shared/kernel/value-object'
 
 export type OrderStatusValue =
+  | 'pending_acceptance'
   | 'waiting_driver'
   | 'heading_to_restaurant'
   | 'waiting_at_restaurant'
@@ -19,6 +20,7 @@ export class OrderStatus extends ValueObject<Props> {
     return new OrderStatus(value)
   }
 
+  static pendingAcceptance = () => new OrderStatus('pending_acceptance')
   static waitingDriver = () => new OrderStatus('waiting_driver')
   static headingToRestaurant = () => new OrderStatus('heading_to_restaurant')
   static waitingAtRestaurant = () => new OrderStatus('waiting_at_restaurant')

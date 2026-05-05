@@ -3,6 +3,7 @@ import { Icon } from '../icons/icon'
 import { cn } from '../lib/cn'
 
 type OrderStatus =
+  | 'pending_acceptance'
   | 'waiting_driver'
   | 'heading_to_restaurant'
   | 'waiting_at_restaurant'
@@ -18,6 +19,7 @@ const statusStyles: Record<
     variant: 'red' | 'yellow' | 'orange' | 'darkYellow' | 'green' | 'gray'
   }
 > = {
+  pending_acceptance: { label: 'En espera de aceptación', icon: 'pending', variant: 'orange' },
   waiting_driver: { label: 'Esperando motorizado', icon: 'pending', variant: 'red' },
   heading_to_restaurant: {
     label: 'En camino al local',

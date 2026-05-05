@@ -1,5 +1,4 @@
 import {
-  buildAutoAssignOrderUseCase,
   buildCheckPlatformScheduleUseCase,
   buildCreateOrderUseCase,
 } from '@/lib/core/container'
@@ -75,6 +74,10 @@ export async function POST(req: NextRequest) {
     clientName: body.data.customerName,
     notes,
     commissionPerOrder: Number(restaurant.commission_per_order),
+    // 'customer_pwa' marca el pedido para que nazca en pending_acceptance,
+    // espere aceptación del restaurante, y NO dispare auto-assign hasta
+    // que el restaurante confirme prep_time real.
+    source: 'customer_pwa',
   })
 
   if (created.isFailure) return problem(created.error)
@@ -83,7 +86,6 @@ export async function POST(req: NextRequest) {
   const update = await sb
     .from('orders')
     .update({
-      source: 'customer_pwa',
       client_name: body.data.customerName,
       client_phone: body.data.customerPhone,
       customer_phone: body.data.customerPhone,
@@ -152,8 +154,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const assignment = await buildAutoAssignOrderUseCase(sb).execute({ orderId })
-  if (assignment.isFailure) return problem(assignment.error)
+  // Pedido queda en pending_acceptance. El restaurante debe aceptar y
+  // definir prep_time real desde su PWA. Cuando lo haga, el endpoint
+  // /restaurant/orders/[id]/accept transiciona a waiting_driver y dispara
+  // AutoAssignOrderUseCase. Si en 5 min no responde, el cron
+  // auto_cancel_unaccepted_orders cancela el pedido.
 
   return NextResponse.json(
     {

@@ -1,5 +1,6 @@
 'use client'
 import { ActiveOrders } from '@/features/restaurante/active-orders/components/active-orders'
+import { PendingAcceptanceList } from '@/features/restaurante/pending-acceptance/components/pending-acceptance-list'
 import { PlatformClosedBanner } from '@/features/restaurante/shared/components/platform-closed-banner'
 import { usePlatformStatus } from '@/features/restaurante/shared/hooks/use-platform-status'
 import { Icon, SolarCTA } from '@tindivo/ui'
@@ -33,6 +34,8 @@ export default function RestauranteHome() {
           variant="solar"
         />
       )}
+
+      <PendingAcceptanceList />
 
       <section>
         <div className="flex items-center gap-3 mb-4 px-1">

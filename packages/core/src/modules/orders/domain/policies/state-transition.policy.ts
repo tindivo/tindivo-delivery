@@ -3,6 +3,9 @@ import type { OrderStatusValue } from '../value-objects/order-status'
 /**
  * Máquina de estados del pedido. Define qué transiciones son válidas.
  *
+ *   pending_acceptance → waiting_driver | cancelled
+ *     (solo aplica a pedidos source='customer_pwa' que esperan que el
+ *      restaurante acepte y defina el prep_time real)
  *   waiting_driver → heading_to_restaurant | cancelled
  *   heading_to_restaurant → waiting_at_restaurant | cancelled
  *   waiting_at_restaurant → picked_up | cancelled
@@ -11,6 +14,7 @@ import type { OrderStatusValue } from '../value-objects/order-status'
  *   cancelled → (terminal)
  */
 const TRANSITIONS: Record<OrderStatusValue, readonly OrderStatusValue[]> = {
+  pending_acceptance: ['waiting_driver', 'cancelled'],
   waiting_driver: ['heading_to_restaurant', 'cancelled'],
   heading_to_restaurant: ['waiting_at_restaurant', 'cancelled'],
   waiting_at_restaurant: ['picked_up', 'cancelled'],

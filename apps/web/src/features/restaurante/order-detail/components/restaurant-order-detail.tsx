@@ -15,6 +15,7 @@ import {
 } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
+import { CustomerOrderItemsSection } from '../../pending-acceptance/components/customer-order-items-section'
 import { useCancelRestaurantOrder } from '../hooks/use-cancel-order'
 import { useMarkReadyEarly } from '../hooks/use-mark-ready-early'
 import { useRequestExtension } from '../hooks/use-request-extension'
@@ -36,6 +37,7 @@ export function RestaurantOrderDetail({ orderId }: Props) {
   // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
   const order = data as any
   const status = (order?.status ?? 'waiting_driver') as
+    | 'pending_acceptance'
     | 'waiting_driver'
     | 'heading_to_restaurant'
     | 'waiting_at_restaurant'
@@ -209,6 +211,47 @@ export function RestaurantOrderDetail({ orderId }: Props) {
             </div>
           )}
         </section>
+
+        {/* Detalle del pedido del cliente (solo customer_pwa): items,
+            modificadores y notas individuales. Para pedidos manuales del
+            restaurante (restaurant_pwa) no se renderiza. */}
+        <CustomerOrderItemsSection orderId={orderId} order={{ source: order.source }} />
+
+        {/* Datos de entrega del cliente (solo customer_pwa) */}
+        {order.source === 'customer_pwa' &&
+          (order.customer_phone || order.delivery_address || order.delivery_reference) && (
+            <section className="bg-surface-container-lowest rounded-[24px] p-5 border border-outline-variant/15 space-y-3">
+              <h3 className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant">
+                Entrega
+              </h3>
+              {order.customer_phone && (
+                <a
+                  href={`tel:+51${order.customer_phone}`}
+                  className="flex items-center gap-2 text-sm font-bold text-on-surface"
+                >
+                  <Icon name="call" size={16} />
+                  +51 {order.customer_phone}
+                </a>
+              )}
+              {order.delivery_address && (
+                <div className="flex items-start gap-2 text-sm text-on-surface">
+                  <Icon
+                    name="location_on"
+                    size={16}
+                    className="mt-0.5 flex-shrink-0 text-on-surface-variant"
+                  />
+                  <div>
+                    <p className="font-semibold">{order.delivery_address}</p>
+                    {order.delivery_reference && (
+                      <p className="text-xs text-on-surface-variant mt-0.5">
+                        {order.delivery_reference}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
 
         {/* Countdown del prep_time — único timer que ve el restaurante.
             Va del prep_time → 0 → negativo si el driver tarda en aceptar. */}

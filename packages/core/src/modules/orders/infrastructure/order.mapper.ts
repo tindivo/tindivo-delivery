@@ -38,6 +38,7 @@ export const OrderMapper = {
       restaurantId: RestaurantId.of(row.restaurant_id),
       driverId: row.driver_id ? DriverId.of(row.driver_id) : null,
       status: OrderStatus.of(row.status),
+      source: (row.source ?? 'restaurant_pwa') as 'restaurant_pwa' | 'customer_pwa',
       prepTime: PrepTime.of(row.prep_minutes),
       payment: PaymentIntent.create(
         row.payment_status,
@@ -62,6 +63,11 @@ export const OrderMapper = {
       notes: row.notes,
       trackingLinkSentAt: row.tracking_link_sent_at ? new Date(row.tracking_link_sent_at) : null,
       trackingLinkSentBy: row.tracking_link_sent_by,
+      pendingAcceptanceAt: row.pending_acceptance_at ? new Date(row.pending_acceptance_at) : null,
+      restaurantAcceptedAt: row.restaurant_accepted_at
+        ? new Date(row.restaurant_accepted_at)
+        : null,
+      restaurantAcceptedPrepMinutes: row.restaurant_accepted_prep_minutes ?? null,
       acceptedAt: row.accepted_at ? new Date(row.accepted_at) : null,
       headingAt: row.heading_at ? new Date(row.heading_at) : null,
       waitingAt: row.waiting_at ? new Date(row.waiting_at) : null,
@@ -91,9 +97,11 @@ export const OrderMapper = {
       restaurant_id: p.restaurantId.value,
       driver_id: p.driverId?.value ?? null,
       status: p.status.value,
+      source: p.source,
       prep_minutes: p.prepTime.minutes,
       estimated_ready_at: p.estimatedReadyAt.toISOString(),
       appears_in_queue_at: p.appearsInQueueAt.toISOString(),
+      pending_acceptance_at: p.pendingAcceptanceAt?.toISOString() ?? null,
       order_amount: p.payment.orderAmount.amount,
       delivery_fee: p.deliveryFee.amount,
       payment_status: p.payment.status,
@@ -113,8 +121,12 @@ export const OrderMapper = {
     return {
       driver_id: p.driverId?.value ?? null,
       status: p.status.value,
+      prep_minutes: p.prepTime.minutes,
       estimated_ready_at: p.estimatedReadyAt.toISOString(),
       appears_in_queue_at: p.appearsInQueueAt.toISOString(),
+      pending_acceptance_at: p.pendingAcceptanceAt?.toISOString() ?? null,
+      restaurant_accepted_at: p.restaurantAcceptedAt?.toISOString() ?? null,
+      restaurant_accepted_prep_minutes: p.restaurantAcceptedPrepMinutes,
       client_phone: p.clientPhone,
       delivery_coordinates: p.deliveryCoordinates
         ? `POINT(${p.deliveryCoordinates.lng} ${p.deliveryCoordinates.lat})`

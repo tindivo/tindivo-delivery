@@ -694,6 +694,7 @@ export type Database = {
           notes: string | null
           order_amount: number
           payment_status: Database["public"]["Enums"]["payment_status"]
+          pending_acceptance_at: string | null
           picked_up_at: string | null
           prep_extended_at: string | null
           prep_extension_minutes: number | null
@@ -701,6 +702,8 @@ export type Database = {
           ready_early_at: string | null
           ready_early_used: boolean
           received_at: string | null
+          restaurant_accepted_at: string | null
+          restaurant_accepted_prep_minutes: number | null
           restaurant_coordinates_cache: unknown
           restaurant_id: string
           short_id: string
@@ -746,6 +749,7 @@ export type Database = {
           notes?: string | null
           order_amount: number
           payment_status: Database["public"]["Enums"]["payment_status"]
+          pending_acceptance_at?: string | null
           picked_up_at?: string | null
           prep_extended_at?: string | null
           prep_extension_minutes?: number | null
@@ -753,6 +757,8 @@ export type Database = {
           ready_early_at?: string | null
           ready_early_used?: boolean
           received_at?: string | null
+          restaurant_accepted_at?: string | null
+          restaurant_accepted_prep_minutes?: number | null
           restaurant_coordinates_cache?: unknown
           restaurant_id: string
           short_id: string
@@ -798,6 +804,7 @@ export type Database = {
           notes?: string | null
           order_amount?: number
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          pending_acceptance_at?: string | null
           picked_up_at?: string | null
           prep_extended_at?: string | null
           prep_extension_minutes?: number | null
@@ -805,6 +812,8 @@ export type Database = {
           ready_early_at?: string | null
           ready_early_used?: boolean
           received_at?: string | null
+          restaurant_accepted_at?: string | null
+          restaurant_accepted_prep_minutes?: number | null
           restaurant_coordinates_cache?: unknown
           restaurant_id?: string
           short_id?: string
@@ -1116,6 +1125,7 @@ export type Database = {
       domain_event_status: "pending" | "published" | "failed"
       order_source: "restaurant_pwa" | "customer_pwa"
       order_status:
+        | "pending_acceptance"
         | "waiting_driver"
         | "heading_to_restaurant"
         | "waiting_at_restaurant"

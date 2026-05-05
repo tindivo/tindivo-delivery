@@ -1,6 +1,6 @@
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
-import { Order } from '../../domain/entities/order'
+import { Order, type OrderSource } from '../../domain/entities/order'
 import { Money } from '../../domain/value-objects/money'
 import { PaymentIntent, type PaymentStatusValue } from '../../domain/value-objects/payment-intent'
 import { PrepTime } from '../../domain/value-objects/prep-time'
@@ -23,6 +23,11 @@ export type CreateOrderCommand = {
   // El endpoint REST la lee de restaurants.commission_per_order y la pasa
   // aquí. Se snapshotea en orders.delivery_fee al insertar.
   commissionPerOrder: number
+  /**
+   * Origen del pedido. 'customer_pwa' nace en pending_acceptance esperando
+   * que el restaurante acepte y defina prep_time real. Default 'restaurant_pwa'.
+   */
+  source?: OrderSource
 }
 
 export type CreateOrderResult = {
@@ -60,6 +65,7 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
         deliveryFee: Money.pen(cmd.commissionPerOrder),
         clientName: cmd.clientName,
         notes: cmd.notes,
+        source: cmd.source,
         now: this.clock.now(),
       })
 

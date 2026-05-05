@@ -81,6 +81,51 @@ export type RestaurantCashSettlementRow = {
   } | null
 }
 
+/**
+ * Pedido en estado pending_acceptance que el restaurante debe aceptar para
+ * definir prep_time real. Cron auto-cancela tras 5 min sin respuesta.
+ */
+export type PendingAcceptanceOrder = {
+  id: string
+  short_id: string
+  client_name: string | null
+  customer_phone: string | null
+  delivery_address: string | null
+  delivery_reference: string | null
+  order_amount: number
+  payment_status: string
+  prep_minutes: number
+  pending_acceptance_at: string | null
+  notes: string | null
+  source: 'restaurant_pwa' | 'customer_pwa'
+  created_at: string
+}
+
+export type CustomerOrderItemDetail = {
+  id: string
+  itemName: string
+  quantity: number
+  unitPrice: number
+  modifiersTotal: number
+  lineTotal: number
+  notes: string | null
+  modifiers: Array<{ groupName: string; optionName: string; priceDelta: number }>
+}
+
+export type CustomerOrderItemsResponse = {
+  source: 'restaurant_pwa' | 'customer_pwa'
+  items: CustomerOrderItemDetail[]
+}
+
+export type AcceptOrderByRestaurantResponse = {
+  id: string
+  status: string
+  estimatedReadyAt: string
+  appearsInQueueAt: string
+  prepMinutes: number
+  autoAssign: { assigned: boolean; driverId: string | null; reason: string | null } | null
+}
+
 export function restaurantApi(client: ApiClient) {
   return {
     getProfile: () => client.get<RestaurantProfile>('restaurant/profile'),
@@ -102,5 +147,14 @@ export function restaurantApi(client: ApiClient) {
     getSupportPhone: () => client.get<{ phone: string }>('restaurant/support-phone'),
     listPendingCash: () =>
       client.get<{ items: RestaurantPendingCashGroup[] }>('restaurant/cash-pending'),
+    listPendingAcceptance: () =>
+      client.get<{ items: PendingAcceptanceOrder[] }>('restaurant/orders/pending-acceptance'),
+    getOrderItems: (orderId: string) =>
+      client.get<CustomerOrderItemsResponse>(`restaurant/orders/${orderId}/items`),
+    acceptOrderByRestaurant: (orderId: string, body: { prepMinutes: number }) =>
+      client.post<AcceptOrderByRestaurantResponse>(
+        `restaurant/orders/${orderId}/accept`,
+        body,
+      ),
   }
 }

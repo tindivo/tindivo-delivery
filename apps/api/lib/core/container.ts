@@ -1,4 +1,5 @@
 import {
+  AcceptOrderByRestaurantUseCase,
   AcceptOrderUseCase,
   AutoAssignOrderUseCase,
   CancelOrderUseCase,
@@ -49,6 +50,11 @@ export function buildAcceptOrderUseCase(sb: ServerClient) {
 export function buildAutoAssignOrderUseCase(sb: ServerClient) {
   const { orders, assignmentRules, events } = deps(sb)
   return new AutoAssignOrderUseCase(orders, assignmentRules, events, clock)
+}
+
+export function buildAcceptOrderByRestaurantUseCase(sb: ServerClient) {
+  const { orders, events } = deps(sb)
+  return new AcceptOrderByRestaurantUseCase(orders, events, clock)
 }
 
 export function buildMarkArrivedUseCase(sb: ServerClient) {

@@ -15,12 +15,14 @@ import {
   CustomerDataSaved,
   DriverArrived,
   OrderAccepted,
+  OrderAcceptedByRestaurant,
   OrderAssigned,
   OrderCancelled,
   OrderCreated,
   OrderDelivered,
   OrderEditedByRestaurant,
   OrderExtended,
+  OrderPendingAcceptance,
   OrderPickedUp,
   OrderReadyEarly,
   OrderReassigned,
@@ -36,9 +38,11 @@ import type { Money } from '../value-objects/money'
 import { OrderId } from '../value-objects/order-id'
 import { OrderStatus } from '../value-objects/order-status'
 import type { PaymentIntent } from '../value-objects/payment-intent'
-import type { PrepTime } from '../value-objects/prep-time'
+import { PrepTime } from '../value-objects/prep-time'
 import type { RestaurantId } from '../value-objects/restaurant-id'
 import { ShortId } from '../value-objects/short-id'
+
+export type OrderSource = 'restaurant_pwa' | 'customer_pwa'
 
 export type OrderProps = {
   id: OrderId
@@ -46,6 +50,7 @@ export type OrderProps = {
   restaurantId: RestaurantId
   driverId: DriverId | null
   status: OrderStatus
+  source: OrderSource
   prepTime: PrepTime
   payment: PaymentIntent
   deliveryFee: Money
@@ -62,6 +67,9 @@ export type OrderProps = {
   notes: string | null
   trackingLinkSentAt: Date | null
   trackingLinkSentBy: string | null
+  pendingAcceptanceAt: Date | null
+  restaurantAcceptedAt: Date | null
+  restaurantAcceptedPrepMinutes: number | null
   acceptedAt: Date | null
   headingAt: Date | null
   waitingAt: Date | null
@@ -85,6 +93,13 @@ export type CreateOrderInput = {
   deliveryFee: Money
   clientName?: string
   notes?: string
+  /**
+   * Origen del pedido. Default: 'restaurant_pwa' (creado por staff, prep_time
+   * confirmado y va directo a waiting_driver). 'customer_pwa' = creado por
+   * cliente final desde tindivo.com, nace en `pending_acceptance` esperando
+   * que el restaurante acepte y defina prep_time real.
+   */
+  source?: OrderSource
   now?: Date
 }
 
@@ -107,7 +122,9 @@ export class Order extends AggregateRoot<OrderId> {
   }
 
   /**
-   * Crea un pedido nuevo. Emite OrderCreated.
+   * Crea un pedido nuevo. Emite OrderCreated y, si source='customer_pwa',
+   * también OrderPendingAcceptance (el restaurante debe aceptar antes de
+   * que el flujo de driver-assignment dispare).
    */
   static create(input: CreateOrderInput): Result<Order, never> {
     const now = input.now ?? new Date()
@@ -115,13 +132,18 @@ export class Order extends AggregateRoot<OrderId> {
     const shortId = ShortId.generate()
     const estimatedReadyAt = input.prepTime.computeEstimatedReadyAt(now)
     const appearsInQueueAt = input.prepTime.computeAppearsInQueueAt(now)
+    const source: OrderSource = input.source ?? 'restaurant_pwa'
+    const initialStatus =
+      source === 'customer_pwa' ? OrderStatus.pendingAcceptance() : OrderStatus.waitingDriver()
+    const pendingAcceptanceAt = source === 'customer_pwa' ? now : null
 
     const order = new Order({
       id,
       shortId,
       restaurantId: input.restaurantId,
       driverId: null,
-      status: OrderStatus.waitingDriver(),
+      status: initialStatus,
+      source,
       prepTime: input.prepTime,
       payment: input.payment,
       deliveryFee: input.deliveryFee,
@@ -138,6 +160,9 @@ export class Order extends AggregateRoot<OrderId> {
       notes: input.notes ?? null,
       trackingLinkSentAt: null,
       trackingLinkSentBy: null,
+      pendingAcceptanceAt,
+      restaurantAcceptedAt: null,
+      restaurantAcceptedPrepMinutes: null,
       acceptedAt: null,
       headingAt: null,
       waitingAt: null,
@@ -166,6 +191,20 @@ export class Order extends AggregateRoot<OrderId> {
         estimatedReadyAt: estimatedReadyAt.toISOString(),
       }),
     )
+
+    if (source === 'customer_pwa') {
+      order.raise(
+        new OrderPendingAcceptance({
+          orderId: id.value,
+          shortId: shortId.value,
+          restaurantId: input.restaurantId.value,
+          orderAmount: input.payment.orderAmount.amount,
+          estimatedPrepMinutes: input.prepTime.minutes,
+          // biome-ignore lint/style/noNonNullAssertion: pendingAcceptanceAt seteado arriba para customer_pwa
+          pendingAcceptanceAt: pendingAcceptanceAt!.toISOString(),
+        }),
+      )
+    }
 
     return Result.ok(order)
   }
@@ -214,11 +253,58 @@ export class Order extends AggregateRoot<OrderId> {
   get readyEarlyUsed(): boolean {
     return this._state.readyEarlyUsed
   }
+  get source(): OrderSource {
+    return this._state.source
+  }
   get props(): Readonly<OrderProps> {
     return this._state
   }
 
   /* ───────────────── Comportamientos ───────────────── */
+
+  /**
+   * El restaurante acepta un pedido pending_acceptance y define el prep_time
+   * real. Recalcula `estimated_ready_at` y `appears_in_queue_at` con el nuevo
+   * prep desde `now`, y transiciona a `waiting_driver`. El use-case dispara
+   * `AutoAssignOrderUseCase` después de save() para que el cron de
+   * asignación procese inmediatamente sin esperar al siguiente tick.
+   *
+   * Solo aplica a pedidos source='customer_pwa'. Pedidos restaurant_pwa
+   * nacen ya en waiting_driver — esta transición rechaza por canTransition.
+   */
+  acceptByRestaurant(
+    prepMinutes: number,
+    now: Date,
+  ): Result<void, InvalidStateTransition> {
+    if (!StateTransitionPolicy.canTransition(this._state.status.value, 'waiting_driver'))
+      return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
+    if (this._state.status.value !== 'pending_acceptance')
+      return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
+
+    const newPrepTime = PrepTime.of(prepMinutes)
+    const newEstimatedReadyAt = newPrepTime.computeEstimatedReadyAt(now)
+    const newAppearsInQueueAt = newPrepTime.computeAppearsInQueueAt(now)
+
+    this._state.status = OrderStatus.waitingDriver()
+    this._state.prepTime = newPrepTime
+    this._state.estimatedReadyAt = newEstimatedReadyAt
+    this._state.appearsInQueueAt = newAppearsInQueueAt
+    this._state.restaurantAcceptedAt = now
+    this._state.restaurantAcceptedPrepMinutes = prepMinutes
+    this._state.updatedAt = now
+
+    this.raise(
+      new OrderAcceptedByRestaurant({
+        orderId: this.id.value,
+        restaurantId: this._state.restaurantId.value,
+        acceptedPrepMinutes: prepMinutes,
+        newEstimatedReadyAt: newEstimatedReadyAt.toISOString(),
+        newAppearsInQueueAt: newAppearsInQueueAt.toISOString(),
+        acceptedAt: now.toISOString(),
+      }),
+    )
+    return Result.okVoid()
+  }
 
   acceptBy(
     driverId: DriverId,
