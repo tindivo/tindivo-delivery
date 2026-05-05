@@ -4,6 +4,7 @@ import { PendingAcceptanceList } from '@/features/restaurante/pending-acceptance
 import { PlatformClosedBanner } from '@/features/restaurante/shared/components/platform-closed-banner'
 import { usePlatformStatus } from '@/features/restaurante/shared/hooks/use-platform-status'
 import { Icon, SolarCTA } from '@tindivo/ui'
+import Link from 'next/link'
 
 export default function RestauranteHome() {
   const { data } = usePlatformStatus()
@@ -36,6 +37,22 @@ export default function RestauranteHome() {
       )}
 
       <PendingAcceptanceList />
+
+      <Link
+        href="/restaurante/negocio"
+        className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/15 hover:border-primary-container/40 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary-container/10">
+            <Icon name="restaurant_menu" size={20} className="text-primary-container" />
+          </span>
+          <div>
+            <p className="font-bold text-on-surface">Mi negocio</p>
+            <p className="text-xs text-on-surface-variant">Editar catálogo, precios e imágenes</p>
+          </div>
+        </div>
+        <Icon name="arrow_forward" size={18} className="text-on-surface-variant" />
+      </Link>
 
       <section>
         <div className="flex items-center gap-3 mb-4 px-1">

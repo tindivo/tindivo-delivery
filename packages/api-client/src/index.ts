@@ -12,6 +12,11 @@ export {
   type CustomerOrderItemDetail,
   type CustomerOrderItemsResponse,
   type AcceptOrderByRestaurantResponse,
+  type MenuCategoryRow,
+  type MenuItemRow,
+  type MenuModifierGroupRow,
+  type MenuModifierOptionRow,
+  type RestaurantMenuTree,
 } from './restaurant'
 export {
   adminApi,

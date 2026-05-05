@@ -126,6 +126,64 @@ export type AcceptOrderByRestaurantResponse = {
   autoAssign: { assigned: boolean; driverId: string | null; reason: string | null } | null
 }
 
+// Tipos snake_case (vienen directo de supabase) para el editor de menu
+export type MenuCategoryRow = {
+  id: string
+  restaurant_id: string
+  name: string
+  description: string | null
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type MenuItemRow = {
+  id: string
+  restaurant_id: string
+  category_id: string | null
+  name: string
+  description: string | null
+  price: number
+  image_url: string | null
+  prep_minutes: number | null
+  is_available: boolean
+  is_featured: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type MenuModifierGroupRow = {
+  id: string
+  menu_item_id: string
+  name: string
+  min_selected: number
+  max_selected: number
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type MenuModifierOptionRow = {
+  id: string
+  group_id: string
+  name: string
+  price_delta: number
+  sort_order: number
+  is_available: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type RestaurantMenuTree = {
+  categories: MenuCategoryRow[]
+  items: MenuItemRow[]
+  groups: MenuModifierGroupRow[]
+  options: MenuModifierOptionRow[]
+}
+
 export function restaurantApi(client: ApiClient) {
   return {
     getProfile: () => client.get<RestaurantProfile>('restaurant/profile'),
@@ -156,5 +214,92 @@ export function restaurantApi(client: ApiClient) {
         `restaurant/orders/${orderId}/accept`,
         body,
       ),
+
+    // Editor de menu (catalogo) — endpoints CRUD del restaurante
+    getMenuTree: () => client.get<RestaurantMenuTree>('restaurant/menu'),
+    createMenuCategory: (body: {
+      name: string
+      description?: string
+      sortOrder?: number
+      isActive?: boolean
+    }) => client.post<MenuCategoryRow>('restaurant/menu/categories', body),
+    updateMenuCategory: (
+      id: string,
+      body: {
+        name?: string
+        description?: string | null
+        sortOrder?: number
+        isActive?: boolean
+      },
+    ) => client.patch<MenuCategoryRow>(`restaurant/menu/categories/${id}`, body),
+    deleteMenuCategory: (id: string) =>
+      client.delete<void>(`restaurant/menu/categories/${id}`),
+
+    createMenuItem: (body: {
+      categoryId?: string | null
+      name: string
+      description?: string
+      price: number
+      imageUrl?: string | null
+      prepMinutes?: number
+      isAvailable?: boolean
+      isFeatured?: boolean
+      sortOrder?: number
+    }) => client.post<MenuItemRow>('restaurant/menu/items', body),
+    updateMenuItem: (
+      id: string,
+      body: {
+        categoryId?: string | null
+        name?: string
+        description?: string | null
+        price?: number
+        imageUrl?: string | null
+        prepMinutes?: number | null
+        isAvailable?: boolean
+        isFeatured?: boolean
+        sortOrder?: number
+      },
+    ) => client.patch<MenuItemRow>(`restaurant/menu/items/${id}`, body),
+    deleteMenuItem: (id: string) => client.delete<void>(`restaurant/menu/items/${id}`),
+
+    createModifierGroup: (body: {
+      menuItemId: string
+      name: string
+      minSelected?: number
+      maxSelected?: number
+      sortOrder?: number
+      isActive?: boolean
+    }) => client.post<MenuModifierGroupRow>('restaurant/menu/modifier-groups', body),
+    updateModifierGroup: (
+      id: string,
+      body: {
+        name?: string
+        minSelected?: number
+        maxSelected?: number
+        sortOrder?: number
+        isActive?: boolean
+      },
+    ) => client.patch<MenuModifierGroupRow>(`restaurant/menu/modifier-groups/${id}`, body),
+    deleteModifierGroup: (id: string) =>
+      client.delete<void>(`restaurant/menu/modifier-groups/${id}`),
+
+    createModifierOption: (body: {
+      groupId: string
+      name: string
+      priceDelta?: number
+      sortOrder?: number
+      isAvailable?: boolean
+    }) => client.post<MenuModifierOptionRow>('restaurant/menu/modifier-options', body),
+    updateModifierOption: (
+      id: string,
+      body: {
+        name?: string
+        priceDelta?: number
+        sortOrder?: number
+        isAvailable?: boolean
+      },
+    ) => client.patch<MenuModifierOptionRow>(`restaurant/menu/modifier-options/${id}`, body),
+    deleteModifierOption: (id: string) =>
+      client.delete<void>(`restaurant/menu/modifier-options/${id}`),
   }
 }
