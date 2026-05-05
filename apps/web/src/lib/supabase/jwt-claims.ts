@@ -5,7 +5,7 @@ import type { Session } from '@supabase/supabase-js'
  * Ver: supabase/migrations/*_custom_access_token_hook.sql
  */
 export type TindivoClaims = {
-  user_role?: 'admin' | 'restaurant' | 'driver'
+  user_role?: 'admin' | 'restaurant' | 'driver' | 'customer'
   is_active?: boolean
   restaurant_id?: string
   driver_id?: string
@@ -58,7 +58,10 @@ export function getClaimsFromSession(session: Session | null): TindivoClaims {
 }
 
 /**
- * Decide la ruta dashboard del usuario según su rol.
+ * Decide la ruta dashboard del usuario según su rol. Para `customer`
+ * retornamos `/login` porque apps/web es solo back-office staff: ese rol
+ * vive en `apps/customer` (tindivo.com) y debe redirigirse fuera del
+ * dominio. El middleware detecta el caso y hace logout.
  */
 export function homePathForRole(role: TindivoClaims['user_role']): string {
   switch (role) {
@@ -68,6 +71,10 @@ export function homePathForRole(role: TindivoClaims['user_role']): string {
       return '/restaurante'
     case 'driver':
       return '/motorizado'
+    case 'customer':
+      // Customer no puede usar delivery.tindivo.com — el LoginForm hace
+      // signOut tras detectar role='customer' y muestra mensaje.
+      return '/login'
     default:
       return '/login'
   }

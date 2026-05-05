@@ -20,7 +20,7 @@ function isPublicPath(pathname: string): boolean {
  * Prefijo de rutas por rol. Mantener en un solo sitio para que
  * `resolveRedirect` y el `LoginForm` compartan el mapeo.
  */
-const ROLE_PATH_PREFIX: Record<NonNullable<TindivoClaims['user_role']>, string> = {
+const ROLE_PATH_PREFIX: Partial<Record<NonNullable<TindivoClaims['user_role']>, string>> = {
   admin: '/admin',
   restaurant: '/restaurante',
   driver: '/motorizado',
@@ -39,6 +39,15 @@ function ownerRoleOfPath(pathname: string): NonNullable<TindivoClaims['user_role
     if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return role
   }
   return null
+}
+
+/**
+ * Cliente customer no debe poder usar el back-office staff. Si llega aquí
+ * con sesión activa, el LoginForm o este middleware lo expulsan a /login
+ * con flag wrong-app=customer para mostrarle "esta cuenta es de cliente".
+ */
+function isCustomerOnStaffApp(role: TindivoClaims['user_role']): boolean {
+  return role === 'customer'
 }
 
 type RedirectContext = {
@@ -73,6 +82,12 @@ function resolveRedirect(ctx: RedirectContext): RouteAction {
   if (!isActive) {
     if (pathname === '/login' || isPublicPath(pathname)) return null
     return { kind: 'redirect', path: '/login?suspended=1' }
+  }
+
+  if (isCustomerOnStaffApp(role)) {
+    return pathname === '/login'
+      ? null
+      : { kind: 'redirect', path: '/login?wrong-app=customer' }
   }
 
   if (pathname === '/login') {

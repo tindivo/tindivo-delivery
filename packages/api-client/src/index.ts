@@ -32,4 +32,11 @@ export {
   type AssignmentRulesDto,
 } from './admin'
 export { platformApi } from './platform'
-export { customerApi } from './customer'
+export {
+  customerApi,
+  type CustomerProfileDto,
+  type CustomerOrderHistoryDto,
+  type CustomerReorderDto,
+  type RegisterCustomerInput,
+  type UpdateCustomerProfileInput,
+} from './customer'

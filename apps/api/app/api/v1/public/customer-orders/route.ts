@@ -83,12 +83,34 @@ export async function POST(req: NextRequest) {
   if (created.isFailure) return problem(created.error)
 
   const orderId = created.value.id
+
+  // Si hay Authorization Bearer con sesión válida de un usuario customer,
+  // vinculamos el pedido a su cuenta para que aparezca en su historial.
+  // Sin auth (flujo invitado), customer_user_id queda NULL.
+  let customerUserId: string | null = null
+  const authHeader = req.headers.get('authorization') ?? ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null
+  if (token) {
+    const { data: userData } = await sb.auth.getUser(token)
+    if (userData?.user) {
+      const { data: profile } = await sb
+        .from('users')
+        .select('id, role, is_active')
+        .eq('id', userData.user.id)
+        .maybeSingle()
+      if (profile?.role === 'customer' && profile.is_active) {
+        customerUserId = profile.id
+      }
+    }
+  }
+
   const update = await sb
     .from('orders')
     .update({
       client_name: body.data.customerName,
       client_phone: body.data.customerPhone,
       customer_phone: body.data.customerPhone,
+      customer_user_id: customerUserId,
       delivery_address: body.data.deliveryAddress,
       customer_address: body.data.deliveryAddress,
       delivery_reference: body.data.deliveryReference?.trim() || null,

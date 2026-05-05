@@ -1,10 +1,11 @@
 'use client'
 import { customer } from '@/lib/api/client'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import type { Customer } from '@tindivo/contracts'
 import { BottomActionBar, Button, Icon, IconButton, Input, Label } from '@tindivo/ui'
 import { motion } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useCustomerAuth } from '../../auth/hooks/use-customer-auth'
 import type { CartItem } from '../hooks/use-cart'
 import { lineTotal, parseMoney } from '../lib/pricing'
 import { type Coords, locate } from '../services/geolocation'
@@ -33,6 +34,12 @@ export function CheckoutSheet({
   onQuantity,
   onSuccess,
 }: Props) {
+  const { session } = useCustomerAuth()
+  const profileQuery = useQuery({
+    queryKey: ['customer', 'profile'],
+    queryFn: () => customer.getMyProfile(),
+    enabled: Boolean(session),
+  })
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
@@ -42,6 +49,23 @@ export function CheckoutSheet({
   const [locating, setLocating] = useState(false)
   const [payment, setPayment] = useState<'pending_yape' | 'pending_cash'>('pending_yape')
   const [paysWith, setPaysWith] = useState('')
+  const [profilePrefilled, setProfilePrefilled] = useState(false)
+
+  // Si el cliente tiene sesión + perfil con datos guardados, prefill al
+  // abrir el sheet la primera vez. No volvemos a pisar lo que el usuario
+  // ya empezó a editar (profilePrefilled flag).
+  useEffect(() => {
+    if (profilePrefilled) return
+    const p = profileQuery.data?.profile
+    if (!p) return
+    if (p.fullName) setName(p.fullName)
+    if (p.phone) setPhone(p.phone)
+    if (p.defaultAddress) setAddress(p.defaultAddress)
+    if (p.defaultReference) setReference(p.defaultReference)
+    if (p.defaultCoordinates) setCoords(p.defaultCoordinates)
+    if (p.defaultLocationAccuracyM != null) setAccuracy(p.defaultLocationAccuracyM)
+    setProfilePrefilled(true)
+  }, [profileQuery.data, profilePrefilled])
   const create = useMutation({
     mutationFn: (body: Customer.CreateCustomerOrderRequest) => customer.createOrder(body),
     onSuccess: (data) => onSuccess(data.shortId),

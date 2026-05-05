@@ -18,7 +18,8 @@
     "./modules/settlements": "./src/modules/settlements/index.ts",
     "./modules/notifications": "./src/modules/notifications/index.ts",
     "./modules/users": "./src/modules/users/index.ts",
-    "./modules/platform": "./src/modules/platform/index.ts"
+    "./modules/platform": "./src/modules/platform/index.ts",
+    "./modules/customer-account": "./src/modules/customer-account/index.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",

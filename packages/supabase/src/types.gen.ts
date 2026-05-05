@@ -211,6 +211,50 @@ export type Database = {
           },
         ]
       }
+      customer_profiles: {
+        Row: {
+          created_at: string
+          default_address: string | null
+          default_coordinates: unknown
+          default_location_accuracy_m: number | null
+          default_reference: string | null
+          full_name: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_address?: string | null
+          default_coordinates?: unknown
+          default_location_accuracy_m?: number | null
+          default_reference?: string | null
+          full_name: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_address?: string | null
+          default_coordinates?: unknown
+          default_location_accuracy_m?: number | null
+          default_reference?: string | null
+          full_name?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_order_items: {
         Row: {
           created_at: string
@@ -677,6 +721,7 @@ export type Database = {
           customer_address: string | null
           customer_location_accuracy_m: number | null
           customer_order_subtotal: number | null
+          customer_user_id: string | null
           customer_phone: string | null
           delivered_at: string | null
           delivery_address: string | null
@@ -733,6 +778,7 @@ export type Database = {
           customer_location_accuracy_m?: number | null
           customer_order_subtotal?: number | null
           customer_phone?: string | null
+          customer_user_id?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates?: unknown
@@ -788,6 +834,7 @@ export type Database = {
           customer_location_accuracy_m?: number | null
           customer_order_subtotal?: number | null
           customer_phone?: string | null
+          customer_user_id?: string | null
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates?: unknown
@@ -1138,7 +1185,7 @@ export type Database = {
         | "pending_cash"
         | "pending_mixed"
       settlement_status: "pending" | "paid" | "overdue"
-      user_role: "admin" | "restaurant" | "driver"
+      user_role: "admin" | "restaurant" | "driver" | "customer"
       vehicle_type: "moto" | "bicicleta" | "pie" | "auto"
     }
     CompositeTypes: {

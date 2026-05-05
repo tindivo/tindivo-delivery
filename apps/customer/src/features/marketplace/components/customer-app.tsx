@@ -5,6 +5,7 @@ import type { Customer } from '@tindivo/contracts'
 import { BottomActionBar, Button, GlassTopBar, Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { LoginButton } from '../../auth/components/login-button'
 import { useCart } from '../hooks/use-cart'
 import { CheckoutSheet } from './checkout-sheet'
 import { ProductSheet } from './product-sheet'
@@ -42,20 +43,23 @@ export function CustomerApp() {
         title="TINDIVO"
         subtitle="Pide en San Jacinto"
         right={
-          <button
-            type="button"
-            onClick={() => setCheckoutOpen(true)}
-            disabled={cart.items.length === 0}
-            className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-lowest border border-outline-variant/30 disabled:opacity-40"
-            aria-label="Ver carrito"
-          >
-            <Icon name="shopping_bag" size={20} filled />
-            {cart.totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-5 h-5 rounded-full bg-primary-container text-white text-[10px] font-black flex items-center justify-center px-1">
-                {cart.totalItems}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <LoginButton />
+            <button
+              type="button"
+              onClick={() => setCheckoutOpen(true)}
+              disabled={cart.items.length === 0}
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-lowest border border-outline-variant/30 disabled:opacity-40"
+              aria-label="Ver carrito"
+            >
+              <Icon name="shopping_bag" size={20} filled />
+              {cart.totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 rounded-full bg-primary-container text-white text-[10px] font-black flex items-center justify-center px-1">
+                  {cart.totalItems}
+                </span>
+              )}
+            </button>
+          </div>
         }
       />
 

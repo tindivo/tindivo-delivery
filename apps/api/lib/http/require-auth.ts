@@ -5,7 +5,7 @@ import { problemCode } from './problem'
 export type AuthContext = {
   userId: string
   email: string
-  role: 'admin' | 'restaurant' | 'driver'
+  role: 'admin' | 'restaurant' | 'driver' | 'customer'
   restaurantId: string | null
   driverId: string | null
   supabase: ServerClient

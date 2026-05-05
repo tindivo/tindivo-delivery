@@ -22,6 +22,13 @@ import {
   CheckPlatformScheduleUseCase,
   SupabasePlatformSettingsRepository,
 } from '@tindivo/core/modules/platform'
+import {
+  GetMyProfileUseCase,
+  ListMyOrdersUseCase,
+  ReorderMyOrderUseCase,
+  SupabaseCustomerProfileRepository,
+  UpdateMyProfileUseCase,
+} from '@tindivo/core/modules/customer-account'
 import type { ServerClient } from '@tindivo/supabase'
 
 const clock = new SystemClock()
@@ -109,4 +116,21 @@ export function buildSaveCustomerDataUseCase(sb: ServerClient) {
 
 export function buildCheckPlatformScheduleUseCase(sb: ServerClient) {
   return new CheckPlatformScheduleUseCase(new SupabasePlatformSettingsRepository(sb), clock)
+}
+
+function customerDeps(sb: ServerClient) {
+  return { repo: new SupabaseCustomerProfileRepository(sb) }
+}
+
+export function buildGetMyProfileUseCase(sb: ServerClient) {
+  return new GetMyProfileUseCase(customerDeps(sb).repo)
+}
+export function buildUpdateMyProfileUseCase(sb: ServerClient) {
+  return new UpdateMyProfileUseCase(customerDeps(sb).repo)
+}
+export function buildListMyOrdersUseCase(sb: ServerClient) {
+  return new ListMyOrdersUseCase(customerDeps(sb).repo)
+}
+export function buildReorderMyOrderUseCase(sb: ServerClient) {
+  return new ReorderMyOrderUseCase(customerDeps(sb).repo)
 }
