@@ -17,6 +17,7 @@ import {
 } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useAcceptOrder } from '../../available-orders/hooks/use-accept-order'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
 import { useMarkDelivered } from '../hooks/use-mark-delivered'
 import { useMarkPickedUp } from '../hooks/use-mark-picked-up'
@@ -39,6 +40,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const received = useMarkReceived(orderId)
   const delivered = useMarkDelivered(orderId)
   const pickedUp = useMarkPickedUp(orderId)
+  const acceptOrder = useAcceptOrder()
   const saveCustomerData = useSaveCustomerData(orderId)
   const now = useNow(1_000)
   const { navigate: navigateMaps, isLocating } = useGeolocatedNavigation()
@@ -168,20 +170,11 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const estimatedReadyAt = raw.estimated_ready_at
     ? new Date(raw.estimated_ready_at as string)
     : null
-  const activationAt = raw.appears_in_queue_at
-    ? new Date(raw.appears_in_queue_at as string)
-    : estimatedReadyAt
   const remainingMs = estimatedReadyAt ? Math.max(0, estimatedReadyAt.getTime() - now.getTime()) : 0
-  const activationRemainingMs = activationAt
-    ? Math.max(0, activationAt.getTime() - now.getTime())
-    : 0
   const prepReady = remainingMs <= 0
   const remainingMinutes = Math.floor(remainingMs / 60_000)
   const remainingSeconds = Math.floor((remainingMs % 60_000) / 1_000)
   const remainingLabel = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`
-  const activationMinutes = Math.floor(activationRemainingMs / 60_000)
-  const activationSeconds = Math.floor((activationRemainingMs % 60_000) / 1_000)
-  const activationLabel = `${activationMinutes}:${activationSeconds.toString().padStart(2, '0')}`
   const restaurantWaUrl: string | null = restaurant.phone
     ? buildWaMeUrl(
         normalizeToE164Pe(restaurant.phone) ?? `51${restaurant.phone}`,
@@ -343,7 +336,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
         {status === 'waiting_driver' && (
           <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
             <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-              Pedido asignado
+              Pedido asignado a ti
             </h3>
             <div
               className="rounded-2xl p-5 text-center"
@@ -354,16 +347,16 @@ export function ActiveOrderDetail({ orderId }: Props) {
               }}
             >
               <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85 mb-1">
-                Se activa en
+                Listo en
               </div>
               <div
                 className="bleed-text text-5xl font-black font-mono tabular-nums leading-none"
                 style={{ letterSpacing: '-0.02em' }}
               >
-                {activationLabel}
+                {remainingLabel}
               </div>
               <div className="text-[11px] opacity-90 mt-2">
-                Te avisaremos cuando toque salir al local.
+                Acepta para reservar el pedido y salir al local.
               </div>
             </div>
           </section>
@@ -536,6 +529,18 @@ export function ActiveOrderDetail({ orderId }: Props) {
       )}
 
       <BottomActionBar>
+        {status === 'waiting_driver' && (
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={acceptOrder.isPending}
+            onClick={() => acceptOrder.mutate(orderId)}
+          >
+            <Icon name="check_circle" size={22} filled />
+            {acceptOrder.isPending ? 'Aceptando...' : 'Aceptar pedido'}
+          </Button>
+        )}
+
         {status === 'heading_to_restaurant' && (
           <>
             {restaurant.phone && (

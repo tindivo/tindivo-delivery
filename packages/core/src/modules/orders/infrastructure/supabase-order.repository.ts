@@ -104,17 +104,12 @@ export class SupabaseOrderRepository implements OrderRepository {
           availability,
         }
       })
-      .filter(({ driver, availability }) => {
-        return (
-          availability?.is_available === true &&
-          isWithinDriverShift(
-            driver.operating_days ?? [],
-            driver.shift_start,
-            driver.shift_end,
-            query.now,
-          )
-        )
-      })
+      // El toggle `is_available` manda. shift_start/shift_end/operating_days
+      // sirven solo como guía para `auto_close_drivers_on_schedule_end`
+      // (cierra disponibilidad cuando termina el shift) — no como bloqueo
+      // estricto en candidatura. Si un driver enciende manual fuera de su
+      // shift, sigue siendo elegible.
+      .filter(({ availability }) => availability?.is_available === true)
       .map(({ driver, availability }) => ({
         driverId: driver.id,
         operatingDays: driver.operating_days ?? [],
@@ -249,40 +244,4 @@ export class SupabaseOrderRepository implements OrderRepository {
     if (error) throw new PersistenceError(error.message, error)
     return (data ?? []).map(OrderMapper.toDomain)
   }
-}
-
-function isWithinDriverShift(
-  operatingDays: readonly string[],
-  shiftStart: string,
-  shiftEnd: string,
-  now: Date,
-): boolean {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Lima',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(now)
-  const weekday = parts.find((p) => p.type === 'weekday')?.value.toLowerCase() ?? ''
-  const hour = parts.find((p) => p.type === 'hour')?.value ?? '00'
-  const minute = parts.find((p) => p.type === 'minute')?.value ?? '00'
-  const day = WEEKDAY_TO_CODE[weekday]
-  if (!day || !operatingDays.includes(day)) return false
-
-  const current = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`
-  const start = shiftStart.slice(0, 5)
-  const end = shiftEnd.slice(0, 5)
-  if (start <= end) return current >= start && current <= end
-  return current >= start || current <= end
-}
-
-const WEEKDAY_TO_CODE: Record<string, string> = {
-  sun: 'sun',
-  mon: 'mon',
-  tue: 'tue',
-  wed: 'wed',
-  thu: 'thu',
-  fri: 'fri',
-  sat: 'sat',
 }

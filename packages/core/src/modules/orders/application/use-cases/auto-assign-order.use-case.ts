@@ -79,13 +79,15 @@ export class AutoAssignOrderUseCase
       return Result.ok({ assigned: false, driverId: null, activated: false, reason: null })
     }
 
+    // Solo asignamos driver_id (estado 2: "Asignado a ti"). El pedido sigue
+    // en `waiting_driver` con `acceptedAt=null`. El driver ve el pedido en
+    // su lista "Mis pedidos" con un botón "Aceptar"; al presionarlo el
+    // endpoint /driver/orders/:id/accept invoca `acceptBy` y transiciona
+    // a `heading_to_restaurant` (estado 3). De este modo respetamos el
+    // estado intermedio del modelo de negocio.
     const driverId = DriverId.of(decision.driverId)
     const assigned = order.assignTo(driverId, decision.reason, now)
     if (assigned.isFailure) return Result.fail(assigned.error)
-
-    const activeCount = candidates.find((c) => c.driverId === decision.driverId)?.activeCount ?? 0
-    const accepted = order.acceptBy(driverId, activeCount, rules.maxOrdersPerDriver, now)
-    if (accepted.isFailure) return Result.fail(accepted.error)
 
     await this.orders.saveAutoAssignment(order, OrderStatus.waitingDriver())
     await this.events.publishAll(order.pullEvents())
@@ -93,7 +95,7 @@ export class AutoAssignOrderUseCase
     return Result.ok({
       assigned: true,
       driverId: decision.driverId,
-      activated: true,
+      activated: false,
       reason: decision.reason,
     })
   }

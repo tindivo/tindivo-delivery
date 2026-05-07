@@ -125,7 +125,7 @@ describe('AutoAssignOrderUseCase', () => {
     expect(publisher.collected).toHaveLength(0)
   })
 
-  it('asigna y activa inmediatamente cuando appearsInQueueAt <= now (prep ≤ 10min)', async () => {
+  it('asigna driver sin transicionar status cuando appearsInQueueAt <= now (prep ≤ 10min)', async () => {
     // prep=10min → appearsInQueueAt = createdAt (igual al now)
     const order = buildOrder(10, NOW)
     const repo = buildRepo({ order, candidates: [buildCandidate()] })
@@ -137,14 +137,17 @@ describe('AutoAssignOrderUseCase', () => {
     expect(result.isSuccess).toBe(true)
     if (!result.isSuccess) return
     expect(result.value.assigned).toBe(true)
-    expect(result.value.activated).toBe(true)
+    // activated=false: la asignación deja al pedido en `waiting_driver` con
+    // driver_id fijado pero acceptedAt=null. El driver acepta manualmente.
+    expect(result.value.activated).toBe(false)
     expect(result.value.driverId).toBe(DRIVER_ID)
     // La razón ahora viene del policy (R1_grouping o R4_rotation).
     expect(['R1_grouping', 'R4_rotation']).toContain(result.value.reason)
     expect(repo.saveAutoAssignmentMock).toHaveBeenCalledOnce()
-    // Eventos esperados: OrderAssigned + OrderAccepted
+    // Solo emite OrderAssigned. OrderAccepted lo emite el endpoint cuando
+    // el driver presiona "Aceptar" en la PWA.
     expect(publisher.collected.map((e) => e.eventType)).toContain('OrderAssigned')
-    expect(publisher.collected.map((e) => e.eventType)).toContain('OrderAccepted')
+    expect(publisher.collected.map((e) => e.eventType)).not.toContain('OrderAccepted')
   })
 
   it('asigna también cuando el cron lo recoge tarde (appearsInQueueAt en el pasado)', async () => {
@@ -160,7 +163,7 @@ describe('AutoAssignOrderUseCase', () => {
     expect(result.isSuccess).toBe(true)
     if (!result.isSuccess) return
     expect(result.value.assigned).toBe(true)
-    expect(result.value.activated).toBe(true)
+    expect(result.value.activated).toBe(false)
     expect(result.value.driverId).toBe(DRIVER_ID)
   })
 
