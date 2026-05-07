@@ -1,4 +1,5 @@
 'use client'
+import { ActiveStatusToggle } from '@/features/admin/shared/components/active-status-toggle'
 import { ApiError } from '@tindivo/api-client'
 import type { Restaurants } from '@tindivo/contracts'
 import { SAN_JACINTO_CENTER } from '@tindivo/core'
@@ -6,7 +7,11 @@ import { Button, Icon, Input, Label } from '@tindivo/ui'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { useCreateRestaurant, useUpdateRestaurant } from '../hooks/use-admin-restaurants'
+import {
+  useCreateRestaurant,
+  useSetRestaurantActive,
+  useUpdateRestaurant,
+} from '../hooks/use-admin-restaurants'
 import { QrUploader } from './qr-uploader'
 
 // Leaflet toca `window` en su top-level: cargar solo en cliente.
@@ -36,6 +41,7 @@ type Props = {
     coordinates_lat: number | null
     coordinates_lng: number | null
     commission_per_order: number
+    is_active: boolean
   }
 }
 
@@ -43,6 +49,7 @@ export function RestaurantForm({ mode, initial }: Props) {
   const router = useRouter()
   const create = useCreateRestaurant()
   const update = useUpdateRestaurant(initial?.id ?? '')
+  const setActive = useSetRestaurantActive(initial?.id ?? '')
 
   const [name, setName] = useState(initial?.name ?? '')
   const [phone, setPhone] = useState(initial?.phone ?? '')
@@ -127,216 +134,226 @@ export function RestaurantForm({ mode, initial }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-      <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
-        <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-          Datos del restaurante
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="name">Nombre</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              minLength={2}
-              maxLength={80}
-            />
-          </div>
-          <div>
-            <Label htmlFor="phone">Teléfono (9 dígitos)</Label>
-            <Input
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-              required
-              inputMode="numeric"
-              pattern="\d{9}"
-            />
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="address">Dirección de referencia</Label>
-          <Input
-            id="address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            required
-            minLength={5}
-            maxLength={200}
-            placeholder="Jr. Amazonas 234, Trujillo"
-          />
-        </div>
-        <div>
-          <Label>Ubicación exacta en el mapa</Label>
-          <p className="text-xs text-on-surface-variant mt-1 mb-2">
-            Toca o arrastra el marcador para marcar la posición precisa del local.
-          </p>
-          <InteractiveMap
-            initialCenter={coords ?? SAN_JACINTO_CENTER}
-            initialZoom={16}
-            value={coords}
-            onChange={setCoords}
-            height={360}
-          />
-          {coords && (
-            <p className="text-xs text-on-surface-variant font-mono pl-1 mt-2">
-              {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
-            </p>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="accent">Color de acento</Label>
-            <div className="flex gap-2 items-stretch">
-              <input
-                type="color"
-                id="accent"
-                value={`#${accentColor}`}
-                onChange={(e) => setAccentColor(e.target.value.replace('#', '').toUpperCase())}
-                className="h-12 w-20 rounded-xl border border-outline-variant/40 cursor-pointer bg-transparent p-1"
-                aria-label="Seleccionar color"
-              />
-              <Input
-                value={accentColor}
-                onChange={(e) =>
-                  setAccentColor(
-                    e.target.value
-                      .replace(/[^0-9a-fA-F]/g, '')
-                      .slice(0, 6)
-                      .toUpperCase(),
-                  )
-                }
-                required
-                pattern="[0-9a-fA-F]{6}"
-                className="font-mono uppercase"
-                aria-label="Código hexadecimal"
-                placeholder="FF6B35"
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="yape">Número Yape/Plin (opcional)</Label>
-            <Input
-              id="yape"
-              value={yapeNumber}
-              onChange={(e) => setYapeNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
-              inputMode="numeric"
-              pattern="\d{9}"
-            />
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="commission">Comisión Tindivo por pedido</Label>
-          <div className="flex items-stretch gap-2">
-            <span className="inline-flex items-center px-3 rounded-xl bg-surface-container border border-outline-variant/30 text-sm font-semibold text-on-surface-variant">
-              S/
-            </span>
-            <Input
-              id="commission"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              value={commissionPerOrder}
-              onChange={(e) => setCommissionPerOrder(e.target.value)}
-              required
-              inputMode="decimal"
-              placeholder="1.00"
-              className="font-mono"
-            />
-          </div>
-          <p className="text-xs text-on-surface-variant mt-1">
-            Monto que se cobra al restaurante por cada pedido entregado. Solo aplica a pedidos
-            nuevos — los pedidos ya creados mantienen su comisión original.
-          </p>
-        </div>
-      </section>
-
-      <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
-        <div>
-          <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-            QR Yape / Plin
-          </h2>
-          <p className="text-xs text-on-surface-variant mt-1">
-            Sube hasta 2 QRs. El motorizado verá el principal por defecto y podrá cambiar al
-            alternativo si el primero no escanea (humedad, daño, error de imagen).
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>QR principal</Label>
-            <QrUploader value={qrUrl} onChange={setQrUrl} restaurantId={initial?.id} />
-          </div>
-          <div className="space-y-2">
-            <Label>QR alternativo (opcional)</Label>
-            <QrUploader
-              value={qrUrlSecondary}
-              onChange={setQrUrlSecondary}
-              restaurantId={initial?.id}
-            />
-          </div>
-        </div>
-      </section>
-
-      {mode === 'create' && (
+    <div className="max-w-2xl space-y-6">
+      {mode === 'edit' && initial && (
+        <ActiveStatusToggle
+          isActive={initial.is_active}
+          subjectLabel={`el restaurante "${initial.name}"`}
+          onToggle={(nextIsActive) => setActive.mutateAsync({ isActive: nextIsActive })}
+          isPending={setActive.isPending}
+        />
+      )}
+      <form onSubmit={handleSubmit} className="space-y-6">
         <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
           <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-            Credenciales del cajero (login a la PWA)
+            Datos del restaurante
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="name">Nombre</Label>
               <Input
-                id="email"
-                type="email"
-                value={ownerEmail}
-                onChange={(e) => setOwnerEmail(e.target.value)}
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Contraseña temporal (mín 8)</Label>
-              <Input
-                id="password"
-                type="text"
-                value={ownerPassword}
-                onChange={(e) => setOwnerPassword(e.target.value)}
-                required
-                minLength={8}
+                minLength={2}
                 maxLength={80}
               />
             </div>
+            <div>
+              <Label htmlFor="phone">Teléfono (9 dígitos)</Label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                required
+                inputMode="numeric"
+                pattern="\d{9}"
+              />
+            </div>
           </div>
-          <p className="text-xs text-on-surface-variant">
-            Comparte estas credenciales con el cajero tras la creación.
-          </p>
+          <div>
+            <Label htmlFor="address">Dirección de referencia</Label>
+            <Input
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              required
+              minLength={5}
+              maxLength={200}
+              placeholder="Jr. Amazonas 234, Trujillo"
+            />
+          </div>
+          <div>
+            <Label>Ubicación exacta en el mapa</Label>
+            <p className="text-xs text-on-surface-variant mt-1 mb-2">
+              Toca o arrastra el marcador para marcar la posición precisa del local.
+            </p>
+            <InteractiveMap
+              initialCenter={coords ?? SAN_JACINTO_CENTER}
+              initialZoom={16}
+              value={coords}
+              onChange={setCoords}
+              height={360}
+            />
+            {coords && (
+              <p className="text-xs text-on-surface-variant font-mono pl-1 mt-2">
+                {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+              </p>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="accent">Color de acento</Label>
+              <div className="flex gap-2 items-stretch">
+                <input
+                  type="color"
+                  id="accent"
+                  value={`#${accentColor}`}
+                  onChange={(e) => setAccentColor(e.target.value.replace('#', '').toUpperCase())}
+                  className="h-12 w-20 rounded-xl border border-outline-variant/40 cursor-pointer bg-transparent p-1"
+                  aria-label="Seleccionar color"
+                />
+                <Input
+                  value={accentColor}
+                  onChange={(e) =>
+                    setAccentColor(
+                      e.target.value
+                        .replace(/[^0-9a-fA-F]/g, '')
+                        .slice(0, 6)
+                        .toUpperCase(),
+                    )
+                  }
+                  required
+                  pattern="[0-9a-fA-F]{6}"
+                  className="font-mono uppercase"
+                  aria-label="Código hexadecimal"
+                  placeholder="FF6B35"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="yape">Número Yape/Plin (opcional)</Label>
+              <Input
+                id="yape"
+                value={yapeNumber}
+                onChange={(e) => setYapeNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                inputMode="numeric"
+                pattern="\d{9}"
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="commission">Comisión Tindivo por pedido</Label>
+            <div className="flex items-stretch gap-2">
+              <span className="inline-flex items-center px-3 rounded-xl bg-surface-container border border-outline-variant/30 text-sm font-semibold text-on-surface-variant">
+                S/
+              </span>
+              <Input
+                id="commission"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={commissionPerOrder}
+                onChange={(e) => setCommissionPerOrder(e.target.value)}
+                required
+                inputMode="decimal"
+                placeholder="1.00"
+                className="font-mono"
+              />
+            </div>
+            <p className="text-xs text-on-surface-variant mt-1">
+              Monto que se cobra al restaurante por cada pedido entregado. Solo aplica a pedidos
+              nuevos — los pedidos ya creados mantienen su comisión original.
+            </p>
+          </div>
         </section>
-      )}
 
-      {errorMsg && (
-        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {errorMsg}
+        <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
+          <div>
+            <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+              QR Yape / Plin
+            </h2>
+            <p className="text-xs text-on-surface-variant mt-1">
+              Sube hasta 2 QRs. El motorizado verá el principal por defecto y podrá cambiar al
+              alternativo si el primero no escanea (humedad, daño, error de imagen).
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>QR principal</Label>
+              <QrUploader value={qrUrl} onChange={setQrUrl} restaurantId={initial?.id} />
+            </div>
+            <div className="space-y-2">
+              <Label>QR alternativo (opcional)</Label>
+              <QrUploader
+                value={qrUrlSecondary}
+                onChange={setQrUrlSecondary}
+                restaurantId={initial?.id}
+              />
+            </div>
+          </div>
+        </section>
+
+        {mode === 'create' && (
+          <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
+            <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+              Credenciales del cajero (login a la PWA)
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={ownerEmail}
+                  onChange={(e) => setOwnerEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Contraseña temporal (mín 8)</Label>
+                <Input
+                  id="password"
+                  type="text"
+                  value={ownerPassword}
+                  onChange={(e) => setOwnerPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  maxLength={80}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-on-surface-variant">
+              Comparte estas credenciales con el cajero tras la creación.
+            </p>
+          </section>
+        )}
+
+        {errorMsg && (
+          <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {errorMsg}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button type="submit" disabled={pending || !coords} size="lg">
+            <Icon name="check" />
+            {pending ? 'Guardando...' : mode === 'create' ? 'Crear restaurante' : 'Guardar cambios'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            disabled={pending}
+            onClick={() => router.back()}
+          >
+            Cancelar
+          </Button>
         </div>
-      )}
-
-      <div className="flex gap-3">
-        <Button type="submit" disabled={pending || !coords} size="lg">
-          <Icon name="check" />
-          {pending ? 'Guardando...' : mode === 'create' ? 'Crear restaurante' : 'Guardar cambios'}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="lg"
-          disabled={pending}
-          onClick={() => router.back()}
-        >
-          Cancelar
-        </Button>
-      </div>
-    </form>
+      </form>
+    </div>
   )
 }
 

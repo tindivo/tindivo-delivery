@@ -12,9 +12,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await auth.auth.supabase
     .from('restaurants')
-    .select(
-      'id, name, phone, address, yape_number, qr_url, accent_color, is_active, is_blocked, block_reason, balance_due',
-    )
+    .select('id, name, phone, address, yape_number, qr_url, accent_color, is_active, balance_due')
     .eq('id', auth.auth.restaurantId)
     .maybeSingle()
 
@@ -30,8 +28,6 @@ export async function GET(req: NextRequest) {
     qrUrl: data.qr_url,
     accentColor: data.accent_color,
     isActive: data.is_active,
-    isBlocked: data.is_blocked,
-    blockReason: data.block_reason,
     balanceDue: Number(data.balance_due),
     email: auth.auth.email,
   })

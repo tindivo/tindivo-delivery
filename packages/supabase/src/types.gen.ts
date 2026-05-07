@@ -211,50 +211,6 @@ export type Database = {
           },
         ]
       }
-      customer_profiles: {
-        Row: {
-          created_at: string
-          default_address: string | null
-          default_coordinates: unknown
-          default_location_accuracy_m: number | null
-          default_reference: string | null
-          full_name: string
-          phone: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          default_address?: string | null
-          default_coordinates?: unknown
-          default_location_accuracy_m?: number | null
-          default_reference?: string | null
-          full_name: string
-          phone?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          default_address?: string | null
-          default_coordinates?: unknown
-          default_location_accuracy_m?: number | null
-          default_reference?: string | null
-          full_name?: string
-          phone?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_profiles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       customer_order_items: {
         Row: {
           created_at: string
@@ -305,6 +261,50 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_profiles: {
+        Row: {
+          created_at: string
+          default_address: string | null
+          default_coordinates: unknown
+          default_location_accuracy_m: number | null
+          default_reference: string | null
+          full_name: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_address?: string | null
+          default_coordinates?: unknown
+          default_location_accuracy_m?: number | null
+          default_reference?: string | null
+          full_name: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_address?: string | null
+          default_coordinates?: unknown
+          default_location_accuracy_m?: number | null
+          default_reference?: string | null
+          full_name?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -468,6 +468,261 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_businesses: {
+        Row: {
+          accent_color: string
+          address: string
+          coordinates: unknown
+          created_at: string
+          delivery_restaurant_id: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          is_published: boolean
+          is_verified: boolean
+          name: string
+          phone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string
+          address: string
+          coordinates?: unknown
+          created_at?: string
+          delivery_restaurant_id?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_published?: boolean
+          is_verified?: boolean
+          name: string
+          phone: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string
+          address?: string
+          coordinates?: unknown
+          created_at?: string
+          delivery_restaurant_id?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_published?: boolean
+          is_verified?: boolean
+          name?: string
+          phone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_businesses_delivery_restaurant_id_fkey"
+            columns: ["delivery_restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_businesses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_menu_categories: {
+        Row: {
+          business_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_menu_categories_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_menu_items: {
+        Row: {
+          business_id: string
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean
+          is_featured: boolean
+          name: string
+          prep_minutes: number | null
+          price: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          is_featured?: boolean
+          name: string
+          prep_minutes?: number | null
+          price: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          is_featured?: boolean
+          name?: string
+          prep_minutes?: number | null
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_menu_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_menu_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_menu_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_menu_modifier_groups: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          max_selected: number
+          menu_item_id: string
+          min_selected: number
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_selected?: number
+          menu_item_id: string
+          min_selected?: number
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_selected?: number
+          menu_item_id?: string
+          min_selected?: number
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_menu_modifier_groups_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_menu_modifier_options: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          is_available: boolean
+          name: string
+          price_delta: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          is_available?: boolean
+          name: string
+          price_delta?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_available?: boolean
+          name?: string
+          price_delta?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_menu_modifier_options_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_menu_modifier_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -721,8 +976,8 @@ export type Database = {
           customer_address: string | null
           customer_location_accuracy_m: number | null
           customer_order_subtotal: number | null
-          customer_user_id: string | null
           customer_phone: string | null
+          customer_user_id: string | null
           delivered_at: string | null
           delivery_address: string | null
           delivery_coordinates: unknown
@@ -881,6 +1136,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_customer_user_id_fkey"
+            columns: ["customer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
@@ -953,12 +1215,52 @@ export type Database = {
           },
         ]
       }
+      restaurant_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          paid_at: string
+          payment_method: string
+          payment_note: string | null
+          restaurant_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          paid_at?: string
+          payment_method: string
+          payment_note?: string | null
+          restaurant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          paid_at?: string
+          payment_method?: string
+          payment_note?: string | null
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_payments_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           accent_color: string
           address: string
           balance_due: number
-          block_reason: string | null
           commission_per_order: number
           coordinates: unknown
           coordinates_lat: number | null
@@ -966,7 +1268,6 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
-          is_blocked: boolean
           is_test_account: boolean
           name: string
           phone: string
@@ -980,7 +1281,6 @@ export type Database = {
           accent_color: string
           address: string
           balance_due?: number
-          block_reason?: string | null
           commission_per_order?: number
           coordinates?: unknown
           coordinates_lat?: number | null
@@ -988,7 +1288,6 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
-          is_blocked?: boolean
           is_test_account?: boolean
           name: string
           phone: string
@@ -1002,7 +1301,6 @@ export type Database = {
           accent_color?: string
           address?: string
           balance_due?: number
-          block_reason?: string | null
           commission_per_order?: number
           coordinates?: unknown
           coordinates_lat?: number | null
@@ -1010,7 +1308,6 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
-          is_blocked?: boolean
           is_test_account?: boolean
           name?: string
           phone?: string
@@ -1148,7 +1445,9 @@ export type Database = {
           yape_number: string
         }[]
       }
+      auto_cancel_unaccepted_orders: { Args: never; Returns: undefined }
       auto_close_drivers_on_schedule_end: { Args: never; Returns: undefined }
+      current_customer_user_id: { Args: never; Returns: string }
       current_driver_id: { Args: never; Returns: string }
       current_restaurant_id: { Args: never; Returns: string }
       current_user_role: {
@@ -1185,7 +1484,7 @@ export type Database = {
         | "pending_cash"
         | "pending_mixed"
       settlement_status: "pending" | "paid" | "overdue"
-      user_role: "admin" | "restaurant" | "driver" | "customer"
+      user_role: "admin" | "restaurant" | "driver" | "customer" | "business"
       vehicle_type: "moto" | "bicicleta" | "pie" | "auto"
     }
     CompositeTypes: {
@@ -1324,6 +1623,7 @@ export const Constants = {
       domain_event_status: ["pending", "published", "failed"],
       order_source: ["restaurant_pwa", "customer_pwa"],
       order_status: [
+        "pending_acceptance",
         "waiting_driver",
         "heading_to_restaurant",
         "waiting_at_restaurant",
@@ -1338,7 +1638,7 @@ export const Constants = {
         "pending_mixed",
       ],
       settlement_status: ["pending", "paid", "overdue"],
-      user_role: ["admin", "restaurant", "driver"],
+      user_role: ["admin", "restaurant", "driver", "customer", "business"],
       vehicle_type: ["moto", "bicicleta", "pie", "auto"],
     },
   },

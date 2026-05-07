@@ -22,13 +22,9 @@ export const CreateRestaurantRequest = z.object({
   phone: PhonePeSchema,
   address: z.string().min(5).max(200),
   yapeNumber: PhonePeSchema.optional(),
-  // URL pública de Supabase Storage del QR Yape/Plin. El upload se hace
-  // desde el cliente directamente a Storage; solo se persiste la URL.
   qrUrl: z.string().url().optional(),
-  // QR alternativo opcional (respaldo si el principal falla al escanear).
   qrUrlSecondary: z.string().url().optional(),
   accentColor: AccentColorSchema,
-  // Ubicación exacta seleccionada por el admin en el mapa (Leaflet).
   coordinates: CoordinatesSchema,
   commissionPerOrder: CommissionPerOrderSchema,
   ownerEmail: z.string().email(),
@@ -49,10 +45,10 @@ export const UpdateRestaurantRequest = z.object({
 })
 export type UpdateRestaurantRequest = z.infer<typeof UpdateRestaurantRequest>
 
-export const BlockRestaurantRequest = z.object({
-  reason: z.string().min(3).max(300),
+export const SetRestaurantActiveRequest = z.object({
+  isActive: z.boolean(),
 })
-export type BlockRestaurantRequest = z.infer<typeof BlockRestaurantRequest>
+export type SetRestaurantActiveRequest = z.infer<typeof SetRestaurantActiveRequest>
 
 export const RestaurantResponse = z.object({
   id: UuidSchema,
@@ -66,8 +62,6 @@ export const RestaurantResponse = z.object({
   accentColor: AccentColorSchema,
   coordinates: CoordinatesSchema.nullable(),
   isActive: z.boolean(),
-  isBlocked: z.boolean(),
-  blockReason: z.string().nullable(),
   balanceDue: MoneyPenSchema,
   commissionPerOrder: MoneyPenSchema,
   createdAt: TimestampSchema,
@@ -77,9 +71,20 @@ export type RestaurantResponse = z.infer<typeof RestaurantResponse>
 
 export const ServiceStatusResponse = z.object({
   isOperatingNow: z.boolean(),
-  isBlocked: z.boolean(),
-  blockReason: z.string().nullable(),
   nextOpenAt: TimestampSchema.nullable(),
   canCreateOrder: z.boolean(),
 })
 export type ServiceStatusResponse = z.infer<typeof ServiceStatusResponse>
+
+export const ActiveOrderRef = z.object({
+  id: UuidSchema,
+  shortId: z.string(),
+  status: z.string(),
+  customerName: z.string().nullable(),
+})
+export type ActiveOrderRef = z.infer<typeof ActiveOrderRef>
+
+export const ActiveOrdersBlockerError = z.object({
+  activeOrders: z.array(ActiveOrderRef),
+})
+export type ActiveOrdersBlockerError = z.infer<typeof ActiveOrdersBlockerError>

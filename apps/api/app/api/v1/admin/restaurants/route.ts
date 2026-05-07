@@ -93,7 +93,6 @@ export async function POST(req: NextRequest) {
       coordinates_lng: input.coordinates.lng,
       commission_per_order: input.commissionPerOrder,
       is_active: true,
-      is_blocked: false,
     })
     .select('*')
     .single()

@@ -32,6 +32,11 @@ export const ToggleAvailabilityRequest = z.object({
 })
 export type ToggleAvailabilityRequest = z.infer<typeof ToggleAvailabilityRequest>
 
+export const SetDriverActiveRequest = z.object({
+  isActive: z.boolean(),
+})
+export type SetDriverActiveRequest = z.infer<typeof SetDriverActiveRequest>
+
 export const SetDriverRestaurantsRequest = z.object({
   restaurantIds: z.array(UuidSchema),
 })

@@ -1,13 +1,11 @@
-import type { Drivers, Restaurants, Settlements } from '@tindivo/contracts'
+import type { Drivers, RestaurantPayments, Restaurants, Settlements } from '@tindivo/contracts'
 import type { ApiClient } from './client'
 
 export type AdminSettlementRow = Settlements.AdminSettlementRow
 export type RestaurantDebtSummaryRow = Settlements.RestaurantDebtSummaryRow
+export type RestaurantPaymentResponse = RestaurantPayments.RestaurantPaymentResponse
+export type RestaurantDebtRow = RestaurantPayments.RestaurantDebtRow
 
-// El backend devuelve en snake_case (select '*' de Supabase sin mapping).
-// Para el consumer del API, tipamos con los campos que efectivamente usa
-// el UI; el tipo fuerte Zod es `Restaurants.RestaurantResponse` y puede
-// usarse en el futuro si se agrega un mapper.
 export type RestaurantRow = {
   id: string
   user_id: string
@@ -21,8 +19,6 @@ export type RestaurantRow = {
   coordinates_lat: number | null
   coordinates_lng: number | null
   is_active: boolean
-  is_blocked: boolean
-  block_reason: string | null
   balance_due: number
   commission_per_order: number
   created_at: string
@@ -171,6 +167,8 @@ export function adminApi(client: ApiClient) {
       client.post<RestaurantRow>('admin/restaurants', body),
     updateRestaurant: (id: string, body: Restaurants.UpdateRestaurantRequest) =>
       client.patch<RestaurantRow>(`admin/restaurants/${id}`, body),
+    setRestaurantActive: (id: string, body: Restaurants.SetRestaurantActiveRequest) =>
+      client.post<RestaurantRow>(`admin/restaurants/${id}/active`, body),
 
     listDrivers: () => client.get<{ items: DriverRow[] }>('admin/drivers'),
     getDriver: (id: string) => client.get<DriverRow>(`admin/drivers/${id}`),
@@ -183,6 +181,19 @@ export function adminApi(client: ApiClient) {
         `admin/drivers/${id}/restaurants`,
         body,
       ),
+    setDriverActive: (id: string, body: Drivers.SetDriverActiveRequest) =>
+      client.post<DriverRow>(`admin/drivers/${id}/active`, body),
+
+    listDebtSummary: () =>
+      client.get<{ items: RestaurantDebtRow[]; totalDebt: number }>(
+        'admin/restaurant-payments/summary',
+      ),
+    listRestaurantPayments: (params?: { restaurantId?: string; from?: string; to?: string }) =>
+      client.get<{ items: RestaurantPaymentResponse[] }>('admin/restaurant-payments', {
+        query: params,
+      }),
+    createRestaurantPayment: (body: RestaurantPayments.CreateRestaurantPaymentRequest) =>
+      client.post<RestaurantPaymentResponse>('admin/restaurant-payments', body),
 
     listCashSettlements: (status?: 'disputed' | 'delivered' | 'confirmed' | 'resolved' | 'all') =>
       client.get<{ items: AdminCashSettlementRow[] }>('admin/cash-settlements', {
@@ -193,17 +204,6 @@ export function adminApi(client: ApiClient) {
         `admin/cash-settlements/${id}/resolve`,
         body,
       ),
-
-    listSettlements: (status?: 'pending' | 'paid' | 'overdue' | 'all', restaurantId?: string) =>
-      client.get<{ items: AdminSettlementRow[] }>('admin/settlements', {
-        query: { status, restaurantId },
-      }),
-    getSettlementsSummary: () =>
-      client.get<{ items: RestaurantDebtSummaryRow[] }>('admin/settlements/summary'),
-    generateSettlements: (body?: Settlements.GenerateSettlementsRequest) =>
-      client.post<{ generated: AdminSettlementRow[] }>('admin/settlements/generate', body ?? {}),
-    markSettlementPaid: (id: string, body: Settlements.MarkSettlementPaidRequest) =>
-      client.post<AdminSettlementRow>(`admin/settlements/${id}/mark-paid`, body),
 
     getMetrics: (from?: string, to?: string) =>
       client.get<AdminMetricsResponse>('admin/metrics', { query: { from, to } }),

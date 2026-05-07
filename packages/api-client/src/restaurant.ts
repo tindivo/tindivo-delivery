@@ -9,10 +9,24 @@ export type RestaurantProfile = {
   qrUrl: string | null
   accentColor: string
   isActive: boolean
-  isBlocked: boolean
-  blockReason: string | null
   balanceDue: number
   email: string
+}
+
+export type RestaurantPaymentItem = {
+  id: string
+  amount: number
+  paymentMethod: 'yape' | 'plin' | 'cash' | 'bank_transfer' | 'other'
+  paymentNote: string | null
+  paidAt: string
+  createdAt: string
+}
+
+export type RestaurantPaymentsResponse = {
+  balanceDue: number
+  yapeNumber: string | null
+  qrUrl: string | null
+  items: RestaurantPaymentItem[]
 }
 
 export type Settlement = {
@@ -190,6 +204,7 @@ export function restaurantApi(client: ApiClient) {
     getHistory: (query?: { status?: string }) =>
       client.get<{ items: unknown[] }>('restaurant/history', { query }),
     getSettlements: () => client.get<RestaurantSettlementsResponse>('restaurant/settlements'),
+    listMyPayments: () => client.get<RestaurantPaymentsResponse>('restaurant/payments'),
     listCashSettlements: () =>
       client.get<{ items: RestaurantCashSettlementRow[] }>('restaurant/cash-settlements'),
     confirmCashSettlement: (id: string, body: { receivedAmount: number }) =>
@@ -210,10 +225,7 @@ export function restaurantApi(client: ApiClient) {
     getOrderItems: (orderId: string) =>
       client.get<CustomerOrderItemsResponse>(`restaurant/orders/${orderId}/items`),
     acceptOrderByRestaurant: (orderId: string, body: { prepMinutes: number }) =>
-      client.post<AcceptOrderByRestaurantResponse>(
-        `restaurant/orders/${orderId}/accept`,
-        body,
-      ),
+      client.post<AcceptOrderByRestaurantResponse>(`restaurant/orders/${orderId}/accept`, body),
 
     // Editor de menu (catalogo) — endpoints CRUD del restaurante
     getMenuTree: () => client.get<RestaurantMenuTree>('restaurant/menu'),
@@ -232,8 +244,7 @@ export function restaurantApi(client: ApiClient) {
         isActive?: boolean
       },
     ) => client.patch<MenuCategoryRow>(`restaurant/menu/categories/${id}`, body),
-    deleteMenuCategory: (id: string) =>
-      client.delete<void>(`restaurant/menu/categories/${id}`),
+    deleteMenuCategory: (id: string) => client.delete<void>(`restaurant/menu/categories/${id}`),
 
     createMenuItem: (body: {
       categoryId?: string | null

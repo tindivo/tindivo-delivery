@@ -36,3 +36,15 @@ export function useUpdateRestaurant(id: string) {
     },
   })
 }
+
+export function useSetRestaurantActive(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: Restaurants.SetRestaurantActiveRequest) =>
+      admin.setRestaurantActive(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'restaurants'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'restaurants', id] })
+    },
+  })
+}

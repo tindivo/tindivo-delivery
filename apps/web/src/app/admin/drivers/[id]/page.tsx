@@ -39,6 +39,7 @@ export default function AdminEditDriverPage({ params }: Props) {
           operating_days: data.operating_days,
           shift_start: data.shift_start,
           shift_end: data.shift_end,
+          is_active: data.is_active,
           restaurantIds: data.restaurantIds ?? [],
         }}
       />

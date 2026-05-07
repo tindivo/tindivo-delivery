@@ -1,7 +1,4 @@
-import {
-  buildCheckPlatformScheduleUseCase,
-  buildCreateOrderUseCase,
-} from '@/lib/core/container'
+import { buildCheckPlatformScheduleUseCase, buildCreateOrderUseCase } from '@/lib/core/container'
 import { problem, problemCode } from '@/lib/http/problem'
 import { parseJson } from '@/lib/http/validate'
 import { Customer } from '@tindivo/contracts'
@@ -43,13 +40,12 @@ export async function POST(req: NextRequest) {
 
   const { data: restaurant, error: restaurantError } = await sb
     .from('restaurants')
-    .select('id, name, is_active, is_blocked, commission_per_order')
+    .select('id, name, is_active, commission_per_order')
     .eq('id', body.data.restaurantId)
     .maybeSingle()
 
   if (restaurantError) return problemCode('INTERNAL_ERROR', 500, restaurantError.message)
   if (!restaurant || !restaurant.is_active) return problemCode('RESTAURANT_NOT_FOUND', 404)
-  if (restaurant.is_blocked) return problemCode('RESTAURANT_BLOCKED', 403)
 
   const cart = await priceCart(sb, body.data.items, body.data.restaurantId)
   if ('response' in cart) return cart.response

@@ -55,9 +55,21 @@ export function RestaurantsList() {
               {items.map((r) => (
                 <tr
                   key={r.id}
-                  className="border-t border-outline-variant/10 hover:bg-surface-container-low/50"
+                  className={`border-t border-outline-variant/10 hover:bg-surface-container-low/50 ${
+                    !r.is_active ? 'opacity-60' : ''
+                  }`}
                 >
-                  <td className="px-4 py-3 font-bold">{r.name}</td>
+                  <td className="px-4 py-3 font-bold">
+                    <span className="inline-flex items-center gap-2">
+                      {r.name}
+                      {!r.is_active && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-surface-container border border-outline-variant/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+                          <Icon name="pause" size={10} filled />
+                          Inactivo
+                        </span>
+                      )}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       aria-label={`color ${r.accent_color}`}

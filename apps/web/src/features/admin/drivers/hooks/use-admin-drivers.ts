@@ -54,3 +54,14 @@ export function useSetDriverRestaurants(id: string) {
     },
   })
 }
+
+export function useSetDriverActive(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: Drivers.SetDriverActiveRequest) => admin.setDriverActive(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'drivers'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'drivers', id] })
+    },
+  })
+}

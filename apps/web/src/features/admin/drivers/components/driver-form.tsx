@@ -1,4 +1,5 @@
 'use client'
+import { ActiveStatusToggle } from '@/features/admin/shared/components/active-status-toggle'
 import { ApiError } from '@tindivo/api-client'
 import type { Drivers } from '@tindivo/contracts'
 import { Button, Icon, Input, Label, PhoneInputPe } from '@tindivo/ui'
@@ -7,6 +8,7 @@ import { useState } from 'react'
 import {
   useAdminRestaurantsForAssignment,
   useCreateDriver,
+  useSetDriverActive,
   useSetDriverRestaurants,
   useUpdateDriver,
 } from '../hooks/use-admin-drivers'
@@ -42,6 +44,7 @@ type Props = {
     operating_days: string[]
     shift_start: string
     shift_end: string
+    is_active: boolean
     restaurantIds?: string[]
   }
 }
@@ -51,6 +54,7 @@ export function DriverForm({ mode, initial }: Props) {
   const create = useCreateDriver()
   const update = useUpdateDriver(initial?.id ?? '')
   const setRestaurants = useSetDriverRestaurants(initial?.id ?? '')
+  const setActive = useSetDriverActive(initial?.id ?? '')
   const restaurantsQuery = useAdminRestaurantsForAssignment()
   const allRestaurants = restaurantsQuery.data?.items ?? []
 
@@ -144,241 +148,251 @@ export function DriverForm({ mode, initial }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
-      <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
-        <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-          Datos del motorizado
-        </h2>
-
-        <div>
-          <Label htmlFor="fullName">Nombre completo</Label>
-          <Input
-            id="fullName"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-            minLength={3}
-            maxLength={80}
-            placeholder="Juan Pérez Gómez"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="phone">Teléfono</Label>
-            <PhoneInputPe
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="licensePlate">Placa (opcional)</Label>
-            <Input
-              id="licensePlate"
-              value={licensePlate}
-              onChange={(e) => setLicensePlate(e.target.value.toUpperCase().slice(0, 20))}
-              maxLength={20}
-              className="font-mono uppercase"
-              placeholder="ABC-123"
-            />
-          </div>
-        </div>
-
-        <div>
-          <Label>Vehículo</Label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
-            {VEHICLES.map((v) => {
-              const active = vehicleType === v.value
-              return (
-                <button
-                  key={v.value}
-                  type="button"
-                  onClick={() => setVehicleType(v.value)}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-colors ${
-                    active
-                      ? 'border-primary bg-primary/10 text-primary font-bold'
-                      : 'border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low'
-                  }`}
-                >
-                  <Icon name={v.icon} size={24} />
-                  <span className="text-xs">{v.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
-        <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-          Horarios y días laborales
-        </h2>
-
-        <div>
-          <Label>Días que trabaja</Label>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {DAYS.map((day) => {
-              const active = operatingDays.includes(day.code)
-              return (
-                <button
-                  key={day.code}
-                  type="button"
-                  onClick={() => toggleDay(day.code)}
-                  title={day.long}
-                  className={`w-11 h-11 rounded-full border font-bold transition-colors ${
-                    active
-                      ? 'border-primary bg-primary text-on-primary'
-                      : 'border-outline-variant/40 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low'
-                  }`}
-                >
-                  {day.short}
-                </button>
-              )
-            })}
-          </div>
-          <p className="text-xs text-on-surface-variant mt-2">
-            Toca los días para activarlos o desactivarlos.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="shiftStart">Turno inicio</Label>
-            <Input
-              id="shiftStart"
-              type="time"
-              value={shiftStart}
-              onChange={(e) => setShiftStart(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="shiftEnd">Turno fin</Label>
-            <Input
-              id="shiftEnd"
-              type="time"
-              value={shiftEnd}
-              onChange={(e) => setShiftEnd(e.target.value)}
-              required
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
-        <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-          Restaurantes asignados
-        </h2>
-        <p className="text-xs text-on-surface-variant -mt-2">
-          Solo los pedidos creados por estos restaurantes podrán auto-asignarse a este motorizado.
-        </p>
-        {restaurantsQuery.isLoading ? (
-          <div className="text-xs text-on-surface-variant">Cargando restaurantes…</div>
-        ) : allRestaurants.length === 0 ? (
-          <div className="text-xs text-on-surface-variant">
-            No hay restaurantes registrados todavía.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {allRestaurants.map((r) => {
-              const checked = restaurantIds.includes(r.id)
-              return (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => toggleRestaurant(r.id)}
-                  className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                    checked
-                      ? 'border-primary bg-primary/10'
-                      : 'border-outline-variant/40 hover:bg-surface-container-low'
-                  }`}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="inline-flex w-4 h-4 rounded items-center justify-center border-2"
-                    style={{
-                      borderColor: checked ? '#FF6B35' : '#cbd5e1',
-                      background: checked ? '#FF6B35' : 'transparent',
-                    }}
-                  >
-                    {checked && <Icon name="check" size={12} className="text-white" filled />}
-                  </span>
-                  <span
-                    className="inline-block w-3 h-3 rounded-full"
-                    style={{ background: `#${r.accent_color}` }}
-                  />
-                  <span className="font-semibold text-sm">{r.name}</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
-        <p className="text-[11px] text-on-surface-variant">
-          {restaurantIds.length === 0
-            ? 'Sin restaurantes asignados → este motorizado NO recibirá pedidos por auto-asignación.'
-            : `${restaurantIds.length} ${restaurantIds.length === 1 ? 'restaurante asignado' : 'restaurantes asignados'}.`}
-        </p>
-      </section>
-
-      {mode === 'create' && (
+    <div className="max-w-2xl space-y-6">
+      {mode === 'edit' && initial && (
+        <ActiveStatusToggle
+          isActive={initial.is_active}
+          subjectLabel={`el motorizado "${initial.full_name}"`}
+          onToggle={(nextIsActive) => setActive.mutateAsync({ isActive: nextIsActive })}
+          isPending={setActive.isPending}
+        />
+      )}
+      <form onSubmit={handleSubmit} className="space-y-6">
         <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
           <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-            Credenciales del motorizado (login a la PWA)
+            Datos del motorizado
           </h2>
+
+          <div>
+            <Label htmlFor="fullName">Nombre completo</Label>
+            <Input
+              id="fullName"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              minLength={3}
+              maxLength={80}
+              placeholder="Juan Pérez Gómez"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={userEmail}
-                onChange={(e) => setUserEmail(e.target.value)}
+              <Label htmlFor="phone">Teléfono</Label>
+              <PhoneInputPe
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="password">Contraseña temporal (mín 8)</Label>
+              <Label htmlFor="licensePlate">Placa (opcional)</Label>
               <Input
-                id="password"
-                type="text"
-                value={userPassword}
-                onChange={(e) => setUserPassword(e.target.value)}
-                required
-                minLength={8}
-                maxLength={80}
+                id="licensePlate"
+                value={licensePlate}
+                onChange={(e) => setLicensePlate(e.target.value.toUpperCase().slice(0, 20))}
+                maxLength={20}
+                className="font-mono uppercase"
+                placeholder="ABC-123"
               />
             </div>
           </div>
-          <p className="text-xs text-on-surface-variant">
-            Comparte estas credenciales con el motorizado tras la creación.
+
+          <div>
+            <Label>Vehículo</Label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+              {VEHICLES.map((v) => {
+                const active = vehicleType === v.value
+                return (
+                  <button
+                    key={v.value}
+                    type="button"
+                    onClick={() => setVehicleType(v.value)}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-colors ${
+                      active
+                        ? 'border-primary bg-primary/10 text-primary font-bold'
+                        : 'border-outline-variant/40 bg-surface-container-lowest hover:bg-surface-container-low'
+                    }`}
+                  >
+                    <Icon name={v.icon} size={24} />
+                    <span className="text-xs">{v.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
+          <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+            Horarios y días laborales
+          </h2>
+
+          <div>
+            <Label>Días que trabaja</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {DAYS.map((day) => {
+                const active = operatingDays.includes(day.code)
+                return (
+                  <button
+                    key={day.code}
+                    type="button"
+                    onClick={() => toggleDay(day.code)}
+                    title={day.long}
+                    className={`w-11 h-11 rounded-full border font-bold transition-colors ${
+                      active
+                        ? 'border-primary bg-primary text-on-primary'
+                        : 'border-outline-variant/40 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low'
+                    }`}
+                  >
+                    {day.short}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-on-surface-variant mt-2">
+              Toca los días para activarlos o desactivarlos.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="shiftStart">Turno inicio</Label>
+              <Input
+                id="shiftStart"
+                type="time"
+                value={shiftStart}
+                onChange={(e) => setShiftStart(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="shiftEnd">Turno fin</Label>
+              <Input
+                id="shiftEnd"
+                type="time"
+                value={shiftEnd}
+                onChange={(e) => setShiftEnd(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
+          <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+            Restaurantes asignados
+          </h2>
+          <p className="text-xs text-on-surface-variant -mt-2">
+            Solo los pedidos creados por estos restaurantes podrán auto-asignarse a este motorizado.
+          </p>
+          {restaurantsQuery.isLoading ? (
+            <div className="text-xs text-on-surface-variant">Cargando restaurantes…</div>
+          ) : allRestaurants.length === 0 ? (
+            <div className="text-xs text-on-surface-variant">
+              No hay restaurantes registrados todavía.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {allRestaurants.map((r) => {
+                const checked = restaurantIds.includes(r.id)
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => toggleRestaurant(r.id)}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                      checked
+                        ? 'border-primary bg-primary/10'
+                        : 'border-outline-variant/40 hover:bg-surface-container-low'
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex w-4 h-4 rounded items-center justify-center border-2"
+                      style={{
+                        borderColor: checked ? '#FF6B35' : '#cbd5e1',
+                        background: checked ? '#FF6B35' : 'transparent',
+                      }}
+                    >
+                      {checked && <Icon name="check" size={12} className="text-white" filled />}
+                    </span>
+                    <span
+                      className="inline-block w-3 h-3 rounded-full"
+                      style={{ background: `#${r.accent_color}` }}
+                    />
+                    <span className="font-semibold text-sm">{r.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          <p className="text-[11px] text-on-surface-variant">
+            {restaurantIds.length === 0
+              ? 'Sin restaurantes asignados → este motorizado NO recibirá pedidos por auto-asignación.'
+              : `${restaurantIds.length} ${restaurantIds.length === 1 ? 'restaurante asignado' : 'restaurantes asignados'}.`}
           </p>
         </section>
-      )}
 
-      {errorMsg && (
-        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {errorMsg}
+        {mode === 'create' && (
+          <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">
+            <h2 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+              Credenciales del motorizado (login a la PWA)
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Contraseña temporal (mín 8)</Label>
+                <Input
+                  id="password"
+                  type="text"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  maxLength={80}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-on-surface-variant">
+              Comparte estas credenciales con el motorizado tras la creación.
+            </p>
+          </section>
+        )}
+
+        {errorMsg && (
+          <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {errorMsg}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button type="submit" disabled={pending} size="lg">
+            <Icon name="check" />
+            {pending ? 'Guardando...' : mode === 'create' ? 'Crear motorizado' : 'Guardar cambios'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            disabled={pending}
+            onClick={() => router.back()}
+          >
+            Cancelar
+          </Button>
         </div>
-      )}
-
-      <div className="flex gap-3">
-        <Button type="submit" disabled={pending} size="lg">
-          <Icon name="check" />
-          {pending ? 'Guardando...' : mode === 'create' ? 'Crear motorizado' : 'Guardar cambios'}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="lg"
-          disabled={pending}
-          onClick={() => router.back()}
-        >
-          Cancelar
-        </Button>
-      </div>
-    </form>
+      </form>
+    </div>
   )
 }
 

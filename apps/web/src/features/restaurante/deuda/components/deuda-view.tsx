@@ -1,42 +1,62 @@
 'use client'
 import { EmptyState, Icon, Skeleton } from '@tindivo/ui'
-import { useSettlements } from '../hooks/use-settlements'
+import { useMyPayments } from '../hooks/use-settlements'
 
 const money = (n: number) =>
   new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(n)
 
-const statusConfig: Record<string, { label: string; bg: string; color: string; border: string }> = {
-  pending: {
-    label: 'Pendiente',
-    bg: 'rgba(234, 179, 8, 0.12)',
-    color: '#92400E',
-    border: 'rgba(234, 179, 8, 0.25)',
+type MethodCfg = { label: string; icon: string; bg: string; color: string }
+const FALLBACK_METHOD: MethodCfg = {
+  label: 'Otro',
+  icon: 'more_horiz',
+  bg: 'rgba(100, 116, 139, 0.12)',
+  color: '#334155',
+}
+const METHOD_CONFIG: Record<string, MethodCfg> = {
+  yape: {
+    label: 'Yape',
+    icon: 'qr_code_2',
+    bg: 'rgba(124, 58, 237, 0.12)',
+    color: '#5B21B6',
   },
-  paid: {
-    label: 'Pagada',
+  plin: {
+    label: 'Plin',
+    icon: 'qr_code',
+    bg: 'rgba(6, 182, 212, 0.12)',
+    color: '#0E7490',
+  },
+  bank_transfer: {
+    label: 'Transferencia',
+    icon: 'account_balance',
+    bg: 'rgba(59, 130, 246, 0.12)',
+    color: '#1D4ED8',
+  },
+  cash: {
+    label: 'Efectivo',
+    icon: 'payments',
     bg: 'rgba(16, 185, 129, 0.12)',
     color: '#065F46',
-    border: 'rgba(16, 185, 129, 0.25)',
   },
-  overdue: {
-    label: 'Vencida',
-    bg: 'rgba(186, 26, 26, 0.12)',
-    color: '#991B1B',
-    border: 'rgba(186, 26, 26, 0.25)',
+  other: {
+    label: 'Otro',
+    icon: 'more_horiz',
+    bg: 'rgba(100, 116, 139, 0.12)',
+    color: '#334155',
   },
 }
 
-function formatPeriod(start: string, end: string) {
-  const s = new Date(start)
-  const e = new Date(end)
-  const sd = s.getDate()
-  const ed = e.getDate()
-  const m = e.toLocaleDateString('es-PE', { month: 'long' })
-  return `${sd} – ${ed} ${m}`
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('es-PE', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export function DeudaView() {
-  const { data, isLoading } = useSettlements()
+  const { data, isLoading } = useMyPayments()
 
   if (isLoading || !data) {
     return (
@@ -83,7 +103,7 @@ export function DeudaView() {
           </div>
           <div className="text-xs opacity-85 mt-2">
             {data.balanceDue > 0
-              ? 'Paga antes del vencimiento con Yape'
+              ? 'Coordina el pago con Tindivo cuando puedas'
               : 'Estás al día. ¡Gracias!'}
           </div>
         </div>
@@ -107,15 +127,15 @@ export function DeudaView() {
                 Pagar con Yape
               </div>
               <p className="text-sm text-on-surface mt-1">
-                Envía el monto exacto al número de Tindivo y luego el admin marcará tu liquidación
-                como pagada.
+                Envía el monto al número de Tindivo y el admin registrará tu pago. Cada pago se
+                descuenta inmediatamente del saldo.
               </p>
             </div>
           </div>
         </section>
       )}
 
-      {/* Lista de liquidaciones */}
+      {/* Historial de pagos */}
       <section>
         <div className="flex items-center gap-3 mb-4 px-1">
           <span
@@ -127,68 +147,49 @@ export function DeudaView() {
             aria-hidden="true"
           />
           <h2 className="text-[11px] font-bold tracking-[0.2em] uppercase text-on-surface-variant">
-            Liquidaciones
+            Historial de pagos
           </h2>
         </div>
 
         {items.length === 0 ? (
           <EmptyState
             icon="account_balance_wallet"
-            title="Sin liquidaciones aún"
-            description="Las liquidaciones semanales aparecerán aquí cuando el admin las genere."
+            title="Aún no hay pagos registrados"
+            description="Cuando coordines un pago con Tindivo, el admin lo registrará aquí y se descontará del saldo."
           />
         ) : (
           <ul className="flex flex-col gap-3">
-            {items.map((s) => {
-              const cfg = (statusConfig[s.status] ?? statusConfig.pending) as {
-                label: string
-                bg: string
-                color: string
-                border: string
-              }
+            {items.map((p) => {
+              const cfg = METHOD_CONFIG[p.paymentMethod] ?? FALLBACK_METHOD
               return (
                 <li
-                  key={s.id}
+                  key={p.id}
                   className="rounded-[24px] p-5 bg-surface-container-lowest border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)]"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="text-[10px] font-bold tracking-wider uppercase text-on-surface-variant">
-                        {formatPeriod(s.periodStart, s.periodEnd)}
+                        {formatDateTime(p.paidAt)}
                       </div>
-                      <div className="bleed-text text-2xl font-black text-on-surface mt-1">
-                        {money(s.totalAmount)}
+                      <div className="bleed-text text-2xl font-black text-emerald-700 mt-1">
+                        {money(p.amount)}
                       </div>
-                      <div className="text-xs text-on-surface-variant mt-1">
-                        {s.orderCount} {s.orderCount === 1 ? 'pedido' : 'pedidos'} · Vence{' '}
-                        {new Date(s.dueDate).toLocaleDateString('es-PE', {
-                          day: '2-digit',
-                          month: 'short',
-                        })}
-                      </div>
+                      {p.paymentNote && (
+                        <p className="text-xs text-on-surface-variant mt-2">{p.paymentNote}</p>
+                      )}
                     </div>
                     <span
                       className="shrink-0 inline-flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full"
                       style={{
                         background: cfg.bg,
                         color: cfg.color,
-                        border: `1px solid ${cfg.border}`,
+                        border: `1px solid ${cfg.color}33`,
                       }}
                     >
+                      <Icon name={cfg.icon} size={12} />
                       {cfg.label}
                     </span>
                   </div>
-                  {s.paidAt && (
-                    <div className="text-xs text-on-surface-variant mt-3 flex items-center gap-1.5">
-                      <Icon name="check_circle" size={14} filled />
-                      Pagada el{' '}
-                      {new Date(s.paidAt).toLocaleDateString('es-PE', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </div>
-                  )}
                 </li>
               )
             })}
