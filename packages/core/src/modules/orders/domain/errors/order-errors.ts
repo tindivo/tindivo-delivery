@@ -63,6 +63,14 @@ export class DriverNotAssigned extends DomainError {
   readonly message = 'El pedido no tiene driver asignado'
 }
 
+export class InvalidTransfer extends DomainError {
+  readonly code = 'INVALID_TRANSFER'
+  readonly message = 'Transferencia no válida'
+  constructor(detail: string) {
+    super({ detail })
+  }
+}
+
 export class RestaurantBlocked extends DomainError {
   readonly code = 'RESTAURANT_BLOCKED'
   readonly message = 'El restaurante está bloqueado'

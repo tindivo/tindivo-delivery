@@ -35,6 +35,10 @@ export function ordersApi(client: ApiClient) {
       client.post<Orders.AcceptOrderResponse>(`driver/orders/${id}/accept`),
     rejectAssignment: (id: string, body: Orders.RejectAssignmentRequest) =>
       client.post<Orders.RejectAssignmentResponse>(`driver/orders/${id}/reject`, body),
+    listPeers: (restaurantId: string) =>
+      client.get<Orders.ListPeersResponse>('driver/peers', { query: { restaurantId } }),
+    transferOrder: (id: string, body: Orders.TransferOrderRequest) =>
+      client.post<Orders.TransferOrderResponse>(`driver/orders/${id}/transfer`, body),
     markArrived: (id: string, body?: Orders.MarkArrivedRequest) =>
       client.post<void>(`driver/orders/${id}/arrived`, body),
     markReceived: (id: string) =>

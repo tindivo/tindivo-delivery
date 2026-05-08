@@ -66,3 +66,9 @@ export type {
   RejectOrderAssignmentCommand,
   RejectOrderAssignmentResult,
 } from './reject-order-assignment.use-case'
+
+export { TransferOrderToDriverUseCase } from './transfer-order-to-driver.use-case'
+export type {
+  TransferOrderToDriverCommand,
+  TransferOrderToDriverResult,
+} from './transfer-order-to-driver.use-case'

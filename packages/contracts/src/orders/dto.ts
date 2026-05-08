@@ -8,7 +8,7 @@ import {
   TimestampSchema,
   UuidSchema,
 } from '../common'
-import { CancellationReason, OrderStatus, PaymentStatus } from '../enums'
+import { CancellationReason, OrderStatus, PaymentStatus, VehicleType } from '../enums'
 
 /* ─────────────── Request DTOs ─────────────── */
 
@@ -191,6 +191,40 @@ export const RejectAssignmentRequest = z.object({
 export type RejectAssignmentRequest = z.infer<typeof RejectAssignmentRequest>
 
 /**
+ * Razones predefinidas con las que el motorizado puede transferir su pedido
+ * activo a otro compañero. Mantener sincronizada con la UI
+ * (`transfer-order-sheet.tsx`).
+ */
+export const TRANSFER_REASONS = [
+  'accident',
+  'mechanical_issue',
+  'personal_emergency',
+  'other',
+] as const
+export const TransferReason = z.enum(TRANSFER_REASONS)
+export type TransferReason = z.infer<typeof TransferReason>
+
+export const TransferOrderRequest = z.object({
+  toDriverId: UuidSchema,
+  reason: TransferReason,
+})
+export type TransferOrderRequest = z.infer<typeof TransferOrderRequest>
+
+export const DriverPeerItem = z.object({
+  driverId: UuidSchema,
+  fullName: z.string(),
+  vehicleType: VehicleType,
+  activeSlots: z.number().int().min(0),
+  reservedSlots: z.number().int().min(0),
+})
+export type DriverPeerItem = z.infer<typeof DriverPeerItem>
+
+export const ListPeersResponse = z.object({
+  items: z.array(DriverPeerItem),
+})
+export type ListPeersResponse = z.infer<typeof ListPeersResponse>
+
+/**
  * Body para POST /driver/orders/:id/picked-up. El driver declara la
  * ocupación del pedido en su mochila (1..N, default 1, max configurable
  * por admin via assignment_rules.maxOccupancySlotsPerOrder).
@@ -344,6 +378,13 @@ export const RejectAssignmentResponse = z.object({
   rejectedAt: TimestampSchema,
 })
 export type RejectAssignmentResponse = z.infer<typeof RejectAssignmentResponse>
+
+export const TransferOrderResponse = z.object({
+  id: UuidSchema,
+  status: OrderStatus,
+  newDriverId: UuidSchema,
+})
+export type TransferOrderResponse = z.infer<typeof TransferOrderResponse>
 
 export const SaveCustomerDataResponse = z.object({
   id: UuidSchema,

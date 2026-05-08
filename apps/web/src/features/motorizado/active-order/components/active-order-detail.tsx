@@ -28,9 +28,11 @@ import { useMarkPickedUp } from '../hooks/use-mark-picked-up'
 import { useMarkReceived } from '../hooks/use-mark-received'
 import { useOrderDetail } from '../hooks/use-order-detail'
 import { useSaveCustomerData } from '../hooks/use-save-customer-data'
+import { useTransferOrder } from '../hooks/use-transfer-order'
 import { ChangePaymentMethodModal } from './change-payment-method-modal'
 import { ConfirmPickupModal } from './confirm-pickup-modal'
 import { CustomerDataForm } from './customer-data-form'
+import { TransferOrderSheet } from './transfer-order-sheet'
 import { YapeQrCard } from './yape-qr-card'
 
 const PHONE_REGEX = /^9\d{8}$/
@@ -46,8 +48,11 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const pickedUp = useMarkPickedUp(orderId)
   const acceptOrder = useAcceptOrder()
   const rejectOrder = useRejectOrder()
+  const transferOrder = useTransferOrder(orderId)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectError, setRejectError] = useState<string | null>(null)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [transferError, setTransferError] = useState<string | null>(null)
   const saveCustomerData = useSaveCustomerData(orderId)
   const now = useNow(1_000)
   const { navigate: navigateMaps, isLocating } = useGeolocatedNavigation()
@@ -571,6 +576,41 @@ export function ActiveOrderDetail({ orderId }: Props) {
         />
       )}
 
+      {transferOpen && (
+        <TransferOrderSheet
+          restaurantId={raw.restaurant_id}
+          isPending={transferOrder.isPending}
+          errorMessage={transferError}
+          onCancel={() => {
+            setTransferOpen(false)
+            setTransferError(null)
+          }}
+          onConfirm={(toDriverId, reason) => {
+            setTransferError(null)
+            transferOrder.mutate(
+              { toDriverId, reason },
+              {
+                onSuccess: () => {
+                  setTransferOpen(false)
+                  router.replace('/motorizado')
+                },
+                onError: (err) => {
+                  if (err instanceof ApiError && err.problem.code === 'DRIVER_CAPACITY_EXCEEDED') {
+                    setTransferError('Ese motorizado ya no tiene espacio. Elige otro.')
+                  } else if (err instanceof ApiError && err.problem.code === 'INVALID_TRANSFER') {
+                    setTransferError(err.problem.detail ?? 'No pudimos transferir el pedido.')
+                  } else if (err instanceof ApiError && err.problem.code === 'INVALID_STATE_TRANSITION') {
+                    setTransferError('El pedido cambió de estado. Recarga la pantalla.')
+                  } else {
+                    setTransferError('No pudimos transferir el pedido. Intenta de nuevo.')
+                  }
+                },
+              },
+            )
+          }}
+        />
+      )}
+
       <BottomActionBar>
         {status === 'waiting_driver' && (
           <div className="flex flex-col gap-2 w-full">
@@ -645,6 +685,17 @@ export function ActiveOrderDetail({ orderId }: Props) {
               <Icon name="check" />
               Llegué al local
             </Button>
+            <button
+              type="button"
+              onClick={() => {
+                setTransferError(null)
+                setTransferOpen(true)
+              }}
+              className="w-full inline-flex items-center justify-center gap-1.5 h-9 text-xs font-bold tracking-wide text-on-surface-variant active:scale-95"
+            >
+              <Icon name="swap_horiz" size={16} />
+              Pasar pedido a otro motorizado
+            </button>
           </>
         )}
 
@@ -720,6 +771,17 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 {pickedUp.isPending ? 'Confirmando...' : 'Ya recogí el pedido'}
               </Button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                setTransferError(null)
+                setTransferOpen(true)
+              }}
+              className="w-full inline-flex items-center justify-center gap-1.5 h-9 text-xs font-bold tracking-wide text-on-surface-variant active:scale-95"
+            >
+              <Icon name="swap_horiz" size={16} />
+              Pasar pedido a otro motorizado
+            </button>
           </>
         )}
 
@@ -775,6 +837,17 @@ export function ActiveOrderDetail({ orderId }: Props) {
               <Icon name="check_circle" filled />
               Pedido entregado
             </Button>
+            <button
+              type="button"
+              onClick={() => {
+                setTransferError(null)
+                setTransferOpen(true)
+              }}
+              className="w-full inline-flex items-center justify-center gap-1.5 h-9 text-xs font-bold tracking-wide text-on-surface-variant active:scale-95"
+            >
+              <Icon name="swap_horiz" size={16} />
+              Pasar pedido a otro motorizado
+            </button>
           </>
         )}
       </BottomActionBar>

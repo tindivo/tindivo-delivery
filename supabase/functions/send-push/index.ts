@@ -126,6 +126,30 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
           vibrate: [300, 120, 300],
         }
 
+      case 'OrderReassigned':
+        // Caso: un motorizado transfirió su pedido (accidente, avería) a otro
+        // compañero. Notificamos al destinatario para que tome la entrega y
+        // al restaurante para que sepa quién se hace responsable ahora.
+        if (role === 'driver') {
+          return {
+            title: `Te pasaron un pedido — ${restaurantName}`,
+            body: `${amount} · entrégalo lo antes posible`,
+            url: `/motorizado/pedidos/${event.aggregate_id}`,
+            tag: `reassigned-${shortId || event.aggregate_id}`,
+            requireInteraction: true,
+            vibrate: [300, 120, 300],
+          }
+        }
+        if (role === 'restaurant') {
+          return {
+            title: 'Cambio de motorizado',
+            body: `${restaurantOrderLabel} ahora va con otro motorizado`,
+            url: `/restaurante/pedidos/${event.aggregate_id}`,
+            tag: `reassigned-${shortId || event.aggregate_id}`,
+          }
+        }
+        return null
+
       case 'OrderOverdue':
         if (role !== 'driver') return null
         return {
@@ -342,6 +366,17 @@ async function resolveRecipients(
       case 'OrderAssigned':
         if (order.drivers?.user_id) {
           out.push({ userId: order.drivers.user_id, role: 'driver' })
+        }
+        break
+
+      case 'OrderReassigned':
+        // `order.drivers.user_id` ya apunta al nuevo driver porque la fila
+        // orders se actualizó antes de insertar el domain_event.
+        if (order.drivers?.user_id) {
+          out.push({ userId: order.drivers.user_id, role: 'driver' })
+        }
+        if (order.restaurants?.user_id) {
+          out.push({ userId: order.restaurants.user_id, role: 'restaurant' })
         }
         break
 

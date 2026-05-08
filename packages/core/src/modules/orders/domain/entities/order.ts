@@ -579,26 +579,43 @@ export class Order extends AggregateRoot<OrderId> {
     return Result.okVoid()
   }
 
+  /**
+   * Reasigna el pedido a otro driver. Permitido en:
+   *  - `heading_to_restaurant` y `waiting_at_restaurant`: el nuevo driver
+   *    "hereda" la asignación pero debe (re)ir al local. Reseteamos el
+   *    status a heading y los timestamps de ruta.
+   *  - `picked_up`: caso accidente/avería con la comida ya en mochila. El
+   *    nuevo driver hereda el pedido tal cual; status sigue picked_up,
+   *    no reseteamos timestamps de ruta porque el cliente espera la comida
+   *    cuanto antes y no hay nada que "rehacer".
+   */
   reassignTo(
     newDriverId: DriverId,
     reason: string,
     now: Date,
   ): Result<void, InvalidStateTransition> {
-    if (
-      this._state.status.value !== 'heading_to_restaurant' &&
-      this._state.status.value !== 'waiting_at_restaurant'
-    )
-      return Result.fail(
-        new InvalidStateTransition(this._state.status.value, 'heading_to_restaurant'),
-      )
+    const status = this._state.status.value
+    const allowed =
+      status === 'heading_to_restaurant' ||
+      status === 'waiting_at_restaurant' ||
+      status === 'picked_up'
+    if (!allowed) {
+      return Result.fail(new InvalidStateTransition(status, 'heading_to_restaurant'))
+    }
 
     const previous = this._state.driverId
     this._state.driverId = newDriverId
-    this._state.status = OrderStatus.headingToRestaurant()
-    this._state.acceptedAt = now
-    this._state.headingAt = now
-    this._state.waitingAt = null
-    this._state.updatedAt = now
+
+    if (status === 'picked_up') {
+      // Solo cambia el dueño; status, pickedUpAt, occupancySlots intactos.
+      this._state.updatedAt = now
+    } else {
+      this._state.status = OrderStatus.headingToRestaurant()
+      this._state.acceptedAt = now
+      this._state.headingAt = now
+      this._state.waitingAt = null
+      this._state.updatedAt = now
+    }
 
     this.raise(
       new OrderReassigned({
