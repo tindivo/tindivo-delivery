@@ -21,7 +21,9 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await auth.auth.supabase
     .from('orders')
-    .select('*, restaurants!inner(name, accent_color), drivers(full_name, phone, vehicle_type)')
+    .select(
+      '*, restaurants!inner(name, accent_color), drivers!orders_driver_id_fkey(full_name, phone, vehicle_type)',
+    )
     .eq('status', 'picked_up')
     .is('tracking_link_sent_at', null)
     .not('client_phone', 'is', null)

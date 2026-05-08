@@ -22,7 +22,9 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await auth.auth.supabase
     .from('orders')
-    .select('*, restaurants!inner(name, accent_color), drivers(full_name, phone, vehicle_type)')
+    .select(
+      '*, restaurants!inner(name, accent_color), drivers!orders_driver_id_fkey(full_name, phone, vehicle_type)',
+    )
     .not('tracking_link_sent_at', 'is', null)
     .order('tracking_link_sent_at', { ascending: false })
     .limit(100)

@@ -18,7 +18,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { data, error } = await auth.auth.supabase
     .from('orders')
-    .select('*, order_status_history(*), drivers(full_name, phone, vehicle_type)')
+    .select(
+      '*, order_status_history(*), drivers!orders_driver_id_fkey(full_name, phone, vehicle_type)',
+    )
     .eq('id', id)
     .eq('restaurant_id', auth.auth.restaurantId)
     .maybeSingle()

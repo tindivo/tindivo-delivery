@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
        created_at, accepted_at, delivered_at, accept_countdown_seconds,
        restaurant_id, driver_id,
        restaurants!inner(name, accent_color, is_test_account),
-       drivers(full_name, vehicle_type, is_test_account)`,
+       drivers!orders_driver_id_fkey(full_name, vehicle_type, is_test_account)`,
     )
     .gte('created_at', range.from.toISOString())
     .lt('created_at', range.to.toISOString())

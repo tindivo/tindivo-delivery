@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await auth.auth.supabase
     .from('orders')
-    .select('*, drivers(full_name)')
+    .select('*, drivers!orders_driver_id_fkey(full_name)')
     .eq('restaurant_id', auth.auth.restaurantId)
     .in('status', statuses)
     .gte('created_at', since.toISOString())
