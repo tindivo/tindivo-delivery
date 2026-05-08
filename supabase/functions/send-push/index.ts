@@ -338,9 +338,16 @@ async function resolveRecipients(
   event: EventRow,
 ): Promise<Recipient[]> {
   if (event.aggregate_type === 'Order') {
+    // Hint `!orders_driver_id_fkey` desambigua el embed `drivers(...)`. Sin
+    // el hint, la migración que añadió `order_assignment_rejections.driver_id`
+    // (FK a drivers) crea una segunda ruta lógica entre `orders` y `drivers`
+    // y PostgREST devuelve PGRST201, este SELECT retorna data=null y la
+    // función marca el evento como published sin enviar ningún push.
     const { data: order } = await sb
       .from('orders')
-      .select('restaurant_id, driver_id, restaurants(user_id), drivers(user_id)')
+      .select(
+        'restaurant_id, driver_id, restaurants(user_id), drivers!orders_driver_id_fkey(user_id)',
+      )
       .eq('id', event.aggregate_id)
       .maybeSingle()
 
