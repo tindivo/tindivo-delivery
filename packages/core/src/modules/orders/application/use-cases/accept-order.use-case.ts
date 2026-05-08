@@ -40,7 +40,12 @@ export class AcceptOrderUseCase
 
     const order = await this.orders.findById(orderId)
     if (!order) return Result.fail(new OrderNotFound(cmd.orderId))
-    if (order.driverId) return Result.fail(new OrderAlreadyAccepted())
+    // Solo rechaza si el pedido ya fue asignado a OTRO driver. Si driver_id
+    // coincide con quien invoca, es el caso normal post-AutoAssign: el
+    // sistema le reservó el pedido y ahora él confirma con "Aceptar".
+    if (order.driverId && order.driverId.value !== cmd.driverId) {
+      return Result.fail(new OrderAlreadyAccepted())
+    }
 
     const previousStatus = order.status
     const activeCount = await this.orders.countActiveByDriver(driverId)
