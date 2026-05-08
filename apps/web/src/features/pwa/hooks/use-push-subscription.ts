@@ -1,9 +1,26 @@
 'use client'
 import { api } from '@/lib/api/client'
 import { supabase } from '@/lib/supabase/client'
+import { ApiError } from '@tindivo/api-client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 type Status = 'unsupported' | 'default' | 'granted' | 'denied' | 'subscribed'
+
+/**
+ * Causa específica de un fallo al suscribir. La UI mapea cada `reason`
+ * a un mensaje accionable (ver `push-toggle-card.tsx`). Mantener este
+ * union actualizado con cualquier nuevo punto de fallo.
+ */
+export type SubscribeFailReason =
+  | 'no-vapid'
+  | 'no-session'
+  | 'no-permission'
+  | 'incomplete-keys'
+  | `subscribe-throw:${string}`
+  | `api-error:${string}:${number}`
+  | `error:${string}`
+
+export type SubscribeResult = { ok: true } | { ok: false; reason: SubscribeFailReason }
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
 const AUTO_HEAL_MIN_INTERVAL_MS = 60_000
@@ -54,38 +71,51 @@ export function usePushSubscription() {
   const lastAutoHealAtRef = useRef<number>(0)
   const autoHealInFlightRef = useRef<boolean>(false)
 
-  const subscribeInternal = useCallback(async (): Promise<boolean> => {
+  const subscribeInternal = useCallback(async (): Promise<SubscribeResult> => {
     if (!VAPID_PUBLIC_KEY) {
       console.error('[push] NEXT_PUBLIC_VAPID_PUBLIC_KEY no configurada')
-      return false
+      return { ok: false, reason: 'no-vapid' }
     }
     // Guard de sesión: el endpoint requiere Bearer token. Sin sesión activa
     // la request va sin Authorization y termina en 401, que el ApiClient
     // tropieza al intentar parsear si el body no es JSON válido.
-    if (!(await hasActiveSession())) return false
+    if (!(await hasActiveSession())) return { ok: false, reason: 'no-session' }
 
     const reg = await navigator.serviceWorker.ready
     let sub = await reg.pushManager.getSubscription()
     if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
-      })
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
+        })
+      } catch (err) {
+        const name = err instanceof Error ? err.name : 'Unknown'
+        return { ok: false, reason: `subscribe-throw:${name}` }
+      }
     }
 
     const json = sub.toJSON()
     if (!json.keys?.p256dh || !json.keys?.auth) {
-      throw new Error('PushSubscription incompleto (faltan keys)')
+      return { ok: false, reason: 'incomplete-keys' }
     }
-    await api.post<void>('push/subscribe', {
-      endpoint: sub.endpoint,
-      keys: {
-        p256dh: json.keys.p256dh,
-        auth: json.keys.auth,
-      },
-      userAgent: navigator.userAgent.slice(0, 300),
-    })
-    return true
+    try {
+      await api.post<void>('push/subscribe', {
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: json.keys.p256dh,
+          auth: json.keys.auth,
+        },
+        userAgent: navigator.userAgent.slice(0, 300),
+      })
+    } catch (err) {
+      if (err instanceof ApiError) {
+        return { ok: false, reason: `api-error:${err.problem.code}:${err.status}` }
+      }
+      const name = err instanceof Error ? err.name : 'Unknown'
+      return { ok: false, reason: `error:${name}` }
+    }
+    return { ok: true }
   }, [])
 
   const tryAutoHeal = useCallback(async (): Promise<void> => {
@@ -224,21 +254,25 @@ export function usePushSubscription() {
    * handler antes de invocar este método, porque iOS Safari rompe el contexto
    * de gesto si hay setState/render intermedios.
    */
-  const subscribe = useCallback(async () => {
+  const subscribe = useCallback(async (): Promise<SubscribeResult> => {
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
       console.warn('[push] subscribe called without granted permission')
       await checkStatus()
-      return false
+      return { ok: false, reason: 'no-permission' }
     }
     setLoading(true)
     try {
-      await subscribeInternal()
+      const result = await subscribeInternal()
       await checkStatus()
-      return true
+      if (!result.ok) console.error('[push:subscribe]', result.reason)
+      return result
     } catch (err) {
-      console.error('[push] subscribe failed', err)
+      // Safety-net: subscribeInternal ya maneja sus errores conocidos,
+      // pero hasActiveSession / serviceWorker.ready pueden lanzar.
+      const name = err instanceof Error ? err.name : 'Unknown'
+      console.error('[push:subscribe] unexpected throw', err)
       await checkStatus()
-      return false
+      return { ok: false, reason: `error:${name}` }
     } finally {
       setLoading(false)
     }
