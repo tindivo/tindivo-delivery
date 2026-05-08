@@ -1,4 +1,5 @@
 'use client'
+import { useNow } from '@/shared/hooks/use-now'
 import { EmptyState, Icon, OrderCard, Skeleton, listItem, staggerContainer } from '@tindivo/ui'
 import { AnimatePresence, motion } from 'motion/react'
 import { useRouter } from 'next/navigation'
@@ -37,6 +38,7 @@ function paymentLabel(status: string): string {
 export function MyActiveOrdersList() {
   const router = useRouter()
   const { data, isLoading } = useDriverActiveOrders()
+  const now = useNow(1_000)
 
   const items = useMemo(() => {
     const list = (data?.items ?? []) as ActiveOrder[]
@@ -92,6 +94,7 @@ export function MyActiveOrdersList() {
                 orderAmount={Number(order.order_amount)}
                 paymentLabel={paymentLabel(order.payment_status)}
                 estimatedReadyAt={order.estimated_ready_at}
+                now={now}
                 onClick={() => router.push(`/motorizado/pedidos/${order.id}`)}
               />
             </motion.li>

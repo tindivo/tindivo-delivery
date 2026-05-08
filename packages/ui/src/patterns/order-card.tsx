@@ -1,9 +1,26 @@
+'use client'
+import { useEffect, useState } from 'react'
 import { Icon } from '../icons/icon'
 import { cn } from '../lib/cn'
 import { type UrgencyTier, computeUrgencyTier } from '../lib/urgency'
 import { ColorDot } from './color-dot'
 import { StatusChip } from './status-chip'
 import { UrgencyBadge } from './urgency-badge'
+
+/**
+ * Mantiene un `now` autónomo (1s) si el padre no propaga uno. Los call sites
+ * que SÍ pasan `now` lo reciben directo y el interval interno se desactiva
+ * para evitar timers duplicados.
+ */
+function useEffectiveNow(externalNow: Date | undefined, enabled: boolean): Date {
+  const [internal, setInternal] = useState<Date>(() => new Date())
+  useEffect(() => {
+    if (externalNow || !enabled) return undefined
+    const id = setInterval(() => setInternal(new Date()), 1_000)
+    return () => clearInterval(id)
+  }, [externalNow, enabled])
+  return externalNow ?? internal
+}
 
 type Props = {
   shortId: string
@@ -106,8 +123,9 @@ export function OrderCard({
       }).format(orderAmount)
 
   const showUrgency = Boolean(estimatedReadyAt)
+  const effectiveNow = useEffectiveNow(now, showUrgency)
   const tier: UrgencyTier | null = showUrgency
-    ? computeUrgencyTier(estimatedReadyAt as string | Date, now ?? new Date())
+    ? computeUrgencyTier(estimatedReadyAt as string | Date, effectiveNow)
     : null
   // El styling de tier (borde rojo, glow) solo aplica cuando el pedido aún
   // no tiene driver — para evitar gritar "urgente" en cards ya en ruta.
@@ -205,7 +223,11 @@ export function OrderCard({
         </div>
         <div className="flex flex-col items-end gap-1.5 text-xs">
           {showUrgency && estimatedReadyAt ? (
-            <UrgencyBadge estimatedReadyAt={estimatedReadyAt} now={now} variant="chip" />
+            <UrgencyBadge
+              estimatedReadyAt={estimatedReadyAt}
+              now={effectiveNow}
+              variant="chip"
+            />
           ) : (
             prepTimeMinutes != null && (
               <span className="inline-flex items-center gap-1 text-on-surface-variant">

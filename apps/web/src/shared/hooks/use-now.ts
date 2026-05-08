@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 /**
  * Hook que devuelve la fecha actual y se refresca cada `intervalMs`.
  *
- * Pensado para componentes con countdown (OrderCard, UrgencyBadge) — 30s
- * es granularidad suficiente para que un pedido cruce de amarillo a rojo
- * sin necesidad de refetch.
+ * Default 1s — los countdowns visibles del dominio (UrgencyBadge,
+ * ElapsedTimer) muestran segundos, así que la granularidad debe permitir
+ * transición fluida. Si un consumer no necesita tanta precisión (ej. un
+ * banner amarillo→rojo cada 10s) puede pasar `useNow(10_000)` explícito.
  */
-export function useNow(intervalMs = 30_000): Date {
+export function useNow(intervalMs = 1_000): Date {
   const [now, setNow] = useState<Date>(() => new Date())
 
   useEffect(() => {

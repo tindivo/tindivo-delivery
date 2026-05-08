@@ -1,3 +1,5 @@
+'use client'
+import { useEffect, useState } from 'react'
 import { Icon } from '../icons/icon'
 import { cn } from '../lib/cn'
 import {
@@ -6,6 +8,21 @@ import {
   formatRemaining,
   remainingLabel,
 } from '../lib/urgency'
+
+/**
+ * Si el padre pasa `now`, lo usamos directo (un solo timer raíz, eficiente).
+ * Si no, montamos un setInterval(1s) interno para que el countdown nunca se
+ * congele aunque el caller olvide propagar `now` desde su `useNow`.
+ */
+function useEffectiveNow(externalNow: Date | undefined): Date {
+  const [internal, setInternal] = useState<Date>(() => new Date())
+  useEffect(() => {
+    if (externalNow) return undefined
+    const id = setInterval(() => setInternal(new Date()), 1_000)
+    return () => clearInterval(id)
+  }, [externalNow])
+  return externalNow ?? internal
+}
 
 type Props = {
   estimatedReadyAt: string | Date
@@ -49,10 +66,11 @@ const TIER_STYLES: Record<
  */
 export function UrgencyBadge({
   estimatedReadyAt,
-  now = new Date(),
+  now: externalNow,
   variant = 'chip',
   className,
 }: Props) {
+  const now = useEffectiveNow(externalNow)
   const tier = computeUrgencyTier(estimatedReadyAt, now)
   const style = TIER_STYLES[tier]
   const countdown = formatRemaining(estimatedReadyAt, now)
