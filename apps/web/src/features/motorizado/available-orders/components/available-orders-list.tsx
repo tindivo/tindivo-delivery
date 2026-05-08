@@ -28,7 +28,7 @@ type OrderItem = any
 export function AvailableOrdersList() {
   const router = useRouter()
   const { data, isLoading } = useAvailableOrders()
-  const { activeCount, max, isFull } = useDriverCapacity()
+  const { activeCount, usedSlots, max, isFull } = useDriverCapacity()
   const now = useNow(1_000)
 
   const items = (data?.items ?? []) as OrderItem[]
@@ -65,7 +65,7 @@ export function AvailableOrdersList() {
 
   return (
     <div className="flex flex-col gap-3">
-      <CapacityIndicator activeCount={activeCount} max={max} />
+      <CapacityIndicator activeCount={activeCount} usedSlots={usedSlots} max={max} />
 
       {isLoading ? (
         <div className="space-y-3">

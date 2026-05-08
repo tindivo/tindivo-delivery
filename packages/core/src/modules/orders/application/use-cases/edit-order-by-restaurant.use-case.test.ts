@@ -146,7 +146,8 @@ describe('EditOrderByRestaurantUseCase', () => {
     order.markArrived(NOW)
     // saveCustomerData requiere phone + (coords or reference)
     order.saveCustomerData('999111222', null, null, 'Av. Test 123', NOW)
-    order.markPickedUp(NOW)
+    const { OccupancySlots: Slots } = await import('../../domain/value-objects/occupancy-slots')
+    order.markPickedUp(Slots.default(), NOW)
     order.markDelivered(NOW)
     order.pullEvents()
 

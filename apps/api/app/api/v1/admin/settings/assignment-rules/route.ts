@@ -28,6 +28,11 @@ const UpdateSchema = z.object({
     .int('groupingWindowMinutes debe ser entero')
     .min(1, 'groupingWindowMinutes mínimo 1 minuto')
     .max(60, 'groupingWindowMinutes máximo 60 minutos'),
+  maxOccupancySlotsPerOrder: z
+    .number()
+    .int('maxOccupancySlotsPerOrder debe ser entero')
+    .min(1, 'maxOccupancySlotsPerOrder mínimo 1')
+    .max(10, 'maxOccupancySlotsPerOrder máximo 10'),
 })
 
 /**
@@ -56,6 +61,7 @@ export async function GET(req: NextRequest) {
       maxOrdersPerDriver: rules.maxOrdersPerDriver,
       maxRestaurantsPerDriver: rules.maxRestaurantsPerDriver,
       groupingWindowMinutes: rules.groupingWindowMinutes,
+      maxOccupancySlotsPerOrder: rules.maxOccupancySlotsPerOrder,
     },
     updatedAt: data?.updated_at ?? null,
   })
@@ -76,6 +82,7 @@ export async function PATCH(req: NextRequest) {
     maxOrdersPerDriver: body.data.maxOrdersPerDriver,
     maxRestaurantsPerDriver: body.data.maxRestaurantsPerDriver,
     groupingWindowMinutes: body.data.groupingWindowMinutes,
+    maxOccupancySlotsPerOrder: body.data.maxOccupancySlotsPerOrder,
   }
 
   const repo = new SupabaseAssignmentRulesRepository(auth.auth.supabase)

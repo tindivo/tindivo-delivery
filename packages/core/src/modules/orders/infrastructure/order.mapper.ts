@@ -3,6 +3,7 @@ import { Order, type OrderProps } from '../domain/entities/order'
 import { Coordinates } from '../domain/value-objects/coordinates'
 import { DriverId } from '../domain/value-objects/driver-id'
 import { Money } from '../domain/value-objects/money'
+import { OccupancySlots } from '../domain/value-objects/occupancy-slots'
 import { OrderId } from '../domain/value-objects/order-id'
 import { OrderStatus } from '../domain/value-objects/order-status'
 import { PaymentIntent } from '../domain/value-objects/payment-intent'
@@ -83,6 +84,7 @@ export const OrderMapper = {
           ? row.prep_extension_minutes
           : null,
       readyEarlyAt: row.ready_early_at ? new Date(row.ready_early_at) : null,
+      occupancySlots: OccupancySlots.of(row.occupancy_slots ?? 1),
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     }
@@ -113,6 +115,7 @@ export const OrderMapper = {
       notes: p.notes,
       extension_used: p.extensionUsed,
       ready_early_used: p.readyEarlyUsed,
+      occupancy_slots: p.occupancySlots.value,
     }
   },
 
@@ -150,6 +153,7 @@ export const OrderMapper = {
       prep_extended_at: p.prepExtendedAt?.toISOString() ?? null,
       prep_extension_minutes: p.prepExtensionMinutes,
       ready_early_at: p.readyEarlyAt?.toISOString() ?? null,
+      occupancy_slots: p.occupancySlots.value,
       payment_status: p.payment.status,
       order_amount: p.payment.orderAmount.amount,
       yape_amount: p.payment.yapeAmount?.amount ?? null,

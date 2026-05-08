@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -916,6 +916,42 @@ export type Database = {
           },
         ]
       }
+      order_assignment_rejections: {
+        Row: {
+          driver_id: string
+          order_id: string
+          reason: string
+          rejected_at: string
+        }
+        Insert: {
+          driver_id: string
+          order_id: string
+          reason: string
+          rejected_at?: string
+        }
+        Update: {
+          driver_id?: string
+          order_id?: string
+          reason?: string
+          rejected_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_assignment_rejections_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_assignment_rejections_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_status_history: {
         Row: {
           changed_at: string
@@ -992,6 +1028,7 @@ export type Database = {
           heading_at: string | null
           id: string
           notes: string | null
+          occupancy_slots: number
           order_amount: number
           payment_status: Database["public"]["Enums"]["payment_status"]
           pending_acceptance_at: string | null
@@ -1048,6 +1085,7 @@ export type Database = {
           heading_at?: string | null
           id?: string
           notes?: string | null
+          occupancy_slots?: number
           order_amount: number
           payment_status: Database["public"]["Enums"]["payment_status"]
           pending_acceptance_at?: string | null
@@ -1104,6 +1142,7 @@ export type Database = {
           heading_at?: string | null
           id?: string
           notes?: string | null
+          occupancy_slots?: number
           order_amount?: number
           payment_status?: Database["public"]["Enums"]["payment_status"]
           pending_acceptance_at?: string | null
@@ -1415,7 +1454,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      activate_assigned_orders: { Args: never; Returns: undefined }
       admin_generate_settlements: {
         Args: {
           p_due_date: string
@@ -1459,6 +1497,7 @@ export type Database = {
       enqueue_overdue_orders: { Args: never; Returns: undefined }
       generate_short_id: { Args: never; Returns: string }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
+      invoke_assign_pending_orders: { Args: never; Returns: undefined }
       prune_stale_push_subscriptions: { Args: never; Returns: undefined }
     }
     Enums: {

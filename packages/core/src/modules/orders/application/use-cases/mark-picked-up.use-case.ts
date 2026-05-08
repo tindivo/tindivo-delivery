@@ -2,7 +2,13 @@ import type { DomainError } from '../../../../shared/errors/domain-error'
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
 import { OrderNotFound } from '../../domain/errors/order-errors'
+import {
+  type AssignmentRules,
+  DEFAULT_ASSIGNMENT_RULES,
+} from '../../domain/policies/assignment-rules'
+import { OccupancySlots } from '../../domain/value-objects/occupancy-slots'
 import { OrderId } from '../../domain/value-objects/order-id'
+import type { AssignmentRulesRepository } from '../ports/assignment-rules.repository'
 import type { Clock } from '../ports/clock'
 import type { EventPublisher } from '../ports/event-publisher'
 import type { OrderRepository } from '../ports/order.repository'
@@ -10,6 +16,7 @@ import type { OrderRepository } from '../ports/order.repository'
 export type MarkPickedUpCommand = {
   orderId: string
   driverId: string
+  occupancySlots: number
 }
 
 export type MarkPickedUpResult = {
@@ -18,6 +25,7 @@ export type MarkPickedUpResult = {
   pickedUpAt: string
   deliveryMapsUrl: string | null
   trackingUrl: string
+  occupancySlots: number
 }
 
 /**
@@ -38,14 +46,18 @@ export class MarkPickedUpUseCase
     private readonly events: EventPublisher,
     private readonly clock: Clock,
     private readonly publicAppUrl: string,
+    private readonly assignmentRules?: AssignmentRulesRepository,
   ) {}
 
   async execute(cmd: MarkPickedUpCommand): Promise<Result<MarkPickedUpResult, DomainError>> {
     const order = await this.orders.findById(OrderId.of(cmd.orderId))
     if (!order) return Result.fail(new OrderNotFound(cmd.orderId))
 
+    const rules = await this.loadRules()
+    const slots = OccupancySlots.of(cmd.occupancySlots, rules.maxOccupancySlotsPerOrder)
+
     const previous = order.status
-    const res = order.markPickedUp(this.clock.now())
+    const res = order.markPickedUp(slots, this.clock.now())
     if (res.isFailure) return Result.fail(res.error)
 
     await this.orders.save(order, previous)
@@ -64,6 +76,13 @@ export class MarkPickedUpUseCase
       pickedUpAt: order.props.pickedUpAt!.toISOString(),
       deliveryMapsUrl: mapsUrl,
       trackingUrl,
+      occupancySlots: order.occupancySlots.value,
     })
+  }
+
+  private async loadRules(): Promise<AssignmentRules> {
+    if (!this.assignmentRules) return DEFAULT_ASSIGNMENT_RULES
+    const stored = await this.assignmentRules.read().catch(() => null)
+    return stored ?? DEFAULT_ASSIGNMENT_RULES
   }
 }

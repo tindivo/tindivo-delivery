@@ -13,6 +13,7 @@ import type { AssignmentRulesRepository } from '../ports/assignment-rules.reposi
 import type { Clock } from '../ports/clock'
 import type { EventPublisher } from '../ports/event-publisher'
 import type { OrderRepository } from '../ports/order.repository'
+import type { RejectionsRepository } from '../ports/rejections.repository'
 
 export type AutoAssignOrderCommand = {
   orderId: string
@@ -33,6 +34,7 @@ export class AutoAssignOrderUseCase
     private readonly assignmentRules: AssignmentRulesRepository,
     private readonly events: EventPublisher,
     private readonly clock: Clock,
+    private readonly rejections?: RejectionsRepository,
   ) {}
 
   async execute(cmd: AutoAssignOrderCommand): Promise<Result<AutoAssignOrderResult, DomainError>> {
@@ -62,12 +64,20 @@ export class AutoAssignOrderUseCase
 
     const rules = await this.loadRules()
 
+    // Excluye drivers que ya rechazaron este pedido específico, así el cron
+    // no se lo vuelve a asignar a quien dijo "no". Si el repo de rechazos
+    // no fue inyectado (composición legacy), tratamos como lista vacía.
+    const excludedDriverIds = this.rejections
+      ? await this.rejections.findRejectedDriverIds(cmd.orderId)
+      : []
+
     const candidates = await this.orders.findAssignmentCandidates({
       restaurantId: order.restaurantId.value,
       estimatedReadyAt: order.estimatedReadyAt,
       now,
       todayStart: startOfLimaDay(now),
       groupingWindowMinutes: rules.groupingWindowMinutes,
+      excludedDriverIds,
     })
 
     const decision = DriverAssignmentPolicy.choose(

@@ -38,6 +38,10 @@ export type DriverAssignmentCandidate = {
   deliveredToday: number
   activeCount: number
   reservedCount: number
+  /** Suma de occupancy_slots de pedidos activos (heading/waiting/picked_up). */
+  activeSlots: number
+  /** Suma de occupancy_slots de pedidos reservados (waiting_driver con driver_id=this). */
+  reservedSlots: number
   cancelledTodayCount: number
   sameRestaurantWindowCount: number
   /** Restaurantes distintos que el driver tiene en mochila (no entregados/cancelados). */
@@ -66,9 +70,13 @@ export const DriverAssignmentPolicy = {
   ): AssignmentDecision | null {
     if (candidates.length === 0) return null
 
-    // R3: cap de pedidos en mochila por driver. Suma activos + reservados.
+    // R3: cap de slots en mochila por driver. Suma occupancy_slots de
+    // activos + reservados; añadimos +1 como reserva implícita del nuevo
+    // pedido (su occupancy real se conoce solo en `markPickedUp`, asumimos 1
+    // hasta entonces). Si el cap es 3 y el driver lleva activeSlots=2 más
+    // 1 reservedSlot, ya está en 3 — no entra otro.
     const r3Pool = candidates.filter(
-      (c) => c.activeCount + c.reservedCount < rules.maxOrdersPerDriver,
+      (c) => c.activeSlots + c.reservedSlots + 1 <= rules.maxOrdersPerDriver,
     )
     if (r3Pool.length === 0) return null // R5: cola "all_drivers_at_cap"
 
@@ -111,7 +119,11 @@ function canAddRestaurant(
 }
 
 function totalAssignedDay(c: DriverAssignmentCandidate): number {
-  return c.deliveredToday + c.activeCount + c.reservedCount + c.cancelledTodayCount
+  // Suma de "carga del día" usando slots para activos/reservados (mochila
+  // física actual) y count para entregados/cancelados (no se reconstruye
+  // historial de slots). Esto premia rotación: un driver con un pedido
+  // grande (slots=3) tiene mismo "load" que tres slots=1 distribuidos.
+  return c.deliveredToday + c.activeSlots + c.reservedSlots + c.cancelledTodayCount
 }
 
 function pickLeastLoaded(

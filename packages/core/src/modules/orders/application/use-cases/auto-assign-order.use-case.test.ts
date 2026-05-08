@@ -40,11 +40,15 @@ function buildOrder(prepMinutes: number, createdAt: Date): Order {
 }
 
 function buildCandidate(over: Partial<DriverAssignmentCandidate> = {}): DriverAssignmentCandidate {
+  const activeCount = over.activeCount ?? 0
+  const reservedCount = over.reservedCount ?? 0
   return {
     driverId: DRIVER_ID,
     deliveredToday: 0,
-    activeCount: 0,
-    reservedCount: 0,
+    activeCount,
+    reservedCount,
+    activeSlots: over.activeSlots ?? activeCount,
+    reservedSlots: over.reservedSlots ?? reservedCount,
     cancelledTodayCount: 0,
     sameRestaurantWindowCount: 0,
     distinctRestaurantsInBag: [],

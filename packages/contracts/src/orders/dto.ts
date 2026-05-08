@@ -171,6 +171,36 @@ export const MarkArrivedRequest = z.object({
 export type MarkArrivedRequest = z.infer<typeof MarkArrivedRequest>
 
 /**
+ * Razones predefinidas con las que el driver puede rechazar una asignación.
+ * Mantener sincronizada con la UI (`reject-assignment-sheet.tsx`).
+ */
+export const REJECTION_REASONS = [
+  'too_far',
+  'backpack_full',
+  'not_convenient',
+  'mechanical_issue',
+  'other',
+] as const
+
+export const RejectionReason = z.enum(REJECTION_REASONS)
+export type RejectionReason = z.infer<typeof RejectionReason>
+
+export const RejectAssignmentRequest = z.object({
+  reason: RejectionReason,
+})
+export type RejectAssignmentRequest = z.infer<typeof RejectAssignmentRequest>
+
+/**
+ * Body para POST /driver/orders/:id/picked-up. El driver declara la
+ * ocupación del pedido en su mochila (1..N, default 1, max configurable
+ * por admin via assignment_rules.maxOccupancySlotsPerOrder).
+ */
+export const MarkPickedUpRequest = z.object({
+  occupancySlots: z.number().int().min(1).max(10),
+})
+export type MarkPickedUpRequest = z.infer<typeof MarkPickedUpRequest>
+
+/**
  * Body para POST /driver/orders/:id/customer-data — el driver guarda los
  * datos del cliente mientras espera en el local. NO transiciona el status.
  *
@@ -304,8 +334,16 @@ export const PickedUpResponse = z.object({
   pickedUpAt: TimestampSchema,
   deliveryMapsUrl: z.string().url().nullable(),
   trackingUrl: z.string().url(),
+  occupancySlots: z.number().int().min(1).max(10),
 })
 export type PickedUpResponse = z.infer<typeof PickedUpResponse>
+
+export const RejectAssignmentResponse = z.object({
+  id: UuidSchema,
+  status: OrderStatus,
+  rejectedAt: TimestampSchema,
+})
+export type RejectAssignmentResponse = z.infer<typeof RejectAssignmentResponse>
 
 export const SaveCustomerDataResponse = z.object({
   id: UuidSchema,

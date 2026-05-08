@@ -6,11 +6,17 @@ const RESTAURANT = { restaurantId: 'rest-1' }
 const RULES: AssignmentRules = DEFAULT_ASSIGNMENT_RULES // 3 / 2 / 5
 
 function candidate(over: Partial<DriverAssignmentCandidate>): DriverAssignmentCandidate {
+  const activeCount = over.activeCount ?? 0
+  const reservedCount = over.reservedCount ?? 0
+  // Por default los tests asumen slots=1 por pedido (compat con R3 anterior
+  // basado en counts). Tests específicos de slots > 1 pueden override.
   return {
     driverId: 'driver-x',
     deliveredToday: 0,
-    activeCount: 0,
-    reservedCount: 0,
+    activeCount,
+    reservedCount,
+    activeSlots: over.activeSlots ?? activeCount,
+    reservedSlots: over.reservedSlots ?? reservedCount,
     cancelledTodayCount: 0,
     sameRestaurantWindowCount: 0,
     distinctRestaurantsInBag: [],

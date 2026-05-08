@@ -82,7 +82,10 @@ export class SupabaseOrderRepository implements OrderRepository {
       .eq('restaurant_id', query.restaurantId)
     if (assignedError) throw new PersistenceError(assignedError.message, assignedError)
 
-    const assignedDriverIds = (assignedRows ?? []).map((r) => r.driver_id)
+    const excluded = new Set(query.excludedDriverIds ?? [])
+    const assignedDriverIds = (assignedRows ?? [])
+      .map((r) => r.driver_id)
+      .filter((id) => !excluded.has(id))
     if (assignedDriverIds.length === 0) return []
 
     const { data: drivers, error: driversError } = await this.sb
@@ -125,7 +128,7 @@ export class SupabaseOrderRepository implements OrderRepository {
     const driverIds = eligibleDrivers.map((d) => d.driverId)
     const { data: orders, error: ordersError } = await this.sb
       .from('orders')
-      .select('driver_id, status, delivered_at, restaurant_id, estimated_ready_at')
+      .select('driver_id, status, delivered_at, restaurant_id, estimated_ready_at, occupancy_slots')
       .in('driver_id', driverIds)
       .gte('created_at', query.todayStart.toISOString())
     if (ordersError) throw new PersistenceError(ordersError.message, ordersError)
@@ -136,6 +139,11 @@ export class SupabaseOrderRepository implements OrderRepository {
         deliveredToday: number
         activeCount: number
         reservedCount: number
+        // Suma de occupancy_slots de pedidos activos. R3 (cap mochila) usa
+        // este número, no el count, para soportar pedidos grandes (slots>1)
+        // que ocupan más espacio físico aunque sean una fila.
+        activeSlots: number
+        reservedSlots: number
         cancelledTodayCount: number
         sameRestaurantWindowCount: number
         // Set de restaurant_ids con pedidos activos o reservados en la mochila.
@@ -149,6 +157,8 @@ export class SupabaseOrderRepository implements OrderRepository {
         deliveredToday: 0,
         activeCount: 0,
         reservedCount: 0,
+        activeSlots: 0,
+        reservedSlots: 0,
         cancelledTodayCount: 0,
         sameRestaurantWindowCount: 0,
         bag: new Set<string>(),
@@ -161,13 +171,19 @@ export class SupabaseOrderRepository implements OrderRepository {
       const s = stats.get(order.driver_id)
       if (!s) continue
 
+      // Pedidos con default 1 (DB: NOT NULL DEFAULT 1) — el `?? 1` es por
+      // si el cliente Supabase elimina el campo en algún select parcial.
+      const slots = order.occupancy_slots ?? 1
+
       if (order.status === 'delivered' && order.delivered_at) {
         s.deliveredToday++
       } else if ((ACTIVE_STATUSES as readonly string[]).includes(order.status)) {
         s.activeCount++
+        s.activeSlots += slots
         s.bag.add(order.restaurant_id)
       } else if (order.status === RESERVED_STATUS) {
         s.reservedCount++
+        s.reservedSlots += slots
         s.bag.add(order.restaurant_id)
       } else if (order.status === 'cancelled') {
         s.cancelledTodayCount++
@@ -193,6 +209,8 @@ export class SupabaseOrderRepository implements OrderRepository {
         deliveredToday: s?.deliveredToday ?? 0,
         activeCount: s?.activeCount ?? 0,
         reservedCount: s?.reservedCount ?? 0,
+        activeSlots: s?.activeSlots ?? 0,
+        reservedSlots: s?.reservedSlots ?? 0,
         cancelledTodayCount: s?.cancelledTodayCount ?? 0,
         sameRestaurantWindowCount: s?.sameRestaurantWindowCount ?? 0,
         distinctRestaurantsInBag: s ? Array.from(s.bag) : [],

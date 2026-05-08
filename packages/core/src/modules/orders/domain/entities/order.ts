@@ -3,6 +3,7 @@ import { Result } from '../../../../shared/kernel/result'
 import {
   CustomerDataMissing,
   DriverCapacityExceeded,
+  DriverNotAssigned,
   InvalidPaymentChange,
   InvalidStateTransition,
   NoPrepTimeToReduce,
@@ -17,6 +18,7 @@ import {
   OrderAccepted,
   OrderAcceptedByRestaurant,
   OrderAssigned,
+  OrderAssignmentRejected,
   OrderCancelled,
   OrderCreated,
   OrderDelivered,
@@ -35,6 +37,7 @@ import { StateTransitionPolicy } from '../policies/state-transition.policy'
 import type { Coordinates } from '../value-objects/coordinates'
 import type { DriverId } from '../value-objects/driver-id'
 import type { Money } from '../value-objects/money'
+import { OccupancySlots } from '../value-objects/occupancy-slots'
 import { OrderId } from '../value-objects/order-id'
 import { OrderStatus } from '../value-objects/order-status'
 import type { PaymentIntent } from '../value-objects/payment-intent'
@@ -82,6 +85,7 @@ export type OrderProps = {
   prepExtendedAt: Date | null
   prepExtensionMinutes: 5 | 10 | null
   readyEarlyAt: Date | null
+  occupancySlots: OccupancySlots
   createdAt: Date
   updatedAt: Date
 }
@@ -175,6 +179,7 @@ export class Order extends AggregateRoot<OrderId> {
       prepExtendedAt: null,
       prepExtensionMinutes: null,
       readyEarlyAt: null,
+      occupancySlots: OccupancySlots.default(),
       createdAt: now,
       updatedAt: now,
     })
@@ -256,6 +261,9 @@ export class Order extends AggregateRoot<OrderId> {
   get source(): OrderSource {
     return this._state.source
   }
+  get occupancySlots(): OccupancySlots {
+    return this._state.occupancySlots
+  }
   get props(): Readonly<OrderProps> {
     return this._state
   }
@@ -272,10 +280,7 @@ export class Order extends AggregateRoot<OrderId> {
    * Solo aplica a pedidos source='customer_pwa'. Pedidos restaurant_pwa
    * nacen ya en waiting_driver — esta transición rechaza por canTransition.
    */
-  acceptByRestaurant(
-    prepMinutes: number,
-    now: Date,
-  ): Result<void, InvalidStateTransition> {
+  acceptByRestaurant(prepMinutes: number, now: Date): Result<void, InvalidStateTransition> {
     if (!StateTransitionPolicy.canTransition(this._state.status.value, 'waiting_driver'))
       return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
     if (this._state.status.value !== 'pending_acceptance')
@@ -464,8 +469,15 @@ export class Order extends AggregateRoot<OrderId> {
    * (phone + coords O referencia) deben estar previamente persistidos via
    * `saveCustomerData`. Si faltan, retorna CustomerDataMissing — la UI
    * no debería permitir llegar aquí sin haber guardado primero.
+   *
+   * `occupancySlots` declara cuánto ocupa el pedido en la mochila del driver.
+   * Default 1; máximo configurable por admin (validado por el use case
+   * contra `assignment_rules.maxOccupancySlotsPerOrder`).
    */
-  markPickedUp(now: Date): Result<void, InvalidStateTransition | CustomerDataMissing> {
+  markPickedUp(
+    occupancySlots: OccupancySlots,
+    now: Date,
+  ): Result<void, InvalidStateTransition | CustomerDataMissing> {
     if (!StateTransitionPolicy.canTransition(this._state.status.value, 'picked_up'))
       return Result.fail(new InvalidStateTransition(this._state.status.value, 'picked_up'))
 
@@ -476,6 +488,7 @@ export class Order extends AggregateRoot<OrderId> {
 
     this._state.status = OrderStatus.pickedUp()
     this._state.pickedUpAt = now
+    this._state.occupancySlots = occupancySlots
     this._state.updatedAt = now
 
     this.raise(
@@ -486,6 +499,43 @@ export class Order extends AggregateRoot<OrderId> {
         clientPhone: phone,
         deliveryCoordinates: coords ? { lat: coords.lat, lng: coords.lng } : null,
         deliveryReference: reference,
+        occupancySlots: occupancySlots.value,
+      }),
+    )
+    return Result.okVoid()
+  }
+
+  /**
+   * El driver rechaza una asignación automática (cron). El pedido sigue en
+   * `waiting_driver` pero pierde el `driver_id`. El cron `assign-pending-orders`
+   * lo re-asignará excluyendo a este driver vía `order_assignment_rejections`
+   * (insertado por el use case junto al save).
+   *
+   * Solo válido si:
+   *  - status === 'waiting_driver'
+   *  - el driver invocador es exactamente el asignado actualmente
+   * Si el pedido ya pasó a `heading_to_restaurant` (ya aceptó), debe usar
+   * el flujo de cancelación o reasignación admin — no este método.
+   */
+  rejectAssignment(
+    driverId: DriverId,
+    reason: string,
+    now: Date,
+  ): Result<void, InvalidStateTransition | DriverNotAssigned> {
+    if (this._state.status.value !== 'waiting_driver')
+      return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
+    if (!this._state.driverId || this._state.driverId.value !== driverId.value)
+      return Result.fail(new DriverNotAssigned())
+
+    this._state.driverId = null
+    this._state.updatedAt = now
+
+    this.raise(
+      new OrderAssignmentRejected({
+        orderId: this.id.value,
+        driverId: driverId.value,
+        reason,
+        rejectedAt: now.toISOString(),
       }),
     )
     return Result.okVoid()

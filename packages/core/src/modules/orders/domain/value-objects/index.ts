@@ -1,6 +1,7 @@
 export { Coordinates } from './coordinates'
 export { DriverId } from './driver-id'
 export { Money } from './money'
+export { OccupancySlots } from './occupancy-slots'
 export { OrderId } from './order-id'
 export { OrderStatus, type OrderStatusValue } from './order-status'
 export { PaymentIntent, type PaymentStatusValue } from './payment-intent'

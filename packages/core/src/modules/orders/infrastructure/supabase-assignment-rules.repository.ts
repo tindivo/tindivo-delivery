@@ -25,6 +25,7 @@ export class SupabaseAssignmentRulesRepository implements AssignmentRulesReposit
       maxOrdersPerDriver: rules.maxOrdersPerDriver,
       maxRestaurantsPerDriver: rules.maxRestaurantsPerDriver,
       groupingWindowMinutes: rules.groupingWindowMinutes,
+      maxOccupancySlotsPerOrder: rules.maxOccupancySlotsPerOrder,
     })
 
     const { data, error } = await this.sb
@@ -46,11 +47,14 @@ function parseRules(raw: string): AssignmentRules | null {
     const max = obj.maxOrdersPerDriver
     const restos = obj.maxRestaurantsPerDriver
     const win = obj.groupingWindowMinutes
+    const slots = obj.maxOccupancySlotsPerOrder
     if (!isPositiveInt(max) || !isPositiveInt(restos) || !isPositiveInt(win)) return null
     return {
       maxOrdersPerDriver: max,
       maxRestaurantsPerDriver: restos,
       groupingWindowMinutes: win,
+      // Backwards compat: configs antiguas sin el nuevo campo usan default 3.
+      maxOccupancySlotsPerOrder: isPositiveInt(slots) ? slots : 3,
     }
   } catch {
     return null

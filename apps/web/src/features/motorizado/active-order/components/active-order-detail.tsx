@@ -1,6 +1,8 @@
 'use client'
 import { useGeolocatedNavigation } from '@/shared/hooks/use-geolocated-navigation'
 import { useNow } from '@/shared/hooks/use-now'
+import { ApiError } from '@tindivo/api-client'
+import type { Orders } from '@tindivo/contracts'
 import { buildWaMeUrl, normalizeToE164Pe } from '@tindivo/core'
 import {
   BottomActionBar,
@@ -17,7 +19,9 @@ import {
 } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { RejectAssignmentSheet } from '../../available-orders/components/reject-assignment-sheet'
 import { useAcceptOrder } from '../../available-orders/hooks/use-accept-order'
+import { useRejectOrder } from '../../available-orders/hooks/use-reject-order'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
 import { useMarkDelivered } from '../hooks/use-mark-delivered'
 import { useMarkPickedUp } from '../hooks/use-mark-picked-up'
@@ -41,6 +45,9 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const delivered = useMarkDelivered(orderId)
   const pickedUp = useMarkPickedUp(orderId)
   const acceptOrder = useAcceptOrder()
+  const rejectOrder = useRejectOrder()
+  const [rejectOpen, setRejectOpen] = useState(false)
+  const [rejectError, setRejectError] = useState<string | null>(null)
   const saveCustomerData = useSaveCustomerData(orderId)
   const now = useNow(1_000)
   const { navigate: navigateMaps, isLocating } = useGeolocatedNavigation()
@@ -507,15 +514,16 @@ export function ActiveOrderDetail({ orderId }: Props) {
       {confirmPickupOpen && (
         <ConfirmPickupModal
           remainingLabel={remainingLabel}
+          prepNotReady={!prepReady}
           isPending={pickedUp.isPending}
           errorMessage={pickupError}
           onCancel={() => {
             setConfirmPickupOpen(false)
             setPickupError(null)
           }}
-          onConfirm={() => {
+          onConfirm={(occupancySlots) => {
             setPickupError(null)
-            pickedUp.mutate(undefined, {
+            pickedUp.mutate(occupancySlots, {
               onSuccess: () => setConfirmPickupOpen(false),
               onError: (err) =>
                 setPickupError(
@@ -528,17 +536,66 @@ export function ActiveOrderDetail({ orderId }: Props) {
         />
       )}
 
+      {rejectOpen && (
+        <RejectAssignmentSheet
+          isPending={rejectOrder.isPending}
+          errorMessage={rejectError}
+          onCancel={() => {
+            setRejectOpen(false)
+            setRejectError(null)
+          }}
+          onConfirm={(reason: Orders.RejectionReason) => {
+            setRejectError(null)
+            rejectOrder.mutate(
+              { orderId, reason },
+              {
+                onSuccess: () => {
+                  setRejectOpen(false)
+                  router.replace('/motorizado')
+                },
+                onError: (err) => {
+                  if (err instanceof ApiError && err.problem.code === 'INVALID_STATE_TRANSITION') {
+                    setRejectError('Este pedido ya cambió de estado. Recarga la lista.')
+                  } else if (
+                    err instanceof ApiError &&
+                    err.problem.code === 'DRIVER_NOT_ASSIGNED'
+                  ) {
+                    setRejectError('Este pedido ya no está asignado a ti.')
+                  } else {
+                    setRejectError('No pudimos rechazar el pedido. Intenta de nuevo.')
+                  }
+                },
+              },
+            )
+          }}
+        />
+      )}
+
       <BottomActionBar>
         {status === 'waiting_driver' && (
-          <Button
-            size="lg"
-            className="w-full"
-            disabled={acceptOrder.isPending}
-            onClick={() => acceptOrder.mutate(orderId)}
-          >
-            <Icon name="check_circle" size={22} filled />
-            {acceptOrder.isPending ? 'Aceptando...' : 'Aceptar pedido'}
-          </Button>
+          <div className="flex flex-col gap-2 w-full">
+            <Button
+              size="lg"
+              className="w-full"
+              disabled={acceptOrder.isPending || rejectOrder.isPending}
+              onClick={() => acceptOrder.mutate(orderId)}
+            >
+              <Icon name="check_circle" size={22} filled />
+              {acceptOrder.isPending ? 'Aceptando...' : 'Aceptar pedido'}
+            </Button>
+            <button
+              type="button"
+              disabled={acceptOrder.isPending || rejectOrder.isPending}
+              onClick={() => {
+                setRejectError(null)
+                setRejectOpen(true)
+              }}
+              className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container border border-outline-variant/40 text-on-surface font-bold tracking-wide active:scale-95 disabled:opacity-60"
+            >
+              <Icon name="cancel" size={20} />
+              Rechazar pedido
+            </button>
+          </div>
         )}
 
         {status === 'heading_to_restaurant' && (
@@ -653,18 +710,10 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 disabled={!hasCustomerData || pickedUp.isPending}
                 onClick={() => {
                   setPickupError(null)
-                  if (!prepReady) {
-                    setConfirmPickupOpen(true)
-                    return
-                  }
-                  pickedUp.mutate(undefined, {
-                    onError: (err) =>
-                      setPickupError(
-                        err instanceof Error
-                          ? err.message
-                          : 'No se pudo confirmar el pickup. Intenta de nuevo.',
-                      ),
-                  })
+                  // Siempre abrimos el modal: el driver debe declarar cuánto
+                  // ocupa el pedido en su mochila (`occupancySlots`) para
+                  // que las reglas R3 cuenten slots y no filas.
+                  setConfirmPickupOpen(true)
                 }}
               >
                 <Icon name="shopping_bag" size={22} filled />

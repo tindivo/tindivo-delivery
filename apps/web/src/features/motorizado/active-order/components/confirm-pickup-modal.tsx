@@ -1,28 +1,43 @@
 'use client'
 import { Button, Icon } from '@tindivo/ui'
+import { useState } from 'react'
 
 type Props = {
   remainingLabel: string
   isPending: boolean
   errorMessage: string | null
-  onConfirm: () => void
+  /** Cap configurado por admin desde assignment_rules. Default 3. */
+  maxSlots?: number
+  /** Si true, advertimos que aún no terminó el prep (warning de pickup prematuro). */
+  prepNotReady?: boolean
+  onConfirm: (occupancySlots: number) => void
   onCancel: () => void
 }
 
 /**
- * Modal de confirmación que aparece cuando el driver presiona "Ya recogí
- * el pedido" ANTES de que `estimated_ready_at` haya pasado. Si ya pasó,
- * el flujo confirma directamente sin abrir este modal — evita fricción en
- * el camino feliz y solo pregunta cuando hay riesgo de marcar pickup
- * prematuro.
+ * Modal de confirmación de pickup con stepper de "ocupación de mochila".
+ *
+ * El driver declara cuántos slots ocupa el pedido (default 1, max
+ * configurable por admin). Esto alimenta R3: cap de pedidos por driver
+ * pasa de "filas" a "suma de slots", así un pedido grande (slots=3)
+ * llena la mochila por sí solo y bloquea nuevas asignaciones.
+ *
+ * Si `prepNotReady=true`, también advertimos que el prep aún no terminó
+ * — antes este modal solo aparecía en ese caso, ahora aparece siempre.
  */
 export function ConfirmPickupModal({
   remainingLabel,
   isPending,
   errorMessage,
+  maxSlots = 3,
+  prepNotReady = false,
   onConfirm,
   onCancel,
 }: Props) {
+  const [slots, setSlots] = useState(1)
+  const safeMax = Math.max(1, Math.min(10, maxSlots))
+  const options = Array.from({ length: safeMax }, (_, i) => i + 1)
+
   return (
     <dialog
       open
@@ -49,22 +64,65 @@ export function ConfirmPickupModal({
               color: '#ffffff',
             }}
           >
-            <Icon name="warning" size={24} filled />
+            <Icon name="inventory_2" size={24} filled />
           </span>
           <div className="flex-1">
             <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-on-surface-variant">
-              Quedan {remainingLabel}
+              Confirmar pickup
             </div>
             <h3 className="font-black text-lg leading-tight mt-0.5">
-              ¿Ya tienes el pedido en las manos?
+              ¿Cuánto ocupa este pedido en tu mochila?
             </h3>
           </div>
         </div>
 
-        <p className="text-sm text-on-surface-variant mb-5">
-          El tiempo de preparación todavía no termina. Confirma solo si el restaurante ya te entregó
-          la comida y estás listo para partir hacia el cliente.
+        <p className="text-sm text-on-surface-variant mb-4">
+          Selecciona los slots que ocupa. Un pedido normal cabe en 1; pedidos grandes (combos
+          familiares, varias bebidas) pueden ocupar más.
         </p>
+
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          {options.map((n) => {
+            const isSelected = slots === n
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setSlots(n)}
+                disabled={isPending}
+                className="relative h-20 rounded-2xl border font-black text-2xl transition-all active:scale-[0.97] disabled:opacity-60"
+                style={{
+                  background: isSelected
+                    ? 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)'
+                    : 'var(--mat-sys-surface-container-low, #f6f3f0)',
+                  color: isSelected ? '#ffffff' : 'var(--mat-sys-on-surface, #1f1b16)',
+                  borderColor: isSelected ? '#FF6B35' : 'rgba(0,0,0,0.08)',
+                  boxShadow: isSelected ? '0 8px 20px -8px rgba(255,107,53,0.5)' : 'none',
+                }}
+              >
+                <div>{n}</div>
+                <div
+                  className="text-[9px] font-bold tracking-[0.18em] uppercase opacity-80"
+                  style={{
+                    color: isSelected ? '#ffffff' : 'var(--mat-sys-on-surface-variant, #5c554f)',
+                  }}
+                >
+                  {n === 1 ? 'slot' : 'slots'}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {prepNotReady && (
+          <div className="mb-4 flex items-start gap-2 p-3 rounded-2xl bg-amber-50 border border-amber-200">
+            <Icon name="warning" size={18} className="text-amber-700 mt-0.5" filled />
+            <div className="text-xs text-amber-900">
+              El prep aún no termina (quedan {remainingLabel}). Confirma solo si el restaurante ya
+              te entregó la comida.
+            </div>
+          </div>
+        )}
 
         {errorMessage && (
           <div className="mb-4 p-3 rounded-2xl bg-red-50 border border-red-200 text-xs font-semibold text-red-800">
@@ -73,9 +131,14 @@ export function ConfirmPickupModal({
         )}
 
         <div className="flex flex-col gap-2">
-          <Button size="lg" className="w-full" disabled={isPending} onClick={onConfirm}>
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={isPending}
+            onClick={() => onConfirm(slots)}
+          >
             <Icon name="delivery_dining" size={20} filled />
-            {isPending ? 'Confirmando...' : 'Sí, ya lo tengo, partir'}
+            {isPending ? 'Confirmando...' : 'Sí, partir con el pedido'}
           </Button>
           <button
             type="button"

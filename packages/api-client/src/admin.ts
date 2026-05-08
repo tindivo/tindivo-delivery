@@ -256,4 +256,5 @@ export type AssignmentRulesDto = {
   maxOrdersPerDriver: number
   maxRestaurantsPerDriver: number
   groupingWindowMinutes: number
+  maxOccupancySlotsPerOrder: number
 }

@@ -24,6 +24,7 @@ export function AssignmentRulesForm() {
   const [maxOrdersPerDriver, setMaxOrdersPerDriver] = useState(3)
   const [maxRestaurantsPerDriver, setMaxRestaurantsPerDriver] = useState(2)
   const [groupingWindowMinutes, setGroupingWindowMinutes] = useState(5)
+  const [maxOccupancySlotsPerOrder, setMaxOccupancySlotsPerOrder] = useState(3)
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -32,6 +33,7 @@ export function AssignmentRulesForm() {
       setMaxOrdersPerDriver(data.rules.maxOrdersPerDriver)
       setMaxRestaurantsPerDriver(data.rules.maxRestaurantsPerDriver)
       setGroupingWindowMinutes(data.rules.groupingWindowMinutes)
+      setMaxOccupancySlotsPerOrder(data.rules.maxOccupancySlotsPerOrder)
       setSavedAt(data.updatedAt)
     }
   }, [data])
@@ -51,10 +53,15 @@ export function AssignmentRulesForm() {
       setErrorMsg('Ventana de agrupación: entre 1 y 60 minutos.')
       return
     }
+    if (!isInRange(maxOccupancySlotsPerOrder, 1, 10)) {
+      setErrorMsg('Máx. ocupación por pedido: entre 1 y 10 slots.')
+      return
+    }
     const body: AssignmentRulesDto = {
       maxOrdersPerDriver,
       maxRestaurantsPerDriver,
       groupingWindowMinutes,
+      maxOccupancySlotsPerOrder,
     }
     try {
       const res = await update.mutateAsync(body)
@@ -126,6 +133,24 @@ export function AssignmentRulesForm() {
             Regla R1. Default: 5 min. Si un motorizado ya tiene un pedido del mismo restaurante con
             tiempo de listo dentro de esta ventana, se le asigna el pedido nuevo para consolidar
             entregas.
+          </p>
+        </div>
+
+        <div>
+          <Label htmlFor="max-occupancy">Máx. ocupación por pedido (slots)</Label>
+          <input
+            id="max-occupancy"
+            type="number"
+            min={1}
+            max={10}
+            value={maxOccupancySlotsPerOrder}
+            onChange={(e) => setMaxOccupancySlotsPerOrder(Number(e.target.value))}
+            className="w-full rounded-xl bg-surface-container border border-outline-variant/30 px-3 py-2 text-base font-semibold tabular-nums"
+          />
+          <p className="text-xs text-on-surface-variant mt-1">
+            Default: 3. Cap del valor que el motorizado puede declarar al recoger un pedido. Suma
+            con el cap R3 (mochila) — un pedido que ocupa N slots reduce en N la capacidad
+            disponible para nuevas asignaciones.
           </p>
         </div>
 

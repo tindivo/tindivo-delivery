@@ -33,14 +33,16 @@ export function ordersApi(client: ApiClient) {
     listDriverOrders: () => client.get<{ items: Orders.OrderSummaryResponse[] }>('driver/orders'),
     acceptOrder: (id: string) =>
       client.post<Orders.AcceptOrderResponse>(`driver/orders/${id}/accept`),
+    rejectAssignment: (id: string, body: Orders.RejectAssignmentRequest) =>
+      client.post<Orders.RejectAssignmentResponse>(`driver/orders/${id}/reject`, body),
     markArrived: (id: string, body?: Orders.MarkArrivedRequest) =>
       client.post<void>(`driver/orders/${id}/arrived`, body),
     markReceived: (id: string) =>
       client.post<Orders.MarkReceivedResponse>(`driver/orders/${id}/received`),
     saveCustomerData: (id: string, body: Orders.SaveCustomerDataRequest) =>
       client.post<Orders.SaveCustomerDataResponse>(`driver/orders/${id}/customer-data`, body),
-    markPickedUp: (id: string) =>
-      client.post<Orders.PickedUpResponse>(`driver/orders/${id}/picked-up`),
+    markPickedUp: (id: string, body: Orders.MarkPickedUpRequest) =>
+      client.post<Orders.PickedUpResponse>(`driver/orders/${id}/picked-up`, body),
     markDelivered: (id: string) => client.post<void>(`driver/orders/${id}/delivered`),
     changePaymentMethod: (id: string, body: Orders.ChangePaymentMethodRequest) =>
       client.post<Orders.ChangePaymentMethodResponse>(

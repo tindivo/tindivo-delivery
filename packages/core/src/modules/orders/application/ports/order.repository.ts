@@ -16,6 +16,12 @@ export type AssignmentCandidateQuery = {
   todayStart: Date
   /** Ventana de agrupación de R1 (de las assignment_rules). */
   groupingWindowMinutes: number
+  /**
+   * Lista de driver_ids excluidos de la candidatura (porque rechazaron este
+   * pedido específico via `order_assignment_rejections`). El cron re-asignará
+   * sin reconsiderarlos para el mismo orderId.
+   */
+  excludedDriverIds?: string[]
 }
 
 export interface OrderRepository {

@@ -128,9 +128,35 @@ export class OrderPickedUp extends BaseDomainEvent {
     clientPhone: string
     deliveryCoordinates: { lat: number; lng: number } | null
     deliveryReference: string | null
+    occupancySlots: number
   }
 
   constructor(payload: OrderPickedUp['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
+/**
+ * Emitido cuando el driver rechaza una asignación automática del cron.
+ * El pedido vuelve a `driver_id=NULL` (status sigue `waiting_driver`) y el
+ * cron `assign-pending-orders` lo re-asignará excluyendo a este driver
+ * vía `order_assignment_rejections`. La razón viene de una lista
+ * predefinida (REJECTION_REASONS en contracts).
+ */
+export class OrderAssignmentRejected extends BaseDomainEvent {
+  readonly eventType = 'OrderAssignmentRejected' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    driverId: string
+    reason: string
+    rejectedAt: string
+  }
+
+  constructor(payload: OrderAssignmentRejected['payload'], metadata?: EventMetadata) {
     super(metadata)
     this.aggregateId = payload.orderId
     this.payload = payload

@@ -10,19 +10,26 @@ import { useDriverActiveOrders } from './use-driver-active-orders'
 export const DRIVER_MAX_CONCURRENT = 3
 
 /**
- * Cuenta los pedidos activos del driver y expone si ya llegó al límite.
+ * Cuenta la ocupación del driver (suma de occupancy_slots de pedidos activos)
+ * y expone si ya llegó al límite. Anteriormente contaba filas; ahora cuenta
+ * slots, alineado con la regla R3 que pasó de "max pedidos" a "max slots".
  *
- * El límite duro está en el backend (AcceptOrderUseCase devuelve
- * DRIVER_CAPACITY_EXCEEDED — 409). Este hook lo refleja en la UI para
- * deshabilitar botones proactivamente, alineado con HU-D-020.
+ * El límite duro está en el backend (AcceptOrderUseCase y AutoAssign aplican
+ * la policy). Este hook lo refleja en la UI para deshabilitar botones
+ * proactivamente, alineado con HU-D-020. Pedidos sin pickup todavía cuentan
+ * como 1 slot (default); al recoger se actualiza al valor declarado.
  */
 export function useDriverCapacity() {
   const { data, isLoading } = useDriverActiveOrders()
-  const activeCount = data?.items?.length ?? 0
-  const isFull = activeCount >= DRIVER_MAX_CONCURRENT
+  // biome-ignore lint/suspicious/noExplicitAny: payload snake_case del API
+  const items = (data?.items ?? []) as any[]
+  const activeCount = items.length
+  const usedSlots = items.reduce((sum, o) => sum + (Number(o?.occupancy_slots) || 1), 0)
+  const isFull = usedSlots >= DRIVER_MAX_CONCURRENT
 
   return {
     activeCount,
+    usedSlots,
     max: DRIVER_MAX_CONCURRENT,
     isFull,
     isLoading,

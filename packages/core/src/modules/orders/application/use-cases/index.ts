@@ -60,3 +60,9 @@ export type {
   SaveCustomerDataCommand,
   SaveCustomerDataResult,
 } from './save-customer-data.use-case'
+
+export { RejectOrderAssignmentUseCase } from './reject-order-assignment.use-case'
+export type {
+  RejectOrderAssignmentCommand,
+  RejectOrderAssignmentResult,
+} from './reject-order-assignment.use-case'
