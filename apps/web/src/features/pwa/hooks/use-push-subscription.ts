@@ -284,7 +284,15 @@ export function usePushSubscription() {
       const reg = await navigator.serviceWorker.ready
       const sub = await reg.pushManager.getSubscription()
       if (sub) {
-        await api.post<void>('push/unsubscribe', { endpoint: sub.endpoint }).catch(() => null)
+        // El handler exporta DELETE; un POST aquí responde 405 y deja la
+        // row huérfana en BD. Se elimina luego solo cuando FCM/APNs reporta
+        // 410 al primer envío fallido — innecesario.
+        await api
+          .request<void>('push/unsubscribe', {
+            method: 'DELETE',
+            body: { endpoint: sub.endpoint },
+          })
+          .catch(() => null)
         await sub.unsubscribe()
       }
       // Evitar que el polling re-suscriba inmediatamente.
