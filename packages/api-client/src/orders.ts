@@ -60,6 +60,25 @@ export function ordersApi(client: ApiClient) {
         body,
       ),
 
+    // Driver — Equipo (request-based transfer)
+    listTeamOrders: () => client.get<{ items: Orders.TeamOrderItem[] }>('driver/team/orders'),
+    listReceivedTransferRequests: () =>
+      client.get<{ items: Orders.ReceivedTransferRequest[] }>('driver/team/transfer-requests'),
+    requestOrderTransfer: (orderId: string, opts?: { idempotencyKey?: string }) =>
+      client.post<Orders.RequestOrderTransferResponse>(
+        `driver/team/orders/${orderId}/request`,
+        undefined,
+        { idempotencyKey: opts?.idempotencyKey },
+      ),
+    acceptTransferRequest: (id: string) =>
+      client.post<Orders.AcceptTransferRequestResponse>(
+        `driver/team/transfer-requests/${id}/accept`,
+      ),
+    rejectTransferRequest: (id: string) =>
+      client.post<Orders.RejectTransferRequestResponse>(
+        `driver/team/transfer-requests/${id}/reject`,
+      ),
+
     // Admin
     listAdminOrders: (query?: Partial<Orders.AdminOrderFiltersRequest>) =>
       client.get<{ items: Orders.OrderSummaryResponse[] }>('admin/orders', { query }),

@@ -150,6 +150,44 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
         }
         return null
 
+      case 'OrderTransferRequested':
+        // Driver B (solicitante) le pidió a Driver A (este push) su pedido.
+        // A tiene 30s para responder. URL apunta a la pestaña Equipo donde
+        // está el banner sticky con countdown + botones Aceptar/Rechazar.
+        if (role !== 'driver') return null
+        return {
+          title: `Te piden tu pedido — #${shortId}`,
+          body: `Un compañero quiere atender este pedido. Acepta o rechaza en 30s.`,
+          url: `/motorizado?tab=team`,
+          tag: `transfer-req-${event.payload?.transferRequestId ?? event.aggregate_id}`,
+          requireInteraction: true,
+          vibrate: [300, 120, 300, 120, 300],
+        }
+
+      case 'OrderTransferAccepted':
+        // Driver A aceptó la solicitud. Push al solicitante (Driver B) con
+        // deeplink al detalle del pedido — ahora está en su mochila.
+        if (role !== 'driver') return null
+        return {
+          title: `¡Tu solicitud fue aceptada! — #${shortId}`,
+          body: `${restaurantName} · entrégalo lo antes posible`,
+          url: `/motorizado/pedidos/${event.aggregate_id}`,
+          tag: `transfer-accept-${event.payload?.transferRequestId ?? event.aggregate_id}`,
+          requireInteraction: true,
+          vibrate: [300, 120, 300],
+        }
+
+      case 'OrderTransferRejected':
+        // Driver A rechazó manualmente. Push al solicitante (Driver B) para
+        // que vuelva a Equipo y busque otro pedido.
+        if (role !== 'driver') return null
+        return {
+          title: `Solicitud rechazada — #${shortId}`,
+          body: `Tu compañero no pudo aceptar. Busca otro pedido en Equipo.`,
+          url: `/motorizado?tab=team`,
+          tag: `transfer-reject-${event.payload?.transferRequestId ?? event.aggregate_id}`,
+        }
+
       case 'OrderOverdue':
         if (role !== 'driver') return null
         return {
@@ -411,6 +449,38 @@ async function resolveRecipients(
           out.push({ userId: order.restaurants.user_id, role: 'restaurant' })
         }
         break
+
+      case 'OrderTransferRequested': {
+        // Push solo al dueño actual (fromDriverId del payload). NO usamos
+        // order.drivers porque ese ya podría apuntar al nuevo dueño en
+        // `OrderTransferAccepted` que se publica casi simultáneo. El payload
+        // del evento es la fuente de verdad para "a quién avisar".
+        const fromDriverId = (event.payload as Record<string, unknown> | null)?.fromDriverId
+        if (typeof fromDriverId === 'string') {
+          const { data: driver } = await sb
+            .from('drivers')
+            .select('user_id')
+            .eq('id', fromDriverId)
+            .maybeSingle()
+          if (driver?.user_id) out.push({ userId: driver.user_id, role: 'driver' })
+        }
+        break
+      }
+
+      case 'OrderTransferAccepted':
+      case 'OrderTransferRejected': {
+        // Push al solicitante (toDriverId): "tu solicitud fue aceptada/rechazada".
+        const toDriverId = (event.payload as Record<string, unknown> | null)?.toDriverId
+        if (typeof toDriverId === 'string') {
+          const { data: driver } = await sb
+            .from('drivers')
+            .select('user_id')
+            .eq('id', toDriverId)
+            .maybeSingle()
+          if (driver?.user_id) out.push({ userId: driver.user_id, role: 'driver' })
+        }
+        break
+      }
     }
 
     // Dedupe por userId + role

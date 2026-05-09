@@ -494,3 +494,82 @@ export class OrderUrgencyCleared extends BaseDomainEvent {
     this.payload = payload
   }
 }
+
+/**
+ * Driver B (solicitante) pidió un pedido a Driver A (dueño actual). Driver A
+ * recibe push notification "Te piden tu pedido — #{shortId}" + ve la solicitud
+ * en su pestaña Equipo con countdown 30s. Si no responde, la solicitud expira
+ * silenciosamente (cron cada 1min, sin evento de expiración).
+ *
+ * El evento NO modifica la order — solo notifica. La transferencia real ocurre
+ * (vía Order.reassignTo) cuando A acepta y se publica OrderTransferAccepted +
+ * OrderReassigned.
+ */
+export class OrderTransferRequested extends BaseDomainEvent {
+  readonly eventType = 'OrderTransferRequested' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    transferRequestId: string
+    orderId: string
+    shortId: string
+    fromDriverId: string
+    toDriverId: string
+    expiresAt: string
+  }
+
+  constructor(payload: OrderTransferRequested['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
+/**
+ * Driver A aceptó la solicitud de Driver B. El pedido fue transferido
+ * (Order.reassignTo emite OrderReassigned aparte). Este evento dispara push
+ * al solicitante "¡Tu solicitud fue aceptada!".
+ */
+export class OrderTransferAccepted extends BaseDomainEvent {
+  readonly eventType = 'OrderTransferAccepted' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    transferRequestId: string
+    orderId: string
+    shortId: string
+    fromDriverId: string
+    toDriverId: string
+    acceptedAt: string
+  }
+
+  constructor(payload: OrderTransferAccepted['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
+/**
+ * Driver A rechazó la solicitud manualmente. Push al solicitante para que
+ * busque otro pedido en Equipo. El pedido NO cambia de dueño.
+ */
+export class OrderTransferRejected extends BaseDomainEvent {
+  readonly eventType = 'OrderTransferRejected' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    transferRequestId: string
+    orderId: string
+    shortId: string
+    fromDriverId: string
+    toDriverId: string
+    rejectedAt: string
+  }
+
+  constructor(payload: OrderTransferRejected['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}

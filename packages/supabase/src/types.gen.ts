@@ -1027,6 +1027,61 @@ export type Database = {
           },
         ]
       }
+      order_transfer_requests: {
+        Row: {
+          created_at: string
+          expires_at: string
+          from_driver_id: string
+          id: string
+          order_id: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["transfer_request_status"]
+          to_driver_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          from_driver_id: string
+          id?: string
+          order_id: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["transfer_request_status"]
+          to_driver_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          from_driver_id?: string
+          id?: string
+          order_id?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["transfer_request_status"]
+          to_driver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_transfer_requests_from_driver_id_fkey"
+            columns: ["from_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_transfer_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_transfer_requests_to_driver_id_fkey"
+            columns: ["to_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           accept_countdown_seconds: number | null
@@ -1540,11 +1595,80 @@ export type Database = {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       enqueue_orders_ready_for_drivers: { Args: never; Returns: undefined }
       enqueue_overdue_orders: { Args: never; Returns: undefined }
+      expire_pending_transfer_requests: { Args: never; Returns: undefined }
       generate_short_id: { Args: never; Returns: string }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
       invoke_assign_one: { Args: { p_order_id: string }; Returns: undefined }
       invoke_assign_pending_orders: { Args: never; Returns: undefined }
       list_available_for_driver: {
+        Args: { p_driver_id: string }
+        Returns: {
+          accept_countdown_seconds: number | null
+          accepted_at: string | null
+          appears_in_queue_at: string
+          assigned_at: string | null
+          cancel_reason: string | null
+          cancel_reason_code: string | null
+          cancelled_at: string | null
+          cash_amount: number | null
+          cash_settlement_id: string | null
+          change_to_give: number | null
+          client_name: string | null
+          client_pays_with: number | null
+          client_phone: string | null
+          created_at: string
+          customer_address: string | null
+          customer_location_accuracy_m: number | null
+          customer_order_subtotal: number | null
+          customer_phone: string | null
+          customer_user_id: string | null
+          delivered_at: string | null
+          delivery_address: string | null
+          delivery_coordinates: unknown
+          delivery_fee: number
+          delivery_lat: number | null
+          delivery_lng: number | null
+          delivery_maps_url: string | null
+          delivery_reference: string | null
+          driver_id: string | null
+          estimated_ready_at: string
+          extension_used: boolean
+          heading_at: string | null
+          id: string
+          notes: string | null
+          occupancy_slots: number
+          order_amount: number
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          pending_acceptance_at: string | null
+          picked_up_at: string | null
+          prep_extended_at: string | null
+          prep_extension_minutes: number | null
+          prep_minutes: number
+          ready_early_at: string | null
+          ready_early_used: boolean
+          received_at: string | null
+          restaurant_accepted_at: string | null
+          restaurant_accepted_prep_minutes: number | null
+          restaurant_coordinates_cache: unknown
+          restaurant_id: string
+          short_id: string
+          source: Database["public"]["Enums"]["order_source"]
+          status: Database["public"]["Enums"]["order_status"]
+          tracking_link_sent_at: string | null
+          tracking_link_sent_by: string | null
+          updated_at: string
+          urgent_since: string | null
+          waiting_at: string | null
+          yape_amount: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      list_team_orders: {
         Args: { p_driver_id: string }
         Returns: {
           accept_countdown_seconds: number | null
@@ -1640,6 +1764,7 @@ export type Database = {
         | "pending_cash"
         | "pending_mixed"
       settlement_status: "pending" | "paid" | "overdue"
+      transfer_request_status: "pending" | "accepted" | "rejected" | "expired"
       user_role: "admin" | "restaurant" | "driver" | "customer" | "business"
       vehicle_type: "moto" | "bicicleta" | "pie" | "auto"
     }
@@ -1794,6 +1919,7 @@ export const Constants = {
         "pending_mixed",
       ],
       settlement_status: ["pending", "paid", "overdue"],
+      transfer_request_status: ["pending", "accepted", "rejected", "expired"],
       user_role: ["admin", "restaurant", "driver", "customer", "business"],
       vehicle_type: ["moto", "bicicleta", "pie", "auto"],
     },

@@ -10,3 +10,9 @@ export type {
   EligiblePeerQuery,
   SinglePeerQuery,
 } from './driver.repository'
+export type {
+  TransferRequestsRepository,
+  TransferRequest,
+  TransferRequestStatus,
+  CreatePendingInput,
+} from './transfer-requests.repository'

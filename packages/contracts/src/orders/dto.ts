@@ -374,6 +374,67 @@ export const ClaimUrgentOrderResponse = z.object({
 })
 export type ClaimUrgentOrderResponse = z.infer<typeof ClaimUrgentOrderResponse>
 
+/* ─────────────── Equipo (request-based transfer) ─────────────── */
+
+/** Item de la pestaña Equipo: order activo de OTRO driver con datos del owner. */
+export const TeamOrderItem = z.object({
+  id: UuidSchema,
+  shortId: ShortIdSchema,
+  status: OrderStatus,
+  restaurantId: UuidSchema,
+  restaurantName: z.string(),
+  restaurantAccentColor: AccentColorSchema,
+  driverId: UuidSchema,
+  driverFullName: z.string(),
+  driverVehicleType: VehicleType,
+  orderAmount: MoneyPenSchema,
+  paymentStatus: PaymentStatus,
+  prepMinutes: z.number().int(),
+  estimatedReadyAt: TimestampSchema,
+  appearsInQueueAt: TimestampSchema,
+  clientName: z.string().nullable(),
+  clientPhone: PhonePeSchema.nullable(),
+  occupancySlots: z.number().int().min(1),
+  createdAt: TimestampSchema,
+  /** Si el driver autenticado ya tiene una solicitud pending para este order. */
+  hasPendingRequest: z.boolean(),
+})
+export type TeamOrderItem = z.infer<typeof TeamOrderItem>
+
+export const RequestOrderTransferResponse = z.object({
+  transferRequestId: UuidSchema,
+  expiresAt: TimestampSchema,
+})
+export type RequestOrderTransferResponse = z.infer<typeof RequestOrderTransferResponse>
+
+/** Solicitud RECIBIDA por el dueño (para mostrar banner de respuesta). */
+export const ReceivedTransferRequest = z.object({
+  id: UuidSchema,
+  orderId: UuidSchema,
+  shortId: ShortIdSchema,
+  restaurantName: z.string(),
+  /** Driver que solicita el pedido (el "to" en BD). */
+  requesterDriverId: UuidSchema,
+  requesterFullName: z.string(),
+  expiresAt: TimestampSchema,
+  createdAt: TimestampSchema,
+})
+export type ReceivedTransferRequest = z.infer<typeof ReceivedTransferRequest>
+
+export const AcceptTransferRequestResponse = z.object({
+  id: UuidSchema, // order id
+  status: OrderStatus,
+  newDriverId: UuidSchema,
+  acceptedAt: TimestampSchema,
+})
+export type AcceptTransferRequestResponse = z.infer<typeof AcceptTransferRequestResponse>
+
+export const RejectTransferRequestResponse = z.object({
+  id: UuidSchema, // transfer request id
+  status: z.literal('rejected'),
+})
+export type RejectTransferRequestResponse = z.infer<typeof RejectTransferRequestResponse>
+
 export const MarkReceivedResponse = z.object({
   id: UuidSchema,
   status: OrderStatus,

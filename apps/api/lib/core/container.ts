@@ -8,6 +8,7 @@ import {
 import {
   AcceptOrderByRestaurantUseCase,
   AcceptOrderUseCase,
+  AcceptTransferRequestUseCase,
   AutoAssignOrderUseCase,
   CancelOrderUseCase,
   ChangePaymentMethodUseCase,
@@ -20,13 +21,16 @@ import {
   MarkReadyEarlyUseCase,
   MarkReceivedUseCase,
   RejectOrderAssignmentUseCase,
+  RejectTransferRequestUseCase,
   RequestExtensionUseCase,
+  RequestOrderTransferUseCase,
   SaveCustomerDataUseCase,
   SupabaseAssignmentRulesRepository,
   SupabaseDriverRepository,
   SupabaseEventPublisher,
   SupabaseOrderRepository,
   SupabaseRejectionsRepository,
+  SupabaseTransferRequestsRepository,
   SystemClock,
   TransferOrderToDriverUseCase,
 } from '@tindivo/core/modules/orders'
@@ -79,6 +83,52 @@ export function buildClaimUrgentOrderUseCase(_sb: ServerClient) {
     new SupabaseEventPublisher(admin),
     clock,
   )
+}
+
+// Builders del flujo "Equipo" — request-based transfer entre motorizados.
+// TODOS usan admin client porque:
+// 1. La tabla order_transfer_requests no tiene policy de INSERT/UPDATE
+//    para drivers (solo SELECT — ver migration 20260515000000).
+// 2. AcceptTransferRequestUseCase muta orders.driver_id (cross-driver).
+// 3. RequestOrderTransferUseCase lee driver_restaurants (RLS restrictiva).
+function teamDeps() {
+  const admin = createAdminClient()
+  return {
+    orders: new SupabaseOrderRepository(admin),
+    drivers: new SupabaseDriverRepository(admin),
+    transferRequests: new SupabaseTransferRequestsRepository(admin),
+    assignmentRules: new SupabaseAssignmentRulesRepository(admin),
+    events: new SupabaseEventPublisher(admin),
+  }
+}
+
+export function buildRequestOrderTransferUseCase(_sb: ServerClient) {
+  const { orders, drivers, transferRequests, assignmentRules, events } = teamDeps()
+  return new RequestOrderTransferUseCase(
+    orders,
+    drivers,
+    transferRequests,
+    assignmentRules,
+    events,
+    clock,
+  )
+}
+
+export function buildAcceptTransferRequestUseCase(_sb: ServerClient) {
+  const { orders, drivers, transferRequests, assignmentRules, events } = teamDeps()
+  return new AcceptTransferRequestUseCase(
+    orders,
+    drivers,
+    transferRequests,
+    assignmentRules,
+    events,
+    clock,
+  )
+}
+
+export function buildRejectTransferRequestUseCase(_sb: ServerClient) {
+  const { orders, transferRequests, events } = teamDeps()
+  return new RejectTransferRequestUseCase(orders, transferRequests, events, clock)
 }
 
 export function buildAutoAssignOrderUseCase(sb: ServerClient) {

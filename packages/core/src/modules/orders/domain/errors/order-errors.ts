@@ -120,3 +120,26 @@ export class DriverNotAuthorizedForRestaurant extends DomainError {
     super({ driverId, restaurantId })
   }
 }
+
+export class TransferRequestNotFound extends DomainError {
+  readonly code = 'TRANSFER_REQUEST_NOT_FOUND'
+  readonly message = 'Solicitud de transferencia no encontrada'
+  constructor(transferRequestId: string) {
+    super({ transferRequestId })
+  }
+}
+
+export class TransferRequestNotPending extends DomainError {
+  readonly code = 'TRANSFER_REQUEST_NOT_PENDING'
+  readonly message = 'La solicitud ya no está pendiente'
+}
+
+export class TransferRequestExpired extends DomainError {
+  readonly code = 'TRANSFER_REQUEST_EXPIRED'
+  readonly message = 'La solicitud expiró (más de 30 segundos sin respuesta)'
+}
+
+export class OrderAlreadyTransferred extends DomainError {
+  readonly code = 'ORDER_ALREADY_TRANSFERRED'
+  readonly message = 'El pedido ya cambió de dueño antes de aceptar la solicitud'
+}
