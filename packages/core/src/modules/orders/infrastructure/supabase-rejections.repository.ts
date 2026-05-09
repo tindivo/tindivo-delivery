@@ -27,10 +27,16 @@ export class SupabaseRejectionsRepository implements RejectionsRepository {
   }
 
   async findRejectedDriverIds(orderId: string): Promise<string[]> {
+    // Filtra por expires_at > now() (TTL de 6h). Tras vencer, el driver
+    // puede ser re-considerado para el mismo pedido — su contexto puede
+    // haber cambiado (ya entregó otro, está más cerca, prendió is_available).
+    // Sin TTL, un rechazo bloqueaba al driver para siempre. Cron diario
+    // prune-expired-rejections elimina filas vencidas.
     const { data, error } = await this.sb
       .from('order_assignment_rejections')
       .select('driver_id')
       .eq('order_id', orderId)
+      .gt('expires_at', new Date().toISOString())
     if (error) throw new PersistenceError(error.message, error)
     return (data ?? []).map((r) => r.driver_id)
   }

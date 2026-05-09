@@ -1,6 +1,7 @@
 'use client'
 import { PlatformClosedBanner } from '@/features/restaurante/shared/components/platform-closed-banner'
 import { usePlatformStatus } from '@/features/restaurante/shared/hooks/use-platform-status'
+import { useIdempotencyKey } from '@/lib/idempotency/use-idempotency-key'
 import { useIsDesktop } from '@/shared/hooks/use-is-desktop'
 import type { Orders } from '@tindivo/contracts'
 import { BottomActionBar, Button, GlassTopBar, Icon, IconButton, MoneyInput, cn } from '@tindivo/ui'
@@ -60,6 +61,10 @@ const paymentOptions: {
 export function NewOrderForm() {
   const router = useRouter()
   const createOrder = useCreateOrder()
+  // UUID v4 que viaja en header Idempotency-Key. Sobrevive recargas accidentales
+  // por sessionStorage. Se descarta tras 2xx/4xx (mutation onSettled abajo) para
+  // que el próximo formulario tenga su propia key.
+  const idem = useIdempotencyKey('restaurante:new-order')
   const platformStatus = usePlatformStatus()
   const isPlatformClosed = platformStatus.data ? !platformStatus.data.isOpen : false
 
@@ -122,9 +127,23 @@ export function NewOrderForm() {
         payment === 'pending_cash' || payment === 'pending_mixed' ? paysWithNum : undefined,
       clientName: clientName.trim() || undefined,
     }
-    createOrder.mutate(body, {
-      onSuccess: () => router.replace('/restaurante'),
-    })
+    createOrder.mutate(
+      { body, idempotencyKey: idem.key },
+      {
+        onSuccess: () => {
+          idem.consume()
+          router.replace('/restaurante')
+        },
+        onError: (err) => {
+          // 4xx: el servidor rechazó por validación, conflicto, etc. La key
+          // ya fue consumida en BD (cache de la respuesta de error). Generar
+          // nueva para que el usuario pueda reintentar con datos corregidos.
+          // 5xx: NO consumir — permitir retry seguro con la misma key.
+          const status = (err as { status?: number })?.status
+          if (status !== undefined && status >= 400 && status < 500) idem.consume()
+        },
+      },
+    )
   }
 
   return (

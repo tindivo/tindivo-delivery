@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { type AssignmentRules, DEFAULT_ASSIGNMENT_RULES } from './assignment-rules'
 import { type DriverAssignmentCandidate, DriverAssignmentPolicy } from './driver-assignment.policy'
 
-const RESTAURANT = { restaurantId: 'rest-1' }
+// Ahora `choose` requiere occupancySlots del pedido entrante. Default 1
+// preserva semántica de los tests anteriores (compat con R3 hardcoded en +1).
+const RESTAURANT = { restaurantId: 'rest-1', occupancySlots: 1 }
 const RULES: AssignmentRules = DEFAULT_ASSIGNMENT_RULES // 3 / 2 / 5
 
 function candidate(over: Partial<DriverAssignmentCandidate>): DriverAssignmentCandidate {
@@ -18,6 +20,7 @@ function candidate(over: Partial<DriverAssignmentCandidate>): DriverAssignmentCa
     activeSlots: over.activeSlots ?? activeCount,
     reservedSlots: over.reservedSlots ?? reservedCount,
     cancelledTodayCount: 0,
+    rejectedTodayCount: 0,
     sameRestaurantWindowCount: 0,
     distinctRestaurantsInBag: [],
     shiftStartedAt: null,
@@ -47,6 +50,28 @@ describe('DriverAssignmentPolicy.choose — R3 (cap mochila)', () => {
     const libre = candidate({ driverId: 'b' })
     const decision = DriverAssignmentPolicy.choose(RESTAURANT, [mixed, libre], RULES)
     expect(decision?.driverId).toBe('b')
+  })
+
+  it('R3 respeta occupancySlots>1 del pedido entrante (no asume +1)', () => {
+    // Driver lleva 1 slot. Pedido entrante ocupa 3 slots. Cap=3 → 1+0+3=4 > 3
+    // → driver fuera del pool. Antes (con +1 hardcoded) habría entrado.
+    const a = candidate({ driverId: 'a', activeCount: 1, activeSlots: 1 })
+    const decision = DriverAssignmentPolicy.choose(
+      { restaurantId: 'rest-1', occupancySlots: 3 },
+      [a],
+      RULES,
+    )
+    expect(decision).toBeNull()
+  })
+
+  it('R3 con occupancySlots=2 sí entra si hay espacio (1+0+2=3 ≤ cap=3)', () => {
+    const a = candidate({ driverId: 'a', activeCount: 1, activeSlots: 1 })
+    const decision = DriverAssignmentPolicy.choose(
+      { restaurantId: 'rest-1', occupancySlots: 2 },
+      [a],
+      RULES,
+    )
+    expect(decision?.driverId).toBe('a')
   })
 })
 
@@ -178,6 +203,22 @@ describe('DriverAssignmentPolicy.choose — R4 (rotación) y tiebreaks', () => {
       RULES,
     )
     expect(decision?.driverId).toBe('sinc')
+  })
+
+  it('totalAssignedDay incluye rechazos del día (driver que rechaza mucho cae al fondo)', () => {
+    // Caso real verificado en BD: driver Jesús (2b96d299) rechazó 7 pedidos
+    // pero seguía siendo "least loaded". Ahora rechazos suman como carga.
+    const rechazon = candidate({
+      driverId: 'rechazon',
+      deliveredToday: 1,
+      rejectedTodayCount: 5,
+    }) // total = 6
+    const sinRechazos = candidate({
+      driverId: 'limpio',
+      deliveredToday: 3,
+    }) // total = 3
+    const decision = DriverAssignmentPolicy.choose(RESTAURANT, [rechazon, sinRechazos], RULES)
+    expect(decision?.driverId).toBe('limpio')
   })
 
   it('tiebreak por shiftStartedAt: gana el que entró antes al turno', () => {

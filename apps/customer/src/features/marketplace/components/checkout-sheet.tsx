@@ -1,5 +1,6 @@
 'use client'
 import { customer } from '@/lib/api/client'
+import { useIdempotencyKey } from '@/lib/idempotency/use-idempotency-key'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import type { Customer } from '@tindivo/contracts'
 import { BottomActionBar, Button, Icon, IconButton, Input, Label } from '@tindivo/ui'
@@ -38,7 +39,7 @@ export function CheckoutSheet({
   const profileQuery = useQuery({
     queryKey: ['customer', 'profile'],
     queryFn: () => customer.getMyProfile(),
-    enabled: Boolean(session),
+    enabled: session?.role === 'customer',
   })
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -66,9 +67,24 @@ export function CheckoutSheet({
     if (p.defaultLocationAccuracyM != null) setAccuracy(p.defaultLocationAccuracyM)
     setProfilePrefilled(true)
   }, [profileQuery.data, profilePrefilled])
+  // UUID v4 que viaja en header Idempotency-Key. Sobrevive recargas accidentales
+  // por sessionStorage. Se descarta tras 2xx/4xx para que un pedido posterior
+  // (siguiente checkout del mismo cliente) tenga su propia key.
+  const idem = useIdempotencyKey('customer:checkout')
   const create = useMutation({
-    mutationFn: (body: Customer.CreateCustomerOrderRequest) => customer.createOrder(body),
-    onSuccess: (data) => onSuccess(data.shortId),
+    mutationFn: (body: Customer.CreateCustomerOrderRequest) =>
+      customer.createOrder(body, { idempotencyKey: idem.key }),
+    onSuccess: (data) => {
+      idem.consume()
+      onSuccess(data.shortId)
+    },
+    onError: (err) => {
+      // 4xx: error final del servidor. Consume para permitir un nuevo intento
+      // con datos corregidos. 5xx: NO consumir — retry con misma key es seguro
+      // (el server cachea solo respuestas <500).
+      const status = (err as { status?: number })?.status
+      if (status !== undefined && status >= 400 && status < 500) idem.consume()
+    },
   })
 
   const cashNumber = parseMoney(paysWith)
@@ -93,32 +109,34 @@ export function CheckoutSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/30 flex items-end">
+    <div className="customer-sheet-overlay">
       <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
       <motion.div
-        initial={{ y: 640 }}
-        animate={{ y: 0 }}
+        initial={{ opacity: 0, y: 48, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', damping: 30, stiffness: 260 }}
-        className="relative z-10 w-full max-h-[94vh] overflow-y-auto rounded-t-[32px] bg-surface pb-36"
+        className="customer-sheet pb-36 md:w-[min(100%,44rem)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-surface/88 backdrop-blur-xl">
-          <div>
-            <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant">
-              Tu pedido
-            </p>
-            <h2 className="text-xl font-black">{restaurant.name}</h2>
+        <div className="sticky top-0 z-10 bg-[#fffaf6]/88 p-4 backdrop-blur-xl">
+          <div className="mx-auto mb-3 customer-sheet-handle md:hidden" />
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase text-on-surface-variant">Tu pedido</p>
+              <h2 className="text-2xl font-black leading-tight">{restaurant.name}</h2>
+            </div>
+            <IconButton variant="subtle" onClick={onClose} aria-label="Cerrar">
+              <Icon name="close" />
+            </IconButton>
           </div>
-          <IconButton variant="subtle" onClick={onClose} aria-label="Cerrar">
-            <Icon name="close" />
-          </IconButton>
         </div>
 
-        <div className="px-5 max-w-xl mx-auto space-y-5">
-          <section className="rounded-[24px] bg-surface-container-lowest border border-outline-variant/20 p-4 space-y-3">
+        <div className="mx-auto max-w-xl space-y-5 px-5">
+          <section className="customer-panel-soft space-y-3 rounded-[28px] p-4">
+            <SheetTitle icon="shopping_bag" title="Resumen" />
             {cart.map((item) => (
               <div key={item.key} className="flex items-center gap-3">
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-bold truncate">{item.menuItem.name}</p>
                   <p className="text-xs text-on-surface-variant">S/ {lineTotal(item).toFixed(2)}</p>
                 </div>
@@ -126,7 +144,7 @@ export function CheckoutSheet({
                   <button
                     type="button"
                     onClick={() => onQuantity(item.key, -1)}
-                    className="h-9 w-9 flex items-center justify-center"
+                    className="flex h-9 w-9 items-center justify-center"
                   >
                     <Icon name="remove" size={18} />
                   </button>
@@ -134,14 +152,14 @@ export function CheckoutSheet({
                   <button
                     type="button"
                     onClick={() => onQuantity(item.key, 1)}
-                    className="h-9 w-9 flex items-center justify-center"
+                    className="flex h-9 w-9 items-center justify-center"
                   >
                     <Icon name="add" size={18} />
                   </button>
                 </div>
               </div>
             ))}
-            <div className="pt-3 border-t border-outline-variant/20 flex items-center justify-between">
+            <div className="flex items-center justify-between border-t border-outline-variant/20 pt-3">
               <span className="font-bold">Total</span>
               <span className="text-2xl font-black text-primary-container">
                 S/ {subtotal.toFixed(2)}
@@ -149,8 +167,8 @@ export function CheckoutSheet({
             </div>
           </section>
 
-          <section className="rounded-[24px] bg-surface-container-lowest border border-outline-variant/20 p-4 space-y-4">
-            <h3 className="font-black">Datos de entrega</h3>
+          <section className="customer-panel-soft space-y-4 rounded-[28px] p-4">
+            <SheetTitle icon="home_pin" title="Datos de entrega" />
             <Field label="Nombre">
               <Input
                 value={name}
@@ -181,7 +199,7 @@ export function CheckoutSheet({
                 value={reference}
                 onChange={(event) => setReference(event.target.value.slice(0, 500))}
                 rows={3}
-                className="w-full rounded-[20px] border border-outline-variant/35 bg-surface-container-lowest px-4 py-3 text-sm resize-none"
+                className="customer-textarea"
                 placeholder="Frente a, piso, color de puerta..."
               />
             </Field>
@@ -189,13 +207,13 @@ export function CheckoutSheet({
               type="button"
               onClick={fetchLocation}
               disabled={locating}
-              className="w-full rounded-[20px] border border-outline-variant/35 bg-surface-container px-4 py-3 flex items-center justify-between gap-3 text-left"
+              className="customer-lift flex w-full items-center justify-between gap-3 rounded-[22px] border border-outline-variant/25 bg-surface-container px-4 py-3 text-left"
             >
               <span>
                 <span className="block font-bold">
                   {coords ? 'Ubicacion lista' : 'Usar mi ubicacion actual'}
                 </span>
-                <span className="block text-xs text-on-surface-variant">
+                <span className="block text-sm text-on-surface-variant">
                   {coords
                     ? `Precision aproximada ${Math.round(accuracy ?? 0)} m`
                     : 'Necesaria para que el motorizado llegue directo'}
@@ -208,8 +226,8 @@ export function CheckoutSheet({
             </button>
           </section>
 
-          <section className="rounded-[24px] bg-surface-container-lowest border border-outline-variant/20 p-4 space-y-3">
-            <h3 className="font-black">Pago</h3>
+          <section className="customer-panel-soft space-y-3 rounded-[28px] p-4">
+            <SheetTitle icon="payments" title="Pago" />
             <div className="grid grid-cols-2 gap-2">
               <PaymentButton
                 active={payment === 'pending_yape'}
@@ -225,7 +243,7 @@ export function CheckoutSheet({
               />
             </div>
             {payment === 'pending_cash' && (
-              <div className="space-y-2 tindivo-reveal">
+              <div className="customer-reveal space-y-2">
                 <Label>Pagare con</Label>
                 <Input
                   value={paysWith}
@@ -234,7 +252,7 @@ export function CheckoutSheet({
                   inputMode="decimal"
                 />
                 {cashNumber >= subtotal && (
-                  <p className="text-sm font-bold text-emerald-700">
+                  <p className="customer-reveal text-sm font-bold text-emerald-700">
                     Vuelto: S/ {(cashNumber - subtotal).toFixed(2)}
                   </p>
                 )}
@@ -243,7 +261,7 @@ export function CheckoutSheet({
           </section>
 
           {create.error && (
-            <div className="rounded-2xl bg-red-50 border border-red-200 p-3 text-sm font-semibold text-red-800">
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">
               {create.error instanceof Error ? create.error.message : 'No se pudo crear el pedido'}
             </div>
           )}
@@ -296,6 +314,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
+function SheetTitle({ icon, title }: { icon: string; title: string }) {
+  return (
+    <h3 className="flex items-center gap-2 text-lg font-black">
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-primary-fixed text-on-primary-fixed">
+        <Icon name={icon} size={20} filled />
+      </span>
+      {title}
+    </h3>
+  )
+}
+
 function PaymentButton({
   active,
   icon,
@@ -311,7 +340,7 @@ function PaymentButton({
     <button
       type="button"
       onClick={onClick}
-      className={`h-14 rounded-[20px] flex items-center justify-center gap-2 font-black border ${
+      className={`customer-lift flex h-14 items-center justify-center gap-2 rounded-[20px] border font-black ${
         active
           ? 'bg-primary-container text-white border-primary-container'
           : 'bg-surface-container text-on-surface border-outline-variant/25'

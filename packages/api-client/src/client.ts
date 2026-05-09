@@ -22,6 +22,12 @@ type RequestOptions = {
   query?: Record<string, string | number | boolean | undefined | null>
   headers?: Record<string, string>
   signal?: AbortSignal
+  /**
+   * UUID v4 generado por el cliente para deduplicar POSTs (patrón Stripe).
+   * El servidor cachea la respuesta y devuelve la misma para retries con la
+   * misma key. Solo aplica a métodos no-GET. Ver `apps/api/lib/http/idempotency.ts`.
+   */
+  idempotencyKey?: string
 }
 
 export class ApiClient {
@@ -54,6 +60,7 @@ export class ApiClient {
     }
     if (token) headers.Authorization = `Bearer ${token}`
     if (opts.body) headers['Content-Type'] = 'application/json'
+    if (opts.idempotencyKey) headers['Idempotency-Key'] = opts.idempotencyKey
 
     const res = await fetch(this.buildUrl(path, opts.query), {
       method,

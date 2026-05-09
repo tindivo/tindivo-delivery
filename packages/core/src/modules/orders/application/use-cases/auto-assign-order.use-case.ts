@@ -81,7 +81,10 @@ export class AutoAssignOrderUseCase
     })
 
     const decision = DriverAssignmentPolicy.choose(
-      { restaurantId: order.restaurantId.value },
+      {
+        restaurantId: order.restaurantId.value,
+        occupancySlots: order.occupancySlots.value,
+      },
       candidates,
       rules,
     )

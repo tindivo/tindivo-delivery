@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -472,6 +472,36 @@ export type Database = {
           },
         ]
       }
+      idempotency_keys: {
+        Row: {
+          created_at: string
+          expires_at: string
+          key: string
+          request_hash: string
+          response_body: Json
+          response_status: number
+          scope: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          key: string
+          request_hash: string
+          response_body: Json
+          response_status: number
+          scope: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          key?: string
+          request_hash?: string
+          response_body?: Json
+          response_status?: number
+          scope?: string
+        }
+        Relationships: []
+      }
       marketplace_businesses: {
         Row: {
           accent_color: string
@@ -919,18 +949,21 @@ export type Database = {
       order_assignment_rejections: {
         Row: {
           driver_id: string
+          expires_at: string
           order_id: string
           reason: string
           rejected_at: string
         }
         Insert: {
           driver_id: string
+          expires_at?: string
           order_id: string
           reason: string
           rejected_at?: string
         }
         Update: {
           driver_id?: string
+          expires_at?: string
           order_id?: string
           reason?: string
           rejected_at?: string
@@ -999,6 +1032,7 @@ export type Database = {
           accept_countdown_seconds: number | null
           accepted_at: string | null
           appears_in_queue_at: string
+          assigned_at: string | null
           cancel_reason: string | null
           cancel_reason_code: string | null
           cancelled_at: string | null
@@ -1056,6 +1090,7 @@ export type Database = {
           accept_countdown_seconds?: number | null
           accepted_at?: string | null
           appears_in_queue_at: string
+          assigned_at?: string | null
           cancel_reason?: string | null
           cancel_reason_code?: string | null
           cancelled_at?: string | null
@@ -1113,6 +1148,7 @@ export type Database = {
           accept_countdown_seconds?: number | null
           accepted_at?: string | null
           appears_in_queue_at?: string
+          assigned_at?: string | null
           cancel_reason?: string | null
           cancel_reason_code?: string | null
           cancelled_at?: string | null
@@ -1485,6 +1521,12 @@ export type Database = {
       }
       auto_cancel_unaccepted_orders: { Args: never; Returns: undefined }
       auto_close_drivers_on_schedule_end: { Args: never; Returns: undefined }
+      claim_pending_orders: {
+        Args: { p_limit?: number }
+        Returns: {
+          id: string
+        }[]
+      }
       current_customer_user_id: { Args: never; Returns: string }
       current_driver_id: { Args: never; Returns: string }
       current_restaurant_id: { Args: never; Returns: string }
@@ -1497,8 +1539,12 @@ export type Database = {
       enqueue_overdue_orders: { Args: never; Returns: undefined }
       generate_short_id: { Args: never; Returns: string }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
+      invoke_assign_one: { Args: { p_order_id: string }; Returns: undefined }
       invoke_assign_pending_orders: { Args: never; Returns: undefined }
+      prune_expired_idempotency_keys: { Args: never; Returns: undefined }
+      prune_expired_rejections: { Args: never; Returns: undefined }
       prune_stale_push_subscriptions: { Args: never; Returns: undefined }
+      timeout_unaccepted_assignments: { Args: never; Returns: undefined }
     }
     Enums: {
       cash_settlement_status:

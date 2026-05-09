@@ -26,16 +26,14 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient()
-  const nowIso = new Date().toISOString()
 
-  const { data: pending, error } = await admin
-    .from('orders')
-    .select('id')
-    .eq('status', 'waiting_driver')
-    .is('driver_id', null)
-    .lte('appears_in_queue_at', nowIso)
-    .order('appears_in_queue_at', { ascending: true })
-    .limit(50)
+  // Lock pesimista vía RPC con FOR UPDATE SKIP LOCKED. Garantiza que dos
+  // invocaciones concurrentes (cron failsafe + triggers reactivos) NUNCA
+  // procesen la misma fila — patrón estándar de queues sobre Postgres.
+  // Sin esto, a escala >1000 ord/día las race conditions generan logs de
+  // RaceCondition aunque el optimistic lock de saveAutoAssignment evite
+  // el doble-assign real.
+  const { data: pending, error } = await admin.rpc('claim_pending_orders', { p_limit: 50 })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

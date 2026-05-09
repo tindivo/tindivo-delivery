@@ -133,6 +133,23 @@ export class SupabaseOrderRepository implements OrderRepository {
       .gte('created_at', query.todayStart.toISOString())
     if (ordersError) throw new PersistenceError(ordersError.message, ordersError)
 
+    // Rechazos del día por driver — penaliza R4 para self-correcting.
+    // Sin esto, un driver que rechaza N pedidos seguidos sigue siendo "least
+    // loaded" y se le re-asigna en loop. Verificado en BD: driver Jesús
+    // rechazó 7 pedidos (4 backpack_full + 2 too_far + 1 not_convenient) pero
+    // seguía recibiendo asignaciones por R4 (no se contaban en su carga).
+    const { data: rejections, error: rejectionsError } = await this.sb
+      .from('order_assignment_rejections')
+      .select('driver_id')
+      .in('driver_id', driverIds)
+      .gte('rejected_at', query.todayStart.toISOString())
+    if (rejectionsError) throw new PersistenceError(rejectionsError.message, rejectionsError)
+
+    const rejectedTodayByDriver = new Map<string, number>()
+    for (const r of rejections ?? []) {
+      rejectedTodayByDriver.set(r.driver_id, (rejectedTodayByDriver.get(r.driver_id) ?? 0) + 1)
+    }
+
     const stats = new Map<
       string,
       {
@@ -212,6 +229,7 @@ export class SupabaseOrderRepository implements OrderRepository {
         activeSlots: s?.activeSlots ?? 0,
         reservedSlots: s?.reservedSlots ?? 0,
         cancelledTodayCount: s?.cancelledTodayCount ?? 0,
+        rejectedTodayCount: rejectedTodayByDriver.get(driver.driverId) ?? 0,
         sameRestaurantWindowCount: s?.sameRestaurantWindowCount ?? 0,
         distinctRestaurantsInBag: s ? Array.from(s.bag) : [],
       }

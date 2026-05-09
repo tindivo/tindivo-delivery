@@ -43,6 +43,14 @@ export type DriverAssignmentCandidate = {
   /** Suma de occupancy_slots de pedidos reservados (waiting_driver con driver_id=this). */
   reservedSlots: number
   cancelledTodayCount: number
+  /**
+   * Cantidad de rechazos del driver hoy (cualquier pedido). Se suma en
+   * `totalAssignedDay` para que un driver que rechaza mucho caiga al fondo
+   * del orden de R4 — self-correcting sin necesidad de banear. Verificado en
+   * BD: driver Jesús (2b96d299) rechazó 7 pedidos pero seguía siendo "least
+   * loaded" porque rechazos no penalizaban.
+   */
+  rejectedTodayCount: number
   sameRestaurantWindowCount: number
   /** Restaurantes distintos que el driver tiene en mochila (no entregados/cancelados). */
   distinctRestaurantsInBag: string[]
@@ -62,21 +70,34 @@ export type AssignmentDecision = {
 
 export type QueueReason = 'all_drivers_at_cap' | 'restaurant_cap_exceeded'
 
+export type ChooseInput = {
+  restaurantId: string
+  /**
+   * Slots que ocupará este pedido en la mochila del driver. Hoy todos los
+   * pedidos nacen con `occupancy_slots=1` (default DB) y solo el driver lo
+   * cambia en `markPickedUp`. Pero el policy debe respetar este input para
+   * casos futuros donde el restaurante o el flujo declare un slot custom
+   * (pedido grande, multi-bolsa, etc.). El `+1` hardcoded anterior subestima
+   * R3 si el slot real entrante es >1.
+   */
+  occupancySlots: number
+}
+
 export const DriverAssignmentPolicy = {
   choose(
-    order: { restaurantId: string },
+    order: ChooseInput,
     candidates: readonly DriverAssignmentCandidate[],
     rules: AssignmentRules,
   ): AssignmentDecision | null {
     if (candidates.length === 0) return null
 
     // R3: cap de slots en mochila por driver. Suma occupancy_slots de
-    // activos + reservados; añadimos +1 como reserva implícita del nuevo
-    // pedido (su occupancy real se conoce solo en `markPickedUp`, asumimos 1
-    // hasta entonces). Si el cap es 3 y el driver lleva activeSlots=2 más
-    // 1 reservedSlot, ya está en 3 — no entra otro.
+    // activos + reservados + el slot real entrante. Si el cap es 3 y el
+    // driver lleva activeSlots=2 más 1 reservedSlot, ya está en 3 — no
+    // entra otro pedido (incluso uno de slot=1).
+    const incomingSlots = Math.max(1, order.occupancySlots)
     const r3Pool = candidates.filter(
-      (c) => c.activeSlots + c.reservedSlots + 1 <= rules.maxOrdersPerDriver,
+      (c) => c.activeSlots + c.reservedSlots + incomingSlots <= rules.maxOrdersPerDriver,
     )
     if (r3Pool.length === 0) return null // R5: cola "all_drivers_at_cap"
 
@@ -120,10 +141,20 @@ function canAddRestaurant(
 
 function totalAssignedDay(c: DriverAssignmentCandidate): number {
   // Suma de "carga del día" usando slots para activos/reservados (mochila
-  // física actual) y count para entregados/cancelados (no se reconstruye
-  // historial de slots). Esto premia rotación: un driver con un pedido
-  // grande (slots=3) tiene mismo "load" que tres slots=1 distribuidos.
-  return c.deliveredToday + c.activeSlots + c.reservedSlots + c.cancelledTodayCount
+  // física actual) y count para entregados/cancelados/rechazados (no se
+  // reconstruye historial de slots). Esto premia rotación: un driver con
+  // un pedido grande (slots=3) tiene mismo "load" que tres slots=1.
+  // `rejectedTodayCount` se suma para penalizar drivers que rechazan mucho:
+  // su próxima asignación los considera "más cargados" y caen al fondo de
+  // R4. Sin esto, el least-loaded loop infinito (driver rechaza → least
+  // loaded → mismo driver → rechaza → ...) que vimos en BD con Jesús.
+  return (
+    c.deliveredToday +
+    c.activeSlots +
+    c.reservedSlots +
+    c.cancelledTodayCount +
+    c.rejectedTodayCount
+  )
 }
 
 function pickLeastLoaded(

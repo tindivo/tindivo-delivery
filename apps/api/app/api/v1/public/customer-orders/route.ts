@@ -1,4 +1,5 @@
 import { buildCheckPlatformScheduleUseCase, buildCreateOrderUseCase } from '@/lib/core/container'
+import { withIdempotency } from '@/lib/http/idempotency'
 import { problem, problemCode } from '@/lib/http/problem'
 import { parseJson } from '@/lib/http/validate'
 import { Customer } from '@tindivo/contracts'
@@ -26,6 +27,19 @@ export async function POST(req: NextRequest) {
 
   const sb = createAdminClient() as any
 
+  // Idempotencia: si el cliente envía Idempotency-Key (UUID v4), la respuesta
+  // se cachea 24h. Reintentos por timeout o doble click devuelven la misma
+  // respuesta sin volver a crear el pedido. Sin header → ejecuta normal.
+  return withIdempotency(req, 'customer_orders', body.data, sb, () =>
+    createCustomerOrder(req, body.data, sb),
+  )
+}
+
+async function createCustomerOrder(
+  req: NextRequest,
+  data: Customer.CreateCustomerOrderRequest,
+  sb: any,
+): Promise<NextResponse> {
   const platformCheck = await buildCheckPlatformScheduleUseCase(sb).execute()
   if (platformCheck.isSuccess && !platformCheck.value.isOpen) {
     const nextOpenAt = platformCheck.value.nextOpenAt?.toISOString() ?? null
@@ -41,33 +55,32 @@ export async function POST(req: NextRequest) {
   const { data: restaurant, error: restaurantError } = await sb
     .from('restaurants')
     .select('id, name, is_active, commission_per_order')
-    .eq('id', body.data.restaurantId)
+    .eq('id', data.restaurantId)
     .maybeSingle()
 
   if (restaurantError) return problemCode('INTERNAL_ERROR', 500, restaurantError.message)
   if (!restaurant || !restaurant.is_active) return problemCode('RESTAURANT_NOT_FOUND', 404)
 
-  const cart = await priceCart(sb, body.data.items, body.data.restaurantId)
+  const cart = await priceCart(sb, data.items, data.restaurantId)
   if ('response' in cart) return cart.response
 
   const subtotal = roundMoney(cart.lines.reduce((sum, line) => sum + line.lineTotal, 0))
   if (subtotal <= 0) return problemCode('VALIDATION_ERROR', 400, 'El carrito no tiene monto')
-  if (body.data.paymentStatus === 'pending_cash' && (body.data.clientPaysWith ?? 0) < subtotal) {
+  if (data.paymentStatus === 'pending_cash' && (data.clientPaysWith ?? 0) < subtotal) {
     return problemCode('VALIDATION_ERROR', 400, 'El efectivo debe cubrir el total del pedido')
   }
 
   const prepMinutes = Math.max(10, ...cart.lines.map((line) => line.prepMinutes ?? 20))
-  const notes = buildOrderNotes(body.data.notes, cart.lines)
+  const notes = buildOrderNotes(data.notes, cart.lines)
 
   const createOrder = buildCreateOrderUseCase(sb)
   const created = await createOrder.execute({
-    restaurantId: body.data.restaurantId,
+    restaurantId: data.restaurantId,
     prepMinutes,
-    paymentStatus: body.data.paymentStatus,
+    paymentStatus: data.paymentStatus,
     orderAmount: subtotal,
-    clientPaysWith:
-      body.data.paymentStatus === 'pending_cash' ? body.data.clientPaysWith : undefined,
-    clientName: body.data.customerName,
+    clientPaysWith: data.paymentStatus === 'pending_cash' ? data.clientPaysWith : undefined,
+    clientName: data.customerName,
     notes,
     commissionPerOrder: Number(restaurant.commission_per_order),
     // 'customer_pwa' marca el pedido para que nazca en pending_acceptance,
@@ -103,15 +116,15 @@ export async function POST(req: NextRequest) {
   const update = await sb
     .from('orders')
     .update({
-      client_name: body.data.customerName,
-      client_phone: body.data.customerPhone,
-      customer_phone: body.data.customerPhone,
+      client_name: data.customerName,
+      client_phone: data.customerPhone,
+      customer_phone: data.customerPhone,
       customer_user_id: customerUserId,
-      delivery_address: body.data.deliveryAddress,
-      customer_address: body.data.deliveryAddress,
-      delivery_reference: body.data.deliveryReference?.trim() || null,
-      delivery_coordinates: `POINT(${body.data.deliveryCoordinates.lng} ${body.data.deliveryCoordinates.lat})`,
-      customer_location_accuracy_m: body.data.locationAccuracyM ?? null,
+      delivery_address: data.deliveryAddress,
+      customer_address: data.deliveryAddress,
+      delivery_reference: data.deliveryReference?.trim() || null,
+      delivery_coordinates: `POINT(${data.deliveryCoordinates.lng} ${data.deliveryCoordinates.lat})`,
+      customer_location_accuracy_m: data.locationAccuracyM ?? null,
       customer_order_subtotal: subtotal,
     })
     .eq('id', orderId)
@@ -198,7 +211,7 @@ async function priceCart(
   sb: any,
   items: Customer.CreateCustomerOrderRequest['items'],
   restaurantId: string,
-): Promise<{ lines: CartLine[] } | { response: Response }> {
+): Promise<{ lines: CartLine[] } | { response: NextResponse }> {
   const itemIds = [...new Set(items.map((item) => item.menuItemId))]
   const { data: menuItems, error: itemsError } = await sb
     .from('menu_items')

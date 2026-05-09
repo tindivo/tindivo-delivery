@@ -4,8 +4,10 @@ import type { ApiClient } from './client'
 export function ordersApi(client: ApiClient) {
   return {
     // Restaurant
-    createOrder: (body: Orders.CreateOrderRequest) =>
-      client.post<Orders.CreateOrderResponse>('restaurant/orders', body),
+    createOrder: (body: Orders.CreateOrderRequest, opts?: { idempotencyKey?: string }) =>
+      client.post<Orders.CreateOrderResponse>('restaurant/orders', body, {
+        idempotencyKey: opts?.idempotencyKey,
+      }),
     listRestaurantOrders: (query?: { status?: string }) =>
       client.get<{ items: Orders.OrderSummaryResponse[] }>('restaurant/orders', { query }),
     getRestaurantOrder: (id: string) =>

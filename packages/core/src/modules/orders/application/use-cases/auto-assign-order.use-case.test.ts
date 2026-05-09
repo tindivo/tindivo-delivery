@@ -50,6 +50,7 @@ function buildCandidate(over: Partial<DriverAssignmentCandidate> = {}): DriverAs
     activeSlots: over.activeSlots ?? activeCount,
     reservedSlots: over.reservedSlots ?? reservedCount,
     cancelledTodayCount: 0,
+    rejectedTodayCount: 0,
     sameRestaurantWindowCount: 0,
     distinctRestaurantsInBag: [],
     shiftStartedAt: null,
