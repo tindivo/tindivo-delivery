@@ -17,7 +17,7 @@ export const CreateOrderRequest = z
     prepMinutes: z
       .number()
       .int()
-      .min(5)
+      .min(10)
       .max(50)
       .refine((minutes) => minutes % 5 === 0, 'prepMinutes debe ir en intervalos de 5 minutos'),
     paymentStatus: PaymentStatus,

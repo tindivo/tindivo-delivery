@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { useAcceptOrderByRestaurant } from '../hooks/use-accept-order'
 import { useOrderItems } from '../hooks/use-order-items'
 
-const PREP_PRESETS = [10, 15, 20, 30, 45, 60] as const
+const PREP_PRESETS = [10, 15, 20, 25, 30, 35, 40, 45, 50] as const
 
 type Props = {
   orderId: string
@@ -42,13 +42,11 @@ export function AcceptOrderSheet({ orderId, order, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/40 flex items-end" role="dialog">
-      <button
-        type="button"
-        aria-label="Cerrar"
-        className="absolute inset-0"
-        onClick={onClose}
-      />
+    <dialog
+      open
+      className="fixed inset-0 z-[80] m-0 h-screen max-h-none w-screen max-w-none border-0 bg-black/40 p-0 flex items-end"
+    >
+      <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
       <motion.div
         initial={{ y: 720 }}
         animate={{ y: 0 }}
@@ -104,7 +102,6 @@ export function AcceptOrderSheet({ orderId, order, onClose }: Props) {
                       <div className="flex flex-wrap gap-1.5 ml-7">
                         {item.modifiers.map((m, idx) => (
                           <span
-                            // biome-ignore lint/suspicious/noArrayIndexKey: modifiers per item are stable
                             key={`${item.id}-${idx}`}
                             className="text-[11px] px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant border border-outline-variant/30"
                           >
@@ -224,7 +221,7 @@ export function AcceptOrderSheet({ orderId, order, onClose }: Props) {
           </Button>
         </div>
       </motion.div>
-    </div>
+    </dialog>
   )
 }
 

@@ -11,7 +11,7 @@ import { useCreateOrder } from '../hooks/use-create-order'
 
 type Payment = 'prepaid' | 'pending_yape' | 'pending_cash' | 'pending_mixed'
 
-const PREP_MINUTES = [10, 15, 20, 30, 45, 60] as const
+const PREP_MINUTES = [10, 15, 20, 25, 30, 35, 40, 45, 50] as const
 type PrepMinutes = (typeof PREP_MINUTES)[number]
 
 function parseMoney(raw: string): number {

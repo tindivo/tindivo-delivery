@@ -16,8 +16,9 @@ const AcceptSchema = z.object({
   prepMinutes: z
     .number()
     .int('prepMinutes debe ser entero')
-    .min(5, 'mínimo 5 minutos')
-    .max(120, 'máximo 120 minutos'),
+    .min(10, 'mínimo 10 minutos')
+    .max(50, 'máximo 50 minutos')
+    .refine((minutes) => minutes % 5 === 0, 'prepMinutes debe ir en intervalos de 5 minutos'),
 })
 
 /**
@@ -27,12 +28,9 @@ const AcceptSchema = z.object({
  * define el prep_time real, y dispara la asignación automática a driver. El
  * cron auto-cancel ya no afectará este pedido.
  *
- * Body: { prepMinutes: 5..120 }
+ * Body: { prepMinutes: 10..50 en intervalos de 5 }
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(req, ['restaurant'])
   if (!auth.ok) return auth.response
   if (!auth.auth.restaurantId) {

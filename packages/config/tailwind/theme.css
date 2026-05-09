@@ -10,24 +10,24 @@
      ─────────────────────────────────────────────────────────── */
 
   /* Surfaces */
-  --color-surface: #f9f9f6;
+  --color-surface: #fbfaf7;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f4f4f1;
-  --color-surface-container: #eeeeeb;
-  --color-surface-container-high: #e8e8e5;
-  --color-surface-container-highest: #e2e3e0;
-  --color-surface-dim: #dadad7;
-  --color-surface-bright: #f9f9f6;
+  --color-surface-container-low: #f4f3ef;
+  --color-surface-container: #eeece7;
+  --color-surface-container-high: #e7e4dd;
+  --color-surface-container-highest: #dedbd3;
+  --color-surface-dim: #d8d5cd;
+  --color-surface-bright: #fbfaf7;
   --color-inverse-surface: #2f312f;
   --color-inverse-on-surface: #f1f1ee;
-  --color-background: #f9f9f6;
+  --color-background: #fbfaf7;
 
   /* Primary (naranja Tindivo) */
-  --color-primary: #ab3500;
+  --color-primary: #b43c1f;
   --color-on-primary: #ffffff;
-  --color-primary-container: #ff6b35;
-  --color-on-primary-container: #5f1900;
-  --color-primary-fixed: #ffdbd0;
+  --color-primary-container: #f26241;
+  --color-on-primary-container: #ffffff;
+  --color-primary-fixed: #ffe1d5;
   --color-primary-fixed-dim: #ffb59d;
   --color-on-primary-fixed: #390c00;
   --color-on-primary-fixed-variant: #832600;
@@ -42,12 +42,12 @@
   --color-secondary-fixed-dim: #c8c6c5;
 
   /* Tertiary */
-  --color-tertiary: #9b4500;
+  --color-tertiary: #b45309;
   --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #ea7c33;
-  --color-on-tertiary-container: #552300;
-  --color-tertiary-fixed: #ffdbc9;
-  --color-tertiary-fixed-dim: #ffb68d;
+  --color-tertiary-container: #f59e0b;
+  --color-on-tertiary-container: #3f2100;
+  --color-tertiary-fixed: #fef3c7;
+  --color-tertiary-fixed-dim: #fde68a;
 
   /* Error */
   --color-error: #ba1a1a;
@@ -56,13 +56,13 @@
   --color-on-error-container: #93000a;
 
   /* On-surface */
-  --color-on-surface: #1a1c1b;
-  --color-on-surface-variant: #594139;
+  --color-on-surface: #17201c;
+  --color-on-surface-variant: #53605c;
   --color-on-background: #1a1c1b;
 
   /* Outlines */
-  --color-outline: #8d7168;
-  --color-outline-variant: #e1bfb5;
+  --color-outline: #7a857f;
+  --color-outline-variant: #d9ded7;
 
   /* Estados semáforo del pedido (para badges y washes) */
   --color-state-red: #ba1a1a;
@@ -73,10 +73,10 @@
   --color-state-emerald: #10b981;
 
   /* Tipografía */
-  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-headline: "Inter", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
-  --font-label: "Inter", system-ui, sans-serif;
+  --font-sans: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-headline: "Manrope", system-ui, sans-serif;
+  --font-body: "Manrope", system-ui, sans-serif;
+  --font-label: "Manrope", system-ui, sans-serif;
 
   /* Radios */
   --radius-sm: 0.5rem;
@@ -96,8 +96,8 @@
   --shadow-danger: 0 4px 20px rgba(186, 26, 26, 0.1), 0 10px 40px rgba(0, 0, 0, 0.06);
 
   /* Glass */
-  --glass-background: rgba(255, 255, 255, 0.6);
-  --glass-border: rgba(255, 107, 53, 0.1);
+  --glass-background: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(180, 60, 31, 0.12);
 
   /* Motion */
   --motion-short: 200ms;

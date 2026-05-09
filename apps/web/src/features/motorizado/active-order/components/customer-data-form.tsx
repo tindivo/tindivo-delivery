@@ -46,7 +46,7 @@ export function CustomerDataForm({
   restaurantCoords,
 }: Props) {
   return (
-    <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
+    <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
       <header className="flex items-center justify-between">
         <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
           Datos del cliente
@@ -56,17 +56,6 @@ export function CustomerDataForm({
           Auto-guardado
         </span>
       </header>
-
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-2">
-        <Icon name="tips_and_updates" size={18} className="text-amber-600 shrink-0 mt-0.5" />
-        <div className="text-xs text-amber-900">
-          <p className="font-bold mb-0.5">Aprovecha la espera</p>
-          <p>
-            Llena los datos mientras te alistan la comida. Marca el destino en el mapa{' '}
-            <span className="font-bold">o</span> escribe una referencia (al menos uno).
-          </p>
-        </div>
-      </div>
 
       <div className="space-y-2">
         <Label htmlFor="customer-phone">Teléfono del cliente</Label>

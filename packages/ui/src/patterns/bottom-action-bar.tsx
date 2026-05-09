@@ -31,8 +31,8 @@ export function BottomActionBar({ children, zIndex = 40 }: Props) {
         background: 'rgba(255, 255, 255, 0.92)',
         backdropFilter: 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        borderTop: '1px solid rgba(225, 191, 181, 0.25)',
-        boxShadow: '0 -8px 24px -8px rgba(171, 53, 0, 0.08)',
+        borderTop: '1px solid rgba(217, 222, 215, 0.7)',
+        boxShadow: '0 -8px 24px -8px rgba(18, 38, 32, 0.1)',
       }}
     >
       <div

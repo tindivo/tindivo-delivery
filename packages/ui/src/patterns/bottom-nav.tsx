@@ -49,7 +49,7 @@ export function BottomNav({ items }: Props) {
         background: 'rgba(255, 255, 255, 0.82)',
         borderTopLeftRadius: '32px',
         borderTopRightRadius: '32px',
-        boxShadow: '0 -4px 30px rgba(171, 53, 0, 0.06)',
+        boxShadow: '0 -4px 30px rgba(18, 38, 32, 0.08)',
         paddingTop: '14px',
         paddingBottom: 'calc(14px + env(safe-area-inset-bottom))',
       }}
@@ -65,15 +65,15 @@ export function BottomNav({ items }: Props) {
             style={
               active
                 ? {
-                    backgroundImage: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
+                    backgroundImage: 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
                     color: '#ffffff',
                     borderRadius: '22px',
                     padding: '10px 6px',
                     boxShadow:
-                      '0 8px 18px -2px rgba(255, 107, 53, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
+                      '0 8px 18px -2px rgba(242, 98, 65, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
                   }
                 : {
-                    color: '#a1a1aa',
+                    color: '#7a857f',
                     padding: '10px 6px',
                   }
             }
@@ -97,10 +97,10 @@ export function BottomNav({ items }: Props) {
                   aria-label={`${item.badge} pendientes`}
                   className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-black leading-none rounded-full"
                   style={{
-                    background: active ? '#ffffff' : '#FF6B35',
-                    color: active ? '#FF6B35' : '#ffffff',
+                    background: active ? '#ffffff' : '#F26241',
+                    color: active ? '#F26241' : '#ffffff',
                     boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
-                    border: active ? '1.5px solid #FF6B35' : '1.5px solid #ffffff',
+                    border: active ? '1.5px solid #F26241' : '1.5px solid #ffffff',
                   }}
                 >
                   {item.badge > 9 ? '9+' : item.badge}

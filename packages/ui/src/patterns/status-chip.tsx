@@ -39,7 +39,7 @@ const chipVariants = cva(
       variant: {
         red: 'bg-error-container text-on-error-container',
         yellow: 'bg-amber-100 text-amber-900',
-        orange: 'bg-tertiary-container text-on-tertiary',
+        orange: 'bg-tertiary-container text-on-tertiary-container',
         darkYellow: 'bg-amber-200 text-amber-900',
         green: 'bg-emerald-100 text-emerald-800',
         gray: 'bg-surface-container text-on-surface-variant',

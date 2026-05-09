@@ -59,6 +59,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const [changePaymentOpen, setChangePaymentOpen] = useState(false)
   const [confirmPickupOpen, setConfirmPickupOpen] = useState(false)
   const [pickupError, setPickupError] = useState<string | null>(null)
+  const [timelineOpen, setTimelineOpen] = useState(false)
   const receivedFiredRef = useRef(false)
 
   // Estado del form mientras el driver edita; vive solo en memoria. La fuente
@@ -121,16 +122,17 @@ export function ActiveOrderDetail({ orderId }: Props) {
     return [
       {
         key: 'accepted',
-        label: 'Asignado',
-        icon: 'check',
-        done: true,
+        label: 'Por aceptar',
+        icon: 'assignment_turned_in',
+        done: s !== 'waiting_driver',
+        current: s === 'waiting_driver',
       },
       {
         key: 'heading',
         label: 'En camino al local',
         icon: 'two_wheeler',
         done: ['waiting_at_restaurant', 'picked_up', 'delivered'].includes(s),
-        current: s === 'heading_to_restaurant' || s === 'waiting_driver',
+        current: s === 'heading_to_restaurant',
       },
       {
         key: 'at_restaurant',
@@ -151,6 +153,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
         label: 'Entregado',
         icon: 'check_circle',
         done: s === 'delivered',
+        current: s === 'delivered',
       },
     ]
   }, [order])
@@ -199,12 +202,24 @@ export function ActiveOrderDetail({ orderId }: Props) {
         `Hola, soy el motorizado de tu pedido #${raw.short_id}, voy en camino con tu pedido.`,
       )
     : null
+  const currentPhase = currentPhaseForStatus(status, {
+    hasCustomerData,
+    isEditingCustomerData,
+    prepReady,
+  })
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen relative"
       style={{ paddingBottom: 'calc(220px + env(safe-area-inset-bottom))' }}
     >
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none -z-10"
+        style={{
+          background: 'linear-gradient(180deg, #fffdf9 0%, #f7faf7 58%, #f3f8f4 100%)',
+        }}
+      />
       <GlassTopBar
         title="PEDIDO"
         subtitle="Motorizado"
@@ -226,12 +241,14 @@ export function ActiveOrderDetail({ orderId }: Props) {
 
       <main className="pt-24 px-4 max-w-md mx-auto space-y-5">
         {/* Header del pedido */}
-        <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)]">
+        <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/20 shadow-[0_12px_36px_-24px_rgba(18,38,32,0.45)]">
           <div className="flex items-start justify-between gap-2">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <ColorDot color={restaurant.accent_color ?? 'ab3500'} />
-                <h1 className="font-black text-lg text-on-surface">{restaurant.name}</h1>
+                <h1 className="font-black text-xl leading-tight text-on-surface">
+                  {restaurant.name}
+                </h1>
               </div>
               <p className="text-xs text-on-surface-variant font-mono">#{raw.short_id}</p>
               {raw.client_name && (
@@ -314,27 +331,20 @@ export function ActiveOrderDetail({ orderId }: Props) {
             )}
         </section>
 
-        {/* Timeline */}
-        <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)]">
-          <Timeline steps={steps} />
-        </section>
+        <CurrentPhaseCard
+          phase={currentPhase}
+          steps={steps}
+          open={timelineOpen}
+          onToggle={() => setTimelineOpen((value) => !value)}
+        />
 
         {/* Restaurante: dirección + navegar */}
         {['waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant'].includes(status) && (
-          <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
+          <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
             <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
               Recoger pedido en
             </h3>
             <p className="font-semibold">{restaurant.address}</p>
-            {restaurant.phone && (
-              <a
-                href={`tel:+51${restaurant.phone}`}
-                className="inline-flex items-center gap-2 text-primary-container font-semibold text-sm"
-              >
-                <Icon name="call" size={16} />
-                Llamar al local
-              </a>
-            )}
           </section>
         )}
 
@@ -346,16 +356,16 @@ export function ActiveOrderDetail({ orderId }: Props) {
               tiempo de prep. El botón "Ya recogí el pedido" transiciona a
               picked_up (con confirmación si aún no llegó a cero). */}
         {status === 'waiting_driver' && (
-          <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
+          <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
             <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
               Pedido asignado a ti
             </h3>
             <div
               className="rounded-2xl p-5 text-center"
               style={{
-                background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
+                background: 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
                 color: '#ffffff',
-                boxShadow: '0 12px 28px -10px rgba(255, 107, 53, 0.45)',
+                boxShadow: '0 12px 28px -10px rgba(242, 98, 65, 0.38)',
               }}
             >
               <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85 mb-1">
@@ -387,7 +397,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
         )}
 
         {status === 'waiting_at_restaurant' && !isEditingCustomerData && hasCustomerData && (
-          <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
+          <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
             <header className="flex items-center justify-between">
               <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
                 {prepReady ? 'Pedido listo' : 'Tiempo de preparación'}
@@ -407,11 +417,11 @@ export function ActiveOrderDetail({ orderId }: Props) {
               style={{
                 background: prepReady
                   ? 'linear-gradient(135deg, #065F46 0%, #10B981 100%)'
-                  : 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
+                  : 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
                 color: '#ffffff',
                 boxShadow: prepReady
                   ? '0 12px 28px -10px rgba(5, 150, 105, 0.45)'
-                  : '0 12px 28px -10px rgba(255, 107, 53, 0.45)',
+                  : '0 12px 28px -10px rgba(242, 98, 65, 0.38)',
               }}
             >
               <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85 mb-1">
@@ -460,7 +470,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
             pin_drop. La navegación GPS (botón "Abrir en Google Maps") vive
             en el BottomActionBar y solo aparece si hay coords. */}
         {status === 'picked_up' && (raw.client_phone || persistedReference) && (
-          <section className="bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
+          <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
             <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
               Entregar al cliente
             </h3>
@@ -505,6 +515,12 @@ export function ActiveOrderDetail({ orderId }: Props) {
               restaurantName={restaurant.name ?? 'Restaurante'}
             />
           )}
+
+        <OrderSupportContacts
+          restaurantName={restaurant.name ?? 'Restaurante'}
+          restaurantPhone={restaurant.phone ?? null}
+          restaurantWaUrl={restaurantWaUrl}
+        />
       </main>
 
       {changePaymentOpen && (
@@ -599,7 +615,10 @@ export function ActiveOrderDetail({ orderId }: Props) {
                     setTransferError('Ese motorizado ya no tiene espacio. Elige otro.')
                   } else if (err instanceof ApiError && err.problem.code === 'INVALID_TRANSFER') {
                     setTransferError(err.problem.detail ?? 'No pudimos transferir el pedido.')
-                  } else if (err instanceof ApiError && err.problem.code === 'INVALID_STATE_TRANSITION') {
+                  } else if (
+                    err instanceof ApiError &&
+                    err.problem.code === 'INVALID_STATE_TRANSITION'
+                  ) {
                     setTransferError('El pedido cambió de estado. Recarga la pantalla.')
                   } else {
                     setTransferError('No pudimos transferir el pedido. Intenta de nuevo.')
@@ -640,28 +659,6 @@ export function ActiveOrderDetail({ orderId }: Props) {
 
         {status === 'heading_to_restaurant' && (
           <>
-            {restaurant.phone && (
-              <div className="flex w-full gap-2">
-                <a
-                  href={`tel:+51${restaurant.phone}`}
-                  className="flex-1 inline-flex items-center justify-center gap-2 h-12 px-4 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
-                >
-                  <Icon name="call" size={20} filled />
-                  Llamar al local
-                </a>
-                {restaurantWaUrl && (
-                  <a
-                    href={restaurantWaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Chatear por WhatsApp con el local"
-                    className="flex-none w-20 inline-flex items-center justify-center h-12 rounded-xl bg-emerald-500 text-white shadow-[0_4px_20px_rgba(16,185,129,0.25)] transition-all duration-300 active:scale-95"
-                  >
-                    <Icon name="chat" size={22} filled />
-                  </a>
-                )}
-              </div>
-            )}
             <button
               type="button"
               onClick={() => navigateMaps(buildRestaurantDestination(restaurant))}
@@ -701,29 +698,6 @@ export function ActiveOrderDetail({ orderId }: Props) {
 
         {status === 'waiting_at_restaurant' && (
           <>
-            {restaurant.phone && (
-              <div className="flex w-full gap-2">
-                <a
-                  href={`tel:+51${restaurant.phone}`}
-                  className="flex-1 inline-flex items-center justify-center gap-2 h-12 px-4 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95"
-                >
-                  <Icon name="call" size={20} filled />
-                  Llamar al local
-                </a>
-                {restaurantWaUrl && (
-                  <a
-                    href={restaurantWaUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Chatear por WhatsApp con el local"
-                    className="flex-none w-20 inline-flex items-center justify-center h-12 rounded-xl bg-emerald-500 text-white shadow-[0_4px_20px_rgba(16,185,129,0.25)] transition-all duration-300 active:scale-95"
-                  >
-                    <Icon name="chat" size={22} filled />
-                  </a>
-                )}
-              </div>
-            )}
-
             {pickupError && !confirmPickupOpen && (
               <div className="w-full p-3 rounded-2xl bg-red-50 border border-red-200 text-xs font-semibold text-red-800">
                 {pickupError}
@@ -801,10 +775,10 @@ export function ActiveOrderDetail({ orderId }: Props) {
                     href={clientWaUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label="Chatear por WhatsApp con el cliente"
+                    aria-label="Abrir WhatsApp con el cliente"
                     className="flex-none w-20 inline-flex items-center justify-center h-12 rounded-xl bg-emerald-500 text-white shadow-[0_4px_20px_rgba(16,185,129,0.25)] transition-all duration-300 active:scale-95"
                   >
-                    <Icon name="chat" size={22} filled />
+                    <Icon name="phone_in_talk" size={22} filled />
                   </a>
                 )}
               </div>
@@ -853,6 +827,256 @@ export function ActiveOrderDetail({ orderId }: Props) {
       </BottomActionBar>
     </div>
   )
+}
+
+type CurrentPhase = {
+  eyebrow: string
+  label: string
+  description: string
+  icon: string
+  tone: 'brand' | 'warning' | 'success' | 'neutral'
+}
+
+function currentPhaseForStatus(
+  status: string,
+  context: {
+    hasCustomerData: boolean
+    isEditingCustomerData: boolean
+    prepReady: boolean
+  },
+): CurrentPhase {
+  switch (status) {
+    case 'waiting_driver':
+      return {
+        eyebrow: 'Momento actual',
+        label: 'Confirma el pedido',
+        description: 'Acepta si puedes tomarlo ahora; si no, recházalo para liberarlo.',
+        icon: 'task_alt',
+        tone: 'brand',
+      }
+    case 'heading_to_restaurant':
+      return {
+        eyebrow: 'Momento actual',
+        label: 'Ve al restaurante',
+        description: 'Abre Maps si lo necesitas y marca llegada cuando estés en el local.',
+        icon: 'navigation',
+        tone: 'brand',
+      }
+    case 'waiting_at_restaurant':
+      if (context.isEditingCustomerData || !context.hasCustomerData) {
+        return {
+          eyebrow: 'Momento actual',
+          label: 'Registra datos del cliente',
+          description: 'Copia el teléfono y destino del papel físico antes de recoger.',
+          icon: 'edit_location_alt',
+          tone: 'warning',
+        }
+      }
+      return {
+        eyebrow: 'Momento actual',
+        label: context.prepReady ? 'Recoge el pedido' : 'Espera en el local',
+        description: context.prepReady
+          ? 'Cuando tengas la bolsa en mano, confirma la recogida.'
+          : 'Mantén los datos listos y confirma apenas te entreguen la bolsa.',
+        icon: context.prepReady ? 'shopping_bag' : 'hourglass_top',
+        tone: context.prepReady ? 'success' : 'warning',
+      }
+    case 'picked_up':
+      return {
+        eyebrow: 'Momento actual',
+        label: 'Entrega al cliente',
+        description: 'Usa Maps o llama al cliente; confirma solo cuando entregues el pedido.',
+        icon: 'delivery_dining',
+        tone: 'success',
+      }
+    case 'delivered':
+      return {
+        eyebrow: 'Momento actual',
+        label: 'Pedido entregado',
+        description: 'Este pedido ya salió de tu cola activa.',
+        icon: 'check_circle',
+        tone: 'success',
+      }
+    default:
+      return {
+        eyebrow: 'Momento actual',
+        label: 'Revisa el pedido',
+        description: 'Sigue la acción principal indicada abajo.',
+        icon: 'receipt_long',
+        tone: 'neutral',
+      }
+  }
+}
+
+function CurrentPhaseCard({
+  phase,
+  steps,
+  open,
+  onToggle,
+}: {
+  phase: CurrentPhase
+  steps: TimelineStep[]
+  open: boolean
+  onToggle: () => void
+}) {
+  const palette = {
+    brand: {
+      bg: 'linear-gradient(135deg, rgba(242, 98, 65, 0.12) 0%, rgba(255,255,255,0.94) 58%)',
+      iconBg: 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
+      border: 'rgba(242, 98, 65, 0.22)',
+      color: '#9B2F18',
+    },
+    warning: {
+      bg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(255,255,255,0.94) 58%)',
+      iconBg: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
+      border: 'rgba(245, 158, 11, 0.24)',
+      color: '#92400E',
+    },
+    success: {
+      bg: 'linear-gradient(135deg, rgba(5, 150, 105, 0.13) 0%, rgba(255,255,255,0.94) 58%)',
+      iconBg: 'linear-gradient(135deg, #059669 0%, #14B8A6 100%)',
+      border: 'rgba(5, 150, 105, 0.22)',
+      color: '#065F46',
+    },
+    neutral: {
+      bg: 'linear-gradient(135deg, rgba(83, 96, 92, 0.1) 0%, rgba(255,255,255,0.94) 58%)',
+      iconBg: 'linear-gradient(135deg, #53605C 0%, #7B8581 100%)',
+      border: 'rgba(83, 96, 92, 0.18)',
+      color: '#34403B',
+    },
+  }[phase.tone]
+
+  return (
+    <section
+      className="rounded-[28px] p-5 border shadow-[0_12px_36px_-24px_rgba(18,38,32,0.45)] overflow-hidden"
+      style={{ background: palette.bg, borderColor: palette.border }}
+    >
+      <div className="flex items-start gap-4">
+        <span
+          className="shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-[0_10px_24px_-12px_rgba(18,38,32,0.65)]"
+          style={{ background: palette.iconBg }}
+        >
+          <Icon name={phase.icon} size={25} filled />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p
+            className="text-[10px] font-black tracking-[0.22em] uppercase"
+            style={{ color: palette.color }}
+          >
+            {phase.eyebrow}
+          </p>
+          <h2 className="mt-1 text-xl font-black leading-tight text-on-surface">{phase.label}</h2>
+          <p className="mt-1 text-sm leading-snug text-on-surface-variant">{phase.description}</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="mt-4 flex min-h-12 w-full items-center justify-between rounded-2xl border border-outline-variant/25 bg-white/72 px-4 text-sm font-black text-on-surface transition-all duration-200 active:scale-[0.98]"
+      >
+        <span>{open ? 'Ocultar fases' : 'Ver todas las fases'}</span>
+        <span
+          className="inline-flex text-on-surface-variant transition-transform duration-200"
+          style={{ transform: open ? 'rotate(180deg)' : 'none' }}
+        >
+          <Icon name="expand_more" size={22} />
+        </span>
+      </button>
+
+      {open && (
+        <div className="tindivo-reveal mt-4 border-t border-outline-variant/15 pt-4">
+          <Timeline steps={steps} />
+        </div>
+      )}
+    </section>
+  )
+}
+
+function OrderSupportContacts({
+  restaurantName,
+  restaurantPhone,
+  restaurantWaUrl,
+}: {
+  restaurantName: string
+  restaurantPhone: string | null
+  restaurantWaUrl: string | null
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="px-1">
+        <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+          Contactos
+        </h3>
+        <p className="mt-1 text-sm font-semibold text-on-surface">
+          {restaurantName} y soporte Tindivo.
+        </p>
+      </div>
+
+      {restaurantPhone && (
+        <a
+          href={phoneHref(restaurantPhone)}
+          className="flex min-h-14 items-center gap-3 rounded-2xl border border-outline-variant/25 bg-surface-container-lowest px-4 text-on-surface transition-all duration-200 active:scale-[0.98]"
+        >
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary">
+            <Icon name="call" size={21} filled />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-black">Llamar al restaurante</span>
+            <span className="block text-xs font-mono text-on-surface-variant">
+              {formatPePhone(restaurantPhone)}
+            </span>
+          </span>
+        </a>
+      )}
+
+      {restaurantWaUrl && (
+        <a
+          href={restaurantWaUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Abrir WhatsApp con el restaurante"
+          className="flex min-h-14 items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-emerald-900 transition-all duration-200 active:scale-[0.98]"
+        >
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white">
+            <Icon name="phone_in_talk" size={21} filled />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-black">WhatsApp al restaurante</span>
+            <span className="block text-xs font-semibold text-emerald-800/80">
+              Para coordinar con el local
+            </span>
+          </span>
+        </a>
+      )}
+
+      <a
+        href="tel:+51906550166"
+        className="flex min-h-14 items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 text-sky-950 transition-all duration-200 active:scale-[0.98]"
+      >
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white">
+          <Icon name="support_agent" size={21} filled />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-black">Necesitas ayuda</span>
+          <span className="block text-xs font-mono text-sky-900/75">+51 906 550 166</span>
+        </span>
+      </a>
+    </section>
+  )
+}
+
+function phoneHref(raw: string): string {
+  const e164 = normalizeToE164Pe(raw)
+  return e164 ? `tel:+${e164}` : `tel:${raw}`
+}
+
+function formatPePhone(raw: string): string {
+  const e164 = normalizeToE164Pe(raw)
+  if (!e164) return raw
+  const local = e164.slice(2)
+  return `+51 ${local.slice(0, 3)} ${local.slice(3, 6)} ${local.slice(6)}`
 }
 
 function paymentLabel(status: string): string {

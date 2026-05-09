@@ -34,7 +34,7 @@ export function WaLinkButton({ phoneE164, message, label, onSent, disabled, clas
         className,
       )}
     >
-      <Icon name="chat" size={20} filled />
+      <Icon name="phone_in_talk" size={20} filled />
       {label ?? 'Enviar por WhatsApp'}
     </a>
   )

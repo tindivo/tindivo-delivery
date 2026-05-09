@@ -13,7 +13,7 @@ type Props = {
  * Top bar glass disruptivo, estilo "floating card":
  *  - Altura 76px con padding interno generoso (16px vertical, 22px horizontal)
  *  - Bordes inferiores redondeados (24px) → se percibe como card flotante
- *  - Mesh orbs en esquinas opuestas + grid pattern sutil
+ *  - Velo de gradiente sutil sin ruido visual
  *  - Logo con dot pulsante + subtitle con línea accent
  *  - Slots left/right respiran con gap natural
  */
@@ -29,52 +29,42 @@ export function GlassTopBar({ left, title, right, className, subtitle }: Props) 
         WebkitBackdropFilter: 'blur(28px) saturate(180%)',
         borderBottomLeftRadius: '24px',
         borderBottomRightRadius: '24px',
-        borderBottom: '1px solid rgba(255, 107, 53, 0.08)',
-        borderLeft: '1px solid rgba(255, 107, 53, 0.05)',
-        borderRight: '1px solid rgba(255, 107, 53, 0.05)',
+        borderBottom: '1px solid rgba(180, 60, 31, 0.08)',
+        borderLeft: '1px solid rgba(180, 60, 31, 0.05)',
+        borderRight: '1px solid rgba(180, 60, 31, 0.05)',
         boxShadow:
-          'inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 8px 28px -10px rgba(171, 53, 0, 0.12), 0 4px 12px -4px rgba(171, 53, 0, 0.06)',
+          'inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 8px 28px -10px rgba(18, 38, 32, 0.14), 0 4px 12px -4px rgba(18, 38, 32, 0.08)',
       }}
     >
-      {/* Orb mesh esquina superior izquierda */}
       <div
         aria-hidden="true"
-        className="absolute -top-8 -left-8 w-44 h-44 rounded-full pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          background:
-            'radial-gradient(circle, rgba(255, 107, 53, 0.18) 0%, rgba(255, 107, 53, 0) 60%)',
-        }}
-      />
-      {/* Orb mesh esquina inferior derecha */}
-      <div
-        aria-hidden="true"
-        className="absolute -bottom-10 -right-8 w-48 h-48 rounded-full pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(255, 140, 66, 0.14) 0%, rgba(255, 140, 66, 0) 65%)',
+          backgroundImage:
+            'linear-gradient(110deg, rgba(242,98,65,0.12), transparent 36%, rgba(20,184,166,0.07))',
         }}
       />
       {/* Contenedor interno con padding generoso (vertical + horizontal) */}
       <div
-        className="relative flex items-center justify-between h-full max-w-7xl mx-auto"
+        className="relative mx-auto flex h-full max-w-7xl items-center justify-between"
         style={{ padding: '0 22px' }}
       >
         {/* Zona izquierda: slot + logo + subtitle */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex min-w-0 items-center gap-3">
           {left ? <div className="shrink-0">{left}</div> : null}
 
           {title ? (
-            <div className="flex flex-col justify-center min-w-0" style={{ gap: '3px' }}>
+            <div className="flex min-w-0 flex-col justify-center" style={{ gap: '3px' }}>
               <div className="relative flex items-center">
                 <span
                   className="font-black uppercase"
                   style={{
                     fontSize: '19px',
-                    letterSpacing: '-0.05em',
+                    letterSpacing: 0,
                     lineHeight: 1.05,
-                    color: '#ab3500',
+                    color: '#b43c1f',
                     textShadow:
-                      '0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 14px rgba(255, 107, 53, 0.28)',
+                      '0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 14px rgba(242, 98, 65, 0.2)',
                   }}
                 >
                   {title}
@@ -83,16 +73,16 @@ export function GlassTopBar({ left, title, right, className, subtitle }: Props) 
                   aria-hidden="true"
                   className="ml-1.5 w-[7px] h-[7px] rounded-full relative shrink-0"
                   style={{
-                    background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
+                    background: 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
                     boxShadow:
-                      '0 0 0 3px rgba(255, 107, 53, 0.18), 0 2px 8px rgba(255, 107, 53, 0.55)',
+                      '0 0 0 3px rgba(242, 98, 65, 0.16), 0 2px 8px rgba(242, 98, 65, 0.42)',
                   }}
                 >
                   <span
                     aria-hidden="true"
                     className="absolute inset-0 rounded-full animate-ping"
                     style={{
-                      background: '#FF6B35',
+                      background: '#F26241',
                       animationDuration: '2.5s',
                     }}
                   />
@@ -100,10 +90,10 @@ export function GlassTopBar({ left, title, right, className, subtitle }: Props) 
               </div>
               {subtitle && (
                 <span
-                  className="text-[9px] font-medium uppercase inline-flex items-center gap-1.5"
+                  className="inline-flex max-w-[150px] items-center gap-1.5 truncate whitespace-nowrap text-xs font-semibold uppercase sm:max-w-none"
                   style={{
-                    letterSpacing: '0.28em',
-                    color: '#a1a1aa',
+                    letterSpacing: 0,
+                    color: '#7a857f',
                     lineHeight: 1,
                   }}
                 >
@@ -112,7 +102,7 @@ export function GlassTopBar({ left, title, right, className, subtitle }: Props) 
                     className="inline-block w-2 h-px"
                     style={{
                       background:
-                        'linear-gradient(90deg, rgba(255,107,53,0.5) 0%, transparent 100%)',
+                        'linear-gradient(90deg, rgba(242,98,65,0.5) 0%, transparent 100%)',
                     }}
                   />
                   {subtitle}
@@ -123,7 +113,7 @@ export function GlassTopBar({ left, title, right, className, subtitle }: Props) 
         </div>
 
         {/* Zona derecha: acciones */}
-        {right ? <div className="flex items-center gap-2 shrink-0">{right}</div> : null}
+        {right ? <div className="flex shrink-0 items-center gap-2">{right}</div> : null}
       </div>
 
       {/* Línea inferior gradient interior — cierre luminoso justo arriba del radius */}
@@ -132,7 +122,7 @@ export function GlassTopBar({ left, title, right, className, subtitle }: Props) 
         className="absolute bottom-0 left-8 right-8 h-px"
         style={{
           background:
-            'linear-gradient(90deg, transparent 0%, rgba(255, 107, 53, 0.35) 50%, transparent 100%)',
+            'linear-gradient(90deg, transparent 0%, rgba(242, 98, 65, 0.28) 50%, transparent 100%)',
         }}
       />
     </header>
