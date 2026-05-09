@@ -104,6 +104,17 @@ export class SupabaseDriverRepository implements DriverRepository {
     }
   }
 
+  async canDriverServe(driverId: string, restaurantId: string): Promise<boolean> {
+    const { data, error } = await this.sb
+      .from('driver_restaurants')
+      .select('driver_id')
+      .eq('driver_id', driverId)
+      .eq('restaurant_id', restaurantId)
+      .maybeSingle()
+    if (error) throw new PersistenceError(error.message, error)
+    return data !== null
+  }
+
   /**
    * Suma occupancy_slots por driver entre los pedidos creados desde
    * `todayStart`. Activos = heading/waiting/picked_up; reservados =

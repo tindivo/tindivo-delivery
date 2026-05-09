@@ -11,6 +11,7 @@ import {
   AutoAssignOrderUseCase,
   CancelOrderUseCase,
   ChangePaymentMethodUseCase,
+  ClaimUrgentOrderUseCase,
   CreateOrderUseCase,
   EditOrderByRestaurantUseCase,
   MarkArrivedUseCase,
@@ -33,7 +34,7 @@ import {
   CheckPlatformScheduleUseCase,
   SupabasePlatformSettingsRepository,
 } from '@tindivo/core/modules/platform'
-import { createAdminClient, type ServerClient } from '@tindivo/supabase'
+import { type ServerClient, createAdminClient } from '@tindivo/supabase'
 
 const clock = new SystemClock()
 
@@ -63,6 +64,21 @@ export function buildCreateOrderUseCase(sb: ServerClient) {
 export function buildAcceptOrderUseCase(sb: ServerClient) {
   const { orders, assignmentRules, events } = deps(sb)
   return new AcceptOrderUseCase(orders, assignmentRules, events, clock)
+}
+
+export function buildClaimUrgentOrderUseCase(_sb: ServerClient) {
+  // Cross-driver mutation (asigna driver_id al invocador): RLS de orders
+  // rechazaría el UPDATE bajo el JWT del driver. Usar admin client. Auth
+  // via requireAuth + canDriverServe garantiza que solo drivers asignados
+  // al restaurante pueden tomar el pedido.
+  const admin = createAdminClient()
+  return new ClaimUrgentOrderUseCase(
+    new SupabaseOrderRepository(admin),
+    new SupabaseDriverRepository(admin),
+    new SupabaseAssignmentRulesRepository(admin),
+    new SupabaseEventPublisher(admin),
+    clock,
+  )
 }
 
 export function buildAutoAssignOrderUseCase(sb: ServerClient) {

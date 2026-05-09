@@ -72,6 +72,12 @@ type Props = {
    * basado en `prominentCode`.
    */
   clientName?: string | null
+  /**
+   * Si true, el pedido está en la cola "Urgente" (post-timeout o post-rechazo).
+   * Fuerza styling rojo + glow + badge "URGENTE" prominente, sin importar el
+   * tier calculado por estimated_ready_at. Solo aplica si status='waiting_driver'.
+   */
+  isUrgent?: boolean
 }
 
 const TIER_STYLES: Record<
@@ -112,6 +118,7 @@ export function OrderCard({
   disabled = false,
   prominentCode = false,
   clientName,
+  isUrgent = false,
 }: Props) {
   const displayLabel = clientName?.trim() || null
   const noCharge = orderAmount === 0
@@ -124,9 +131,14 @@ export function OrderCard({
 
   const showUrgency = Boolean(estimatedReadyAt)
   const effectiveNow = useEffectiveNow(now, showUrgency)
-  const tier: UrgencyTier | null = showUrgency
+  const computedTier: UrgencyTier | null = showUrgency
     ? computeUrgencyTier(estimatedReadyAt as string | Date, effectiveNow)
     : null
+  // Cola "Urgente" (post-timeout o post-rechazo) fuerza el tier visual a
+  // overdue independientemente del estimated_ready_at — el pedido es
+  // urgente por estar en la cola, no por el countdown.
+  const tier: UrgencyTier | null =
+    isUrgent && status === 'waiting_driver' ? 'overdue' : computedTier
   // El styling de tier (borde rojo, glow) solo aplica cuando el pedido aún
   // no tiene driver — para evitar gritar "urgente" en cards ya en ruta.
   const applyTierStyle = tier && status === 'waiting_driver'
@@ -206,7 +218,23 @@ export function OrderCard({
             </>
           )}
         </div>
-        <StatusChip status={status} />
+        <div className="flex flex-col items-end gap-1">
+          {isUrgent && status === 'waiting_driver' && (
+            <span
+              aria-label="Pedido urgente"
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black tracking-wider"
+              style={{
+                background: 'linear-gradient(135deg, #991B1B 0%, #BA1A1A 100%)',
+                color: '#ffffff',
+                boxShadow: '0 4px 12px rgba(186, 26, 26, 0.35)',
+              }}
+            >
+              <Icon name="priority_high" size={12} filled />
+              URGENTE
+            </span>
+          )}
+          <StatusChip status={status} />
+        </div>
       </div>
 
       <div className="flex items-end justify-between pl-2">
@@ -223,11 +251,7 @@ export function OrderCard({
         </div>
         <div className="flex flex-col items-end gap-1.5 text-xs">
           {showUrgency && estimatedReadyAt ? (
-            <UrgencyBadge
-              estimatedReadyAt={estimatedReadyAt}
-              now={effectiveNow}
-              variant="chip"
-            />
+            <UrgencyBadge estimatedReadyAt={estimatedReadyAt} now={effectiveNow} variant="chip" />
           ) : (
             prepTimeMinutes != null && (
               <span className="inline-flex items-center gap-1 text-on-surface-variant">

@@ -34,4 +34,11 @@ export type SinglePeerQuery = {
 export interface DriverRepository {
   findEligiblePeers(query: EligiblePeerQuery): Promise<EligiblePeer[]>
   findEligiblePeer(query: SinglePeerQuery): Promise<EligiblePeer | null>
+  /**
+   * Valida si un driver tiene autorización para atender pedidos del
+   * restaurante (existe fila en `driver_restaurants`). Usado por
+   * `ClaimUrgentOrderUseCase` para impedir que un driver tome un pedido
+   * urgente de un restaurante que no atiende.
+   */
+  canDriverServe(driverId: string, restaurantId: string): Promise<boolean>
 }

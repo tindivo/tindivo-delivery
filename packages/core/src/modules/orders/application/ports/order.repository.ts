@@ -51,6 +51,17 @@ export interface OrderRepository {
 
   findAssignmentCandidates(query: AssignmentCandidateQuery): Promise<DriverAssignmentCandidate[]>
 
+  /**
+   * UPDATE atómico que reclama un pedido de la cola "Urgente". Combina
+   * `assignTo` + `acceptBy` en una sola query para resolver la race entre
+   * dos drivers tap-eando "Tomar pedido" simultáneamente. WHERE compuesto
+   * (status='waiting_driver' AND driver_id IS NULL AND urgent_since IS NOT NULL)
+   * garantiza que solo el primero gana — Postgres locking sin race window.
+   *
+   * Retorna `true` si reclamó la fila, `false` si otro driver ya la tomó.
+   */
+  claimUrgent(orderId: OrderId, driverId: DriverId, now: Date): Promise<boolean>
+
   findAvailable(nowIso: string): Promise<Order[]>
   findByRestaurant(restaurantId: RestaurantId, statuses?: OrderStatus[]): Promise<Order[]>
   findByDriver(driverId: DriverId, statuses?: OrderStatus[]): Promise<Order[]>

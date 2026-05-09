@@ -85,6 +85,7 @@ export const OrderMapper = {
           : null,
       readyEarlyAt: row.ready_early_at ? new Date(row.ready_early_at) : null,
       occupancySlots: OccupancySlots.of(row.occupancy_slots ?? 1),
+      urgentSince: row.urgent_since ? new Date(row.urgent_since) : null,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     }
@@ -154,6 +155,7 @@ export const OrderMapper = {
       prep_extension_minutes: p.prepExtensionMinutes,
       ready_early_at: p.readyEarlyAt?.toISOString() ?? null,
       occupancy_slots: p.occupancySlots.value,
+      urgent_since: p.urgentSince?.toISOString() ?? null,
       payment_status: p.payment.status,
       order_amount: p.payment.orderAmount.amount,
       yape_amount: p.payment.yapeAmount?.amount ?? null,

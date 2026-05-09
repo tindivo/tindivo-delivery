@@ -1,14 +1,12 @@
 'use client'
-import { fullSignOut } from '@/features/auth/services/sign-out'
 import { useCashSummary } from '@/features/motorizado/efectivo/hooks/use-cash-summary'
 import { useDriverProfile } from '@/features/motorizado/perfil/hooks/use-driver-profile'
+import { CapacityIndicatorCompact } from '@/features/motorizado/shared/components/capacity-indicator-compact'
 import { BottomNav, type BottomNavItem, GlassTopBar, Icon, IconButton } from '@tindivo/ui'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { type ReactNode, useMemo } from 'react'
 
 export default function MotorizadoLayout({ children }: { children: ReactNode }) {
-  const router = useRouter()
   const profile = useDriverProfile()
   const cash = useCashSummary(profile.data?.id)
 
@@ -35,11 +33,6 @@ export default function MotorizadoLayout({ children }: { children: ReactNode }) 
     [pendingCashRestaurants],
   )
 
-  async function logout() {
-    await fullSignOut()
-    router.replace('/login')
-  }
-
   return (
     <div className="min-h-screen pb-28">
       <GlassTopBar
@@ -52,11 +45,10 @@ export default function MotorizadoLayout({ children }: { children: ReactNode }) 
             </Link>
           </IconButton>
         }
-        right={
-          <IconButton variant="ghost" onClick={logout} aria-label="Cerrar sesión">
-            <Icon name="logout" />
-          </IconButton>
-        }
+        // Capacity widget SIEMPRE visible (antes vivía solo en la pestaña
+        // Disponibles y desaparecía al cambiar a Mis pedidos). Logout se mueve
+        // al perfil (ya tiene botón ahí — DriverProfileView).
+        right={<CapacityIndicatorCompact />}
       />
       {children}
       <BottomNav items={navItems} />

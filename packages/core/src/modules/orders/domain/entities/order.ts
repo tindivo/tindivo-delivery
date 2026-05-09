@@ -11,6 +11,7 @@ import {
   OrderNotEditable,
   PaymentChangeNotAllowed,
   PrepTimeExtensionLimit,
+  UrgentNotAvailable,
 } from '../errors/order-errors'
 import {
   CustomerDataSaved,
@@ -24,11 +25,13 @@ import {
   OrderDelivered,
   OrderEditedByRestaurant,
   OrderExtended,
+  OrderMarkedUrgent,
   OrderPendingAcceptance,
   OrderPickedUp,
   OrderReadyEarly,
   OrderReassigned,
   OrderReceived,
+  OrderUrgencyCleared,
   PaymentMethodChanged,
   TrackingLinkSent,
 } from '../events/order-events'
@@ -86,6 +89,15 @@ export type OrderProps = {
   prepExtensionMinutes: 5 | 10 | null
   readyEarlyAt: Date | null
   occupancySlots: OccupancySlots
+  /**
+   * Cola "Urgente": NULL = no urgente. Timestamp = momento en que entró a la
+   * cola urgente (post-timeout o post-rechazo). Sirve como FIFO de la cola y
+   * como flag visual "Urgente" en la PWA del motorizado. Cualquier driver
+   * del restaurante puede tomarlo manualmente vía /claim (FCFS sin reglas
+   * R1-R5). Los triggers reactivos de auto-asignación tienen guard
+   * `urgent_since IS NULL` y NO disparan para urgentes.
+   */
+  urgentSince: Date | null
   createdAt: Date
   updatedAt: Date
 }
@@ -180,6 +192,7 @@ export class Order extends AggregateRoot<OrderId> {
       prepExtensionMinutes: null,
       readyEarlyAt: null,
       occupancySlots: OccupancySlots.default(),
+      urgentSince: null,
       createdAt: now,
       updatedAt: now,
     })
@@ -264,6 +277,12 @@ export class Order extends AggregateRoot<OrderId> {
   get occupancySlots(): OccupancySlots {
     return this._state.occupancySlots
   }
+  get urgentSince(): Date | null {
+    return this._state.urgentSince
+  }
+  get isUrgent(): boolean {
+    return this._state.urgentSince !== null
+  }
   get props(): Readonly<OrderProps> {
     return this._state
   }
@@ -332,11 +351,19 @@ export class Order extends AggregateRoot<OrderId> {
       (this._state.estimatedReadyAt.getTime() - now.getTime()) / 1000,
     )
 
+    // Edge case: el cron `timeout_unaccepted_assignments` corrió en el segundo
+    // 4:59 mientras el driver estaba viendo el pedido y aceptó. En BD el
+    // pedido ya tenía `urgent_since` set; al aceptar lo limpiamos para que
+    // no se vea como "Urgente" en su lista de Mis pedidos. Optimistic lock
+    // del repo permite el accept aún si driver_id se liberó por timeout.
+    const wasUrgent = this._state.urgentSince !== null
+
     this._state.driverId = driverId
     this._state.status = OrderStatus.headingToRestaurant()
     this._state.acceptedAt = now
     this._state.headingAt = now
     this._state.acceptCountdownSeconds = countdownSeconds
+    this._state.urgentSince = null
     this._state.updatedAt = now
 
     this.raise(
@@ -347,6 +374,15 @@ export class Order extends AggregateRoot<OrderId> {
         acceptCountdownSeconds: countdownSeconds,
       }),
     )
+    if (wasUrgent) {
+      this.raise(
+        new OrderUrgencyCleared({
+          orderId: this.id.value,
+          claimedBy: driverId.value,
+          clearedAt: now.toISOString(),
+        }),
+      )
+    }
     return Result.okVoid()
   }
 
@@ -506,16 +542,16 @@ export class Order extends AggregateRoot<OrderId> {
   }
 
   /**
-   * El driver rechaza una asignación automática (cron). El pedido sigue en
-   * `waiting_driver` pero pierde el `driver_id`. El cron `assign-pending-orders`
-   * lo re-asignará excluyendo a este driver vía `order_assignment_rejections`
-   * (insertado por el use case junto al save).
+   * El driver rechaza una asignación. El pedido pasa a la cola "Urgente"
+   * (atributo `urgentSince` set + `driver_id=NULL`). NO se reasigna
+   * automáticamente con reglas R1-R5 — queda en cola para que cualquier
+   * driver del restaurante lo tome manualmente vía /claim (FCFS).
    *
    * Solo válido si:
    *  - status === 'waiting_driver'
    *  - el driver invocador es exactamente el asignado actualmente
    * Si el pedido ya pasó a `heading_to_restaurant` (ya aceptó), debe usar
-   * el flujo de cancelación o reasignación admin — no este método.
+   * el flujo de cancelación o transferencia admin — no este método.
    */
   rejectAssignment(
     driverId: DriverId,
@@ -527,7 +563,9 @@ export class Order extends AggregateRoot<OrderId> {
     if (!this._state.driverId || this._state.driverId.value !== driverId.value)
       return Result.fail(new DriverNotAssigned())
 
+    const previousDriverId = this._state.driverId.value
     this._state.driverId = null
+    this._state.urgentSince = now
     this._state.updatedAt = now
 
     this.raise(
@@ -536,6 +574,72 @@ export class Order extends AggregateRoot<OrderId> {
         driverId: driverId.value,
         reason,
         rejectedAt: now.toISOString(),
+      }),
+    )
+    this.raise(
+      new OrderMarkedUrgent({
+        orderId: this.id.value,
+        shortId: this._state.shortId.value,
+        restaurantId: this._state.restaurantId.value,
+        urgentSince: now.toISOString(),
+        source: 'driver_reject',
+        previousDriverId,
+      }),
+    )
+    return Result.okVoid()
+  }
+
+  /**
+   * Un driver toma manualmente un pedido de la cola "Urgente". Combina
+   * `assignTo` + `acceptBy` en una sola transición sin pasar por las reglas
+   * R1-R5 (la cola urgente es FCFS pura — el primer driver del restaurante
+   * que toque el botón gana). El repo usa un UPDATE atómico con WHERE
+   * compuesto para resolver la race entre dos drivers tap-eando simultáneo.
+   *
+   * Pre: status='waiting_driver' AND urgentSince!=null
+   * Post: driver_id=X, status='heading_to_restaurant', urgent_since=null,
+   *       acceptedAt=now, headingAt=now
+   *
+   * Validaciones de driver_restaurants y capacidad (R3) se hacen en el
+   * use case ANTES de llegar aquí.
+   */
+  applyClaimUrgent(driverId: DriverId, now: Date): Result<void, UrgentNotAvailable> {
+    if (this._state.status.value !== 'waiting_driver' || this._state.urgentSince === null)
+      return Result.fail(new UrgentNotAvailable())
+
+    const countdownSeconds = Math.round(
+      (this._state.estimatedReadyAt.getTime() - now.getTime()) / 1000,
+    )
+
+    this._state.driverId = driverId
+    this._state.status = OrderStatus.headingToRestaurant()
+    this._state.acceptedAt = now
+    this._state.headingAt = now
+    this._state.acceptCountdownSeconds = countdownSeconds
+    this._state.urgentSince = null
+    this._state.updatedAt = now
+
+    this.raise(
+      new OrderAssigned({
+        orderId: this.id.value,
+        driverId: driverId.value,
+        assignedAt: now.toISOString(),
+        reason: 'urgent_claim',
+      }),
+    )
+    this.raise(
+      new OrderAccepted({
+        orderId: this.id.value,
+        driverId: driverId.value,
+        acceptedAt: now.toISOString(),
+        acceptCountdownSeconds: countdownSeconds,
+      }),
+    )
+    this.raise(
+      new OrderUrgencyCleared({
+        orderId: this.id.value,
+        claimedBy: driverId.value,
+        clearedAt: now.toISOString(),
       }),
     )
     return Result.okVoid()

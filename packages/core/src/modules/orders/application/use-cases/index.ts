@@ -72,3 +72,9 @@ export type {
   TransferOrderToDriverCommand,
   TransferOrderToDriverResult,
 } from './transfer-order-to-driver.use-case'
+
+export { ClaimUrgentOrderUseCase } from './claim-urgent-order.use-case'
+export type {
+  ClaimUrgentOrderCommand,
+  ClaimUrgentOrderResult,
+} from './claim-urgent-order.use-case'

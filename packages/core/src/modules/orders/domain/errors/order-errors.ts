@@ -107,3 +107,16 @@ export class OrderNotEditable extends DomainError {
     super({ status })
   }
 }
+
+export class UrgentNotAvailable extends DomainError {
+  readonly code = 'URGENT_NOT_AVAILABLE'
+  readonly message = 'Este pedido ya no está disponible como urgente'
+}
+
+export class DriverNotAuthorizedForRestaurant extends DomainError {
+  readonly code = 'DRIVER_NOT_AUTHORIZED_FOR_RESTAURANT'
+  readonly message = 'No estás asignado para atender pedidos de este restaurante'
+  constructor(driverId: string, restaurantId: string) {
+    super({ driverId, restaurantId })
+  }
+}

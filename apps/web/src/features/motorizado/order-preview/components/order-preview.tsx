@@ -1,6 +1,7 @@
 'use client'
 import { useDriverCapacity } from '@/features/motorizado/active-order/hooks/use-driver-capacity'
 import { useAcceptOrder } from '@/features/motorizado/available-orders/hooks/use-accept-order'
+import { useClaimUrgentOrder } from '@/features/motorizado/available-orders/hooks/use-claim-urgent-order'
 import { useNow } from '@/shared/hooks/use-now'
 import { ApiError } from '@tindivo/api-client'
 import {
@@ -43,26 +44,43 @@ export function OrderPreview({ orderId }: Props) {
   const router = useRouter()
   const { data, isLoading } = useOrderPreview(orderId)
   const accept = useAcceptOrder()
+  const claim = useClaimUrgentOrder()
   const { activeCount, max, isFull } = useDriverCapacity()
   const now = useNow(1_000)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  // Pedido urgente (post-timeout o post-rechazo): no fue asignado a este
+  // driver — está en cola FCFS. Botón cambia a "Tomar pedido (Urgente)" y
+  // llama al endpoint /claim que combina assignTo + acceptBy atómicamente.
+  const isUrgent = Boolean(data?.urgent_since)
+  const isClaimable = isUrgent && data?.status === 'waiting_driver' && !data?.driver_id
+
   function handleAccept() {
     if (!data) return
     setErrorMsg(null)
-    accept.mutate(data.id, {
+    const action = isClaimable ? claim.mutate : accept.mutate
+    action(data.id, {
       onSuccess: () => router.replace(`/motorizado/pedidos/${data.id}`),
       onError: (err) => {
         if (err instanceof ApiError && err.problem.code === 'DRIVER_CAPACITY_EXCEEDED') {
           setErrorMsg(`Estás al límite (${max}/${max}). Completa una entrega para recibir nuevos.`)
         } else if (err instanceof ApiError && err.problem.code === 'ORDER_ALREADY_ACCEPTED') {
           setErrorMsg('Este pedido ya fue tomado por otro motorizado.')
+        } else if (
+          err instanceof ApiError &&
+          err.problem.code === 'DRIVER_NOT_AUTHORIZED_FOR_RESTAURANT'
+        ) {
+          setErrorMsg('No estás asignado para atender pedidos de este restaurante.')
+        } else if (err instanceof ApiError && err.problem.code === 'URGENT_NOT_AVAILABLE') {
+          setErrorMsg('Este pedido urgente ya fue tomado por otro motorizado.')
         } else {
           setErrorMsg('No pudimos aceptar el pedido. Intenta de nuevo.')
         }
       },
     })
   }
+
+  const isPending = accept.isPending || claim.isPending
 
   if (isLoading || !data) {
     return (
@@ -303,21 +321,37 @@ export function OrderPreview({ orderId }: Props) {
           <Button
             size="lg"
             className="w-full"
-            disabled={accept.isPending || isFull}
+            disabled={isPending || isFull}
             onClick={handleAccept}
+            style={
+              isClaimable && !isFull
+                ? {
+                    background: 'linear-gradient(135deg, #991B1B 0%, #BA1A1A 100%)',
+                    color: '#ffffff',
+                    boxShadow: '0 12px 28px -8px rgba(186, 26, 26, 0.4)',
+                  }
+                : undefined
+            }
           >
-            <Icon name={isFull ? 'block' : 'check_circle'} filled />
+            <Icon
+              name={isFull ? 'block' : isClaimable ? 'priority_high' : 'check_circle'}
+              filled
+            />
             {isFull
               ? `Al límite (${max}/${max})`
-              : accept.isPending
-                ? 'Aceptando...'
-                : 'Aceptar pedido'}
+              : isPending
+                ? isClaimable
+                  ? 'Tomando...'
+                  : 'Aceptando...'
+                : isClaimable
+                  ? 'Tomar pedido urgente'
+                  : 'Aceptar pedido'}
           </Button>
           <Button
             variant="secondary"
             size="md"
             className="w-full"
-            disabled={accept.isPending}
+            disabled={isPending}
             onClick={() => router.back()}
           >
             <Icon name="arrow_back" />

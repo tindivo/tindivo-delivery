@@ -45,6 +45,20 @@ export class AutoAssignOrderUseCase
       return Result.ok({ assigned: false, driverId: null, activated: false, reason: null })
     }
 
+    // Defensa en profundidad: los pedidos urgentes NO se asignan por reglas
+    // R1-R5 — son first-come-first-served vía /claim. El trigger reactivo
+    // ya tiene guard `urgent_since IS NULL` y el cron failsafe filtra en
+    // claim_pending_orders RPC, pero protegemos también el use case por si
+    // alguien lo invoca directamente (admin script, test, etc.).
+    if (order.urgentSince !== null) {
+      return Result.ok({
+        assigned: false,
+        driverId: null,
+        activated: false,
+        reason: 'urgent_no_auto_assign',
+      })
+    }
+
     const now = this.clock.now()
 
     // Asignación diferida: si el pedido todavía no entra en la ventana de

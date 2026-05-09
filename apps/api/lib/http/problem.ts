@@ -22,6 +22,8 @@ const CODE_TO_STATUS: Record<string, number> = {
   PREP_TIME_EXTENSION_LIMIT: 409,
   PAYMENT_CHANGE_NOT_ALLOWED: 409,
   INVALID_PAYMENT_CHANGE: 400,
+  URGENT_NOT_AVAILABLE: 409,
+  DRIVER_NOT_AUTHORIZED_FOR_RESTAURANT: 403,
   RESTAURANT_BLOCKED: 403,
   PLATFORM_CLOSED: 403,
   INTERNAL_ERROR: 500,
@@ -40,6 +42,8 @@ const CODE_TO_TITLE: Record<string, string> = {
   ORDER_NOT_CANCELLABLE: 'Pedido no cancelable',
   PAYMENT_CHANGE_NOT_ALLOWED: 'Cambio de pago no permitido',
   INVALID_PAYMENT_CHANGE: 'Datos de pago inválidos',
+  URGENT_NOT_AVAILABLE: 'Pedido urgente ya no disponible',
+  DRIVER_NOT_AUTHORIZED_FOR_RESTAURANT: 'No estás autorizado para este restaurante',
   PLATFORM_CLOSED: 'Plataforma cerrada',
   INTERNAL_ERROR: 'Error interno',
 }

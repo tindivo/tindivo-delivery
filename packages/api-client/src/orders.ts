@@ -35,6 +35,10 @@ export function ordersApi(client: ApiClient) {
     listDriverOrders: () => client.get<{ items: Orders.OrderSummaryResponse[] }>('driver/orders'),
     acceptOrder: (id: string) =>
       client.post<Orders.AcceptOrderResponse>(`driver/orders/${id}/accept`),
+    claimUrgent: (id: string, opts?: { idempotencyKey?: string }) =>
+      client.post<Orders.ClaimUrgentOrderResponse>(`driver/orders/${id}/claim`, undefined, {
+        idempotencyKey: opts?.idempotencyKey,
+      }),
     rejectAssignment: (id: string, body: Orders.RejectAssignmentRequest) =>
       client.post<Orders.RejectAssignmentResponse>(`driver/orders/${id}/reject`, body),
     listPeers: (restaurantId: string) =>

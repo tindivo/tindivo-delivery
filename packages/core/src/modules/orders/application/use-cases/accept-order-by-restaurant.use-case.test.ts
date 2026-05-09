@@ -62,6 +62,7 @@ function buildRepo(opts: { order: Order | null }) {
     findAvailable: async () => [],
     findByRestaurant: async () => [],
     findByDriver: async () => [],
+    claimUrgent: async () => false,
   }
   return { repo, saveMock }
 }

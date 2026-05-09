@@ -58,6 +58,34 @@ export class SupabaseOrderRepository implements OrderRepository {
     if ((count ?? 0) === 0) throw new RaceCondition(order.id.value)
   }
 
+  async claimUrgent(orderId: OrderId, driverId: DriverId, now: Date): Promise<boolean> {
+    // UPDATE atómico que reclama el pedido de la cola urgente.
+    // El WHERE compuesto resuelve la race entre dos drivers tap-eando "Tomar"
+    // al mismo tiempo: solo el primero matchea las 3 condiciones; el segundo
+    // ve count=0 y devuelve false → el use case mapea a ORDER_ALREADY_ACCEPTED.
+    // El trigger BEFORE UPDATE `trg_orders_set_assigned_at` setea assigned_at.
+    const nowIso = now.toISOString()
+    const { error, count } = await this.sb
+      .from('orders')
+      .update(
+        {
+          driver_id: driverId.value,
+          urgent_since: null,
+          status: 'heading_to_restaurant',
+          accepted_at: nowIso,
+          heading_at: nowIso,
+          updated_at: nowIso,
+        },
+        { count: 'exact' },
+      )
+      .eq('id', orderId.value)
+      .eq('status', 'waiting_driver')
+      .is('driver_id', null)
+      .not('urgent_since', 'is', null)
+    if (error) throw new PersistenceError(error.message, error)
+    return (count ?? 0) === 1
+  }
+
   async countActiveByDriver(driverId: DriverId): Promise<number> {
     const { count, error } = await this.sb
       .from('orders')

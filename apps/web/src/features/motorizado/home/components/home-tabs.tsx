@@ -49,15 +49,15 @@ export function HomeTabs() {
         }}
       >
         <TabButton
-          active={tab === 'available'}
-          onClick={() => setTab('available')}
-          label="Disponibles"
-        />
-        <TabButton
           active={tab === 'active'}
           onClick={() => setTab('active')}
           label="Mis pedidos"
           badge={activeCount > 0 ? activeCount : undefined}
+        />
+        <TabButton
+          active={tab === 'available'}
+          onClick={() => setTab('available')}
+          label="En espera"
         />
       </div>
 
@@ -92,9 +92,9 @@ function TabButton({
       style={
         active
           ? {
-              background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
+              background: 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
               color: '#ffffff',
-              boxShadow: '0 8px 18px -4px rgba(255, 107, 53, 0.35)',
+              boxShadow: '0 8px 18px -4px rgba(242, 98, 65, 0.3)',
             }
           : {
               color: '#71717a',
@@ -111,8 +111,8 @@ function TabButton({
             height: '20px',
             padding: '0 6px',
             borderRadius: '999px',
-            background: active ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 107, 53, 0.15)',
-            color: active ? '#ffffff' : '#AB3500',
+            background: active ? 'rgba(255, 255, 255, 0.28)' : 'rgba(242, 98, 65, 0.14)',
+            color: active ? '#ffffff' : '#B43C1F',
           }}
         >
           {badge}

@@ -436,3 +436,61 @@ export class OrderAcceptedByRestaurant extends BaseDomainEvent {
     this.payload = payload
   }
 }
+
+/**
+ * Emitido cuando un pedido pasa a la cola "Urgente" (atributo, no estado).
+ * Sucede en dos casos:
+ *  - `source='timeout'`: el cron `timeout_unaccepted_assignments` libera la
+ *    reservación tras 5 min sin acceptBy. Mismo INSERT en
+ *    `order_assignment_rejections` con reason='timeout_no_acceptance'.
+ *  - `source='driver_reject'`: el driver presiona "Rechazar" desde la PWA
+ *    (use case `RejectOrderAssignmentUseCase`). Acompañado de
+ *    `OrderAssignmentRejected` con la razón explícita.
+ *
+ * El pedido queda con `driver_id=NULL` y `urgent_since=now()`. Cualquier
+ * driver del restaurante puede tomarlo manualmente vía `/claim` (FCFS sin
+ * reglas R1-R5). El trigger reactivo de auto-asignación tiene un guard
+ * `urgent_since IS NULL` y NO dispara para urgentes.
+ */
+export class OrderMarkedUrgent extends BaseDomainEvent {
+  readonly eventType = 'OrderMarkedUrgent' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    shortId: string
+    restaurantId: string
+    urgentSince: string
+    source: 'timeout' | 'driver_reject'
+    previousDriverId: string | null
+  }
+
+  constructor(payload: OrderMarkedUrgent['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
+/**
+ * Emitido cuando un pedido sale de la cola urgente. Sucede cuando un driver
+ * exitosamente lo reclama (`/claim` → `applyClaimUrgent`) o cuando el `acceptBy`
+ * normal limpia el flag (edge case: driver aceptó en el segundo 4:59
+ * mientras el cron de timeout corría).
+ */
+export class OrderUrgencyCleared extends BaseDomainEvent {
+  readonly eventType = 'OrderUrgencyCleared' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    claimedBy: string | null
+    clearedAt: string
+  }
+
+  constructor(payload: OrderUrgencyCleared['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}

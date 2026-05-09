@@ -83,6 +83,7 @@ function buildRepo(opts: {
     findAvailable: async () => [],
     findByRestaurant: async () => [],
     findByDriver: async () => [],
+    claimUrgent: async () => false,
   }
 }
 
@@ -189,6 +190,35 @@ describe('AutoAssignOrderUseCase', () => {
       reason: null,
     })
     expect(repo.saveAutoAssignmentMock).not.toHaveBeenCalled()
+  })
+
+  it('NO asigna pedidos urgentes (defensa en profundidad — son first-come-first-served)', async () => {
+    // Pedido prep=10 normalmente sería asignado, pero está marcado urgent.
+    // Simulamos timeout previo: rejectAssignment marca urgentSince automáticamente.
+    const order = buildOrder(10, NOW)
+    const { DriverId } = await import('../../domain/value-objects/driver-id')
+    order.assignTo(DriverId.of(DRIVER_ID), 'first_assign', NOW)
+    const reject = order.rejectAssignment(DriverId.of(DRIVER_ID), 'too_far', NOW)
+    expect(reject.isSuccess).toBe(true)
+    expect(order.urgentSince).not.toBeNull()
+    order.pullEvents()
+
+    const repo = buildRepo({ order, candidates: [buildCandidate()] })
+    const publisher = buildPublisher()
+    const useCase = new AutoAssignOrderUseCase(repo, buildRulesRepo(), publisher, fixedClock(NOW))
+
+    const result = await useCase.execute({ orderId: order.id.value })
+
+    expect(result.isSuccess).toBe(true)
+    if (!result.isSuccess) return
+    expect(result.value).toEqual({
+      assigned: false,
+      driverId: null,
+      activated: false,
+      reason: 'urgent_no_auto_assign',
+    })
+    expect(repo.saveAutoAssignmentMock).not.toHaveBeenCalled()
+    expect(publisher.collected).toHaveLength(0)
   })
 
   it('no asigna si el pedido ya tiene driver (idempotencia)', async () => {

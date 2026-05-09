@@ -14,7 +14,12 @@ import { CancellationReason, OrderStatus, PaymentStatus, VehicleType } from '../
 
 export const CreateOrderRequest = z
   .object({
-    prepMinutes: z.number().int().min(5).max(120),
+    prepMinutes: z
+      .number()
+      .int()
+      .min(5)
+      .max(50)
+      .refine((minutes) => minutes % 5 === 0, 'prepMinutes debe ir en intervalos de 5 minutos'),
     paymentStatus: PaymentStatus,
     orderAmount: MoneyPenSchema,
     yapeAmount: MoneyPenSchema.optional(),
@@ -301,6 +306,12 @@ export const OrderSummaryResponse = z.object({
   clientPhone: PhonePeSchema.nullable(),
   clientName: z.string().nullable(),
   trackingLinkSentAt: TimestampSchema.nullable(),
+  /**
+   * Cola "Urgente": null = no urgente, timestamp = momento en que entró a la
+   * cola urgente (post-timeout o post-rechazo). Frontend muestra badge rojo
+   * en pedidos con valor; el ordenamiento del endpoint los pone primero.
+   */
+  urgentSince: TimestampSchema.nullable(),
   createdAt: TimestampSchema,
 })
 export type OrderSummaryResponse = z.infer<typeof OrderSummaryResponse>
@@ -354,6 +365,14 @@ export const AcceptOrderResponse = z.object({
   acceptedAt: TimestampSchema,
 })
 export type AcceptOrderResponse = z.infer<typeof AcceptOrderResponse>
+
+export const ClaimUrgentOrderResponse = z.object({
+  id: UuidSchema,
+  status: OrderStatus,
+  acceptedAt: TimestampSchema,
+  driverId: UuidSchema,
+})
+export type ClaimUrgentOrderResponse = z.infer<typeof ClaimUrgentOrderResponse>
 
 export const MarkReceivedResponse = z.object({
   id: UuidSchema,

@@ -14,7 +14,6 @@ import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 import { useAvailableOrders } from '../hooks/use-available-orders'
 import { useOverdueFeedback } from '../hooks/use-overdue-feedback'
-import { CapacityIndicator } from './capacity-indicator'
 import { OverdueBanner } from './overdue-banner'
 import { UpcomingOrdersSection } from './upcoming-orders-section'
 
@@ -28,7 +27,7 @@ type OrderItem = any
 export function AvailableOrdersList() {
   const router = useRouter()
   const { data, isLoading } = useAvailableOrders()
-  const { activeCount, usedSlots, max, isFull } = useDriverCapacity()
+  const { isFull } = useDriverCapacity()
   const now = useNow(1_000)
 
   const items = (data?.items ?? []) as OrderItem[]
@@ -65,8 +64,7 @@ export function AvailableOrdersList() {
 
   return (
     <div className="flex flex-col gap-3">
-      <CapacityIndicator activeCount={activeCount} usedSlots={usedSlots} max={max} />
-
+      {/* CapacityIndicator vive en el right slot del GlassTopBar (siempre visible). */}
       {isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-32" />
@@ -95,6 +93,7 @@ export function AvailableOrdersList() {
                   // Si hay overdue, los pending quedan bloqueados (priorizar).
                   // Si el driver está al límite 3/3, TODOS bloqueados.
                   const isLocked = isFull || (overdueCount > 0 && !isOverdue)
+                  const isUrgent = Boolean(order.urgent_since)
                   return (
                     <motion.li
                       key={order.id}
@@ -113,6 +112,7 @@ export function AvailableOrdersList() {
                         prepTimeMinutes={order.prep_minutes}
                         estimatedReadyAt={order.estimated_ready_at}
                         now={now}
+                        isUrgent={isUrgent}
                         disabled={isLocked}
                         onClick={() => router.push(`/motorizado/pedidos/${order.id}/preview`)}
                       />
