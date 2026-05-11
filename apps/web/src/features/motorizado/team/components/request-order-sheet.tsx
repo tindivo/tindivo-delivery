@@ -62,11 +62,12 @@ export function RequestOrderSheet({ order, onClose, onSuccess }: Props) {
   }
 
   return (
-    <dialog
-      open
-      className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-transparent"
-      style={{ background: 'rgba(0, 0, 0, 0.55)' }}
+    <div
+      role="dialog"
+      aria-modal="true"
       aria-label="Solicitar pedido"
+      className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center"
+      style={{ background: 'rgba(0, 0, 0, 0.55)' }}
     >
       <button
         type="button"
@@ -155,6 +156,6 @@ export function RequestOrderSheet({ order, onClose, onSuccess }: Props) {
           </Button>
         </div>
       </motion.div>
-    </dialog>
+    </div>
   )
 }
