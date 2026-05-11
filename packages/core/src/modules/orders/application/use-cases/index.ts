@@ -96,3 +96,9 @@ export type {
   RejectTransferRequestCommand,
   RejectTransferRequestResult,
 } from './reject-transfer-request.use-case'
+
+export { AutoAcceptExpiredTransferRequestsUseCase } from './auto-accept-expired-transfer-requests.use-case'
+export type {
+  AutoAcceptExpiredTransferRequestsCommand,
+  AutoAcceptExpiredTransferRequestsResult,
+} from './auto-accept-expired-transfer-requests.use-case'

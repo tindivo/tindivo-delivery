@@ -108,6 +108,18 @@ export class SupabaseTransferRequestsRepository implements TransferRequestsRepos
     return (data ?? []).map((r) => toDomain(r as Row))
   }
 
+  async findExpiredPending(now: Date, limit = 50): Promise<TransferRequest[]> {
+    const { data, error } = await this.sb
+      .from('order_transfer_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .lt('expires_at', now.toISOString())
+      .order('expires_at', { ascending: true })
+      .limit(limit)
+    if (error) throw new PersistenceError(error.message, error)
+    return (data ?? []).map((r) => toDomain(r as Row))
+  }
+
   async markAccepted(id: string, now: Date): Promise<void> {
     const { error } = await this.sb
       .from('order_transfer_requests')
@@ -121,6 +133,15 @@ export class SupabaseTransferRequestsRepository implements TransferRequestsRepos
     const { error } = await this.sb
       .from('order_transfer_requests')
       .update({ status: 'rejected', resolved_at: now.toISOString() })
+      .eq('id', id)
+      .eq('status', 'pending')
+    if (error) throw new PersistenceError(error.message, error)
+  }
+
+  async markExpired(id: string, now: Date): Promise<void> {
+    const { error } = await this.sb
+      .from('order_transfer_requests')
+      .update({ status: 'expired', resolved_at: now.toISOString() })
       .eq('id', id)
       .eq('status', 'pending')
     if (error) throw new PersistenceError(error.message, error)

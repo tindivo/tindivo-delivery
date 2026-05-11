@@ -5,9 +5,19 @@ Contexto rápido para futuras sesiones de Claude Code trabajando en este repo.
 ## Arquitectura
 
 Monorepo Turborepo + pnpm workspaces con:
-- 4 apps Next.js 16 (api, admin, restaurant, driver, tracking)
+- 3 apps Next.js: `api` (REST, puerto 3001), `web` (back-office staff, 3000),
+  `customer` (PWA pública del cliente final, 3002).
 - 7 packages: core (DDD hexagonal), contracts (Zod), supabase, ui, api-client, config
 - Backend: Supabase Cloud (Auth + Postgres + Realtime + Edge Functions)
+
+### Hosts por app
+
+- `apps/api` → `api.tindivo.com` (o subdominio de Vercel) — REST único.
+- `apps/web` → `delivery.tindivo.com` — login admin/restaurant/driver.
+- `apps/customer` → `tindivo.com` — marketplace + checkout + tracking público.
+
+Cada app tiene su propio Service Worker, manifest, cookie jar (porque viven en
+hosts distintos) y bundle. Reusan los mismos packages compartidos.
 
 ## Reglas estrictas
 
@@ -31,6 +41,16 @@ Monorepo Turborepo + pnpm workspaces con:
    `scope: 'global'` y cierra TODAS las sesiones del usuario en TODOS los
    dispositivos (PWA instalada + navegador). Usamos `'local'` para que
    cada dispositivo cierre solo su propia sesión.
+10. **`apps/customer` es la PWA pública del cliente final** (tindivo.com).
+    NO importar features de admin/restaurant/driver. NO usar `@tindivo/core`
+    (es backend-only). NO compartir cookie/SW con `apps/web` — cada uno
+    vive en su dominio y aísla sesión. Endpoints públicos en
+    `apps/api/app/api/v1/public/*` (sin auth) y deben mantener CORS via
+    `lib/http/cors.ts` para aceptar requests desde tindivo.com.
+11. **Tracking público** (`/pedidos/:shortId`) vive solo en `apps/customer`.
+    Cuando staff genera links del tracking para mandar por WhatsApp, usar
+    `customerOrigin()` / `trackingUrl()` de `apps/web/src/lib/urls/customer.ts`
+    que apunta a `NEXT_PUBLIC_CUSTOMER_URL` (default `https://tindivo.com`).
 
 ## Flujo de desarrollo
 
@@ -46,14 +66,98 @@ Monorepo Turborepo + pnpm workspaces con:
 ## Comandos clave
 
 ```bash
-pnpm dev              # dev de todo (5 apps paralelas)
+pnpm dev              # dev de todo (3 apps paralelas)
 pnpm --filter <app> dev
-pnpm db:types         # regenerar tipos de Supabase
+pnpm db:types         # regenerar tipos de Supabase (requiere supabase CLI)
 pnpm db:push          # aplicar migrations
 pnpm build
-pnpm type-check
+pnpm type-check       # turbo: tsc --noEmit en cada paquete (8 packages)
 pnpm check            # Biome lint + format
+pnpm --filter @tindivo/core test   # vitest run (los tests del dominio)
 ```
+
+- **Vitest solo está configurado en `packages/core`**. Las apps (`api`, `web`, `customer`) tienen scripts `lint` + `type-check` pero NO `test`.
+- Si `supabase` CLI no está instalado globalmente, regenerar tipos vía MCP de Supabase (`generate_typescript_types`) y escribir el resultado a `packages/supabase/src/types.gen.ts`.
+- Las migrations se pueden aplicar a producción vía MCP (`apply_migration`) sin necesidad de `pnpm db:push`.
+
+## Módulos del dominio (`packages/core/src/modules/`)
+
+`orders`, `restaurants`, `drivers`, `cash-settlements`, `settlements`, `notifications`, `users`, `platform`, `customer-account`. Cada uno con `domain/`, `application/` (use cases + ports), `infrastructure/` (adaptadores Supabase). El módulo `orders` es el más complejo (15+ use cases, máquina de estados, policy R1-R5 de asignación).
+
+## Sistema de eventos (outbox + triggers + cron failsafe)
+
+Arquitectura event-driven verificada en producción. Latencia P99 objetivo <5s.
+
+- **Outbox**: tabla `domain_events` (`aggregate_type`, `aggregate_id`, `event_type`, `payload`, `published_at`, `retry_count`, `last_error`).
+- **Publicación**: use cases del core hacen `events.publishAll(order.pullEvents())` después de `orders.save()`. NO publicar fuera de un use case.
+- **Push notifications**: trigger `trg_domain_events_dispatch_push` invoca Edge Function `send-push` vía `pg_net.http_post()` tras cada INSERT en `domain_events`. Mapeo evento→push en `supabase/functions/send-push/index.ts`.
+- **Asignación reactiva** (no cron polling):
+  - Trigger `trg_orders_reactive_assign_aiu` en `orders` → invoca `/api/v1/internal/orders/assign-one` vía `pg_net` cuando un pedido entra a `status='waiting_driver' AND driver_id IS NULL AND appears_in_queue_at <= now()`.
+  - Trigger `trg_rejections_reactive_assign_ai` en `order_assignment_rejections` → mismo endpoint, dispara reasignación tras rechazo.
+  - Endpoint `/internal/orders/assign-one` requiere `Authorization: Bearer <SERVICE_ROLE_KEY>`. NO exponer al exterior.
+  - Crons `*-failsafe` cada 5 min cubren si pg_net o el endpoint fallan.
+- **Transferencia entre motorizados con timeout-as-accept**: en la pestaña Equipo del motorizado, Driver B solicita el pedido de Driver A. A tiene 30s para aceptar/rechazar. **Si no responde, se interpreta como aceptación** (el pedido se transfiere automáticamente). Implementado vía cron `process-expired-transfer-requests` (1 min) → endpoint `/api/v1/internal/transfer-requests/process-expired` → `AutoAcceptExpiredTransferRequestsUseCase`. Si al expirar el solicitante ya no es elegible (capacidad R3 / autorización), cae a `markExpired` (no transfiere). Eventos: `OrderTransferAutoAccepted` (push diferenciado a A y B vía `kind: 'from' | 'to'`), `OrderTransferExpired` (push a B con `reason`).
+- **Lock pesimista**: RPC `claim_pending_orders(p_limit)` usa `FOR UPDATE SKIP LOCKED` para que cron y triggers concurrentes no toquen la misma fila. Llamar desde JS con `admin.rpc('claim_pending_orders', { p_limit: 50 })`.
+- **`assigned_at`**: columna en `orders` mantenida por trigger `trg_orders_set_assigned_at` BEFORE UPDATE. Setea `now()` cuando `driver_id` pasa de NULL a no-NULL, limpia cuando vuelve a NULL. Usado por `timeout_unaccepted_assignments` (libera reservaciones >90s).
+
+**Reglas de asignación R1-R5** (`driver-assignment.policy.ts`):
+- `choose({ restaurantId, occupancySlots }, candidates, rules)` — pasar `order.occupancySlots.value` (no asumir 1).
+- `totalAssignedDay` suma `delivered + active + reserved + cancelled + rejected` del día. Driver que rechaza mucho cae al fondo de R4 (self-correcting).
+- `findAssignmentCandidates` calcula `rejectedTodayCount` consultando `order_assignment_rejections` filtrado por `expires_at > now()` (TTL 6h).
+
+## Idempotencia en endpoints POST de creación (Stripe pattern)
+
+Resuelve duplicados por doble click / retry de browser. Implementación en `apps/api/lib/http/idempotency.ts`.
+
+- **Cliente** genera UUID v4 por formulario:
+  ```ts
+  const idem = useIdempotencyKey('restaurante:new-order')  // apps/web/src/lib/idempotency
+  mutation.mutate({ body, idempotencyKey: idem.key }, {
+    onSuccess: () => idem.consume(),
+    onError: (e) => { if (e.status >= 400 && e.status < 500) idem.consume() },
+  })
+  ```
+  - Persiste en `sessionStorage` por `formId` para sobrevivir recargas.
+  - Consumir tras 2xx/4xx. NO consumir tras 5xx (permite retry seguro con misma key).
+
+- **Servidor** envuelve el handler:
+  ```ts
+  return withIdempotency(req, 'restaurant_orders', body.data, admin, async () => {
+    // ... lógica del endpoint
+    return NextResponse.json(result, { status: 201 })
+  })
+  ```
+  - Sin header `Idempotency-Key` → ejecuta tal cual (back-compat).
+  - Misma key + mismo body → respuesta cacheada (status original).
+  - Misma key + body distinto → 409 `IDEMPOTENCY_KEY_MISMATCH`.
+  - Solo se cachean respuestas <500 (las 5xx permiten retry).
+  - Tabla `idempotency_keys` con TTL 24h, prune diario.
+
+- **CORS**: agregar headers nuevos a `apps/api/middleware.ts:40` (`Access-Control-Allow-Headers`). `Idempotency-Key` ya está incluido.
+
+- **Cliente API**: el helper `ApiClient.post(path, body, { idempotencyKey })` lo propaga automáticamente.
+
+## Cron jobs activos (no romper sin razón)
+
+```sql
+select jobname, schedule from cron.job order by jobid;
+```
+
+| Cron | Frecuencia | Propósito |
+|---|---|---|
+| `auto-cancel-pending-acceptance` | `* * * * *` | Cancela `pending_acceptance` >5 min sin aceptar (SLA) |
+| `auto-close-drivers` | `* * * * *` | Cierra `driver_availability.is_available=true` cuando termina `platform_schedule.endHHMM` (idempotente) |
+| `timeout-unaccepted-assignments` | `* * * * *` | Libera `driver_id` y crea rejection si pasaron 90s sin acceptBy |
+| `assign-pending-orders-failsafe` | `*/5 * * * *` | Failsafe del trigger reactivo (assign-one) |
+| `enqueue-orders-ready-for-drivers-failsafe` | `*/5 * * * *` | Emite `OrderReadyForDrivers` cuando `appears_in_queue_at <= now()` |
+| `enqueue-overdue-orders-failsafe` | `*/5 * * * *` | Emite `OrderOverdue` si `estimated_ready_at` pasa sin asignación |
+| `process-expired-transfer-requests` | `* * * * *` | Auto-acepta solicitudes de transferencia vencidas (30s) vía endpoint interno. Si solicitante ya no es elegible, marca `expired` (no transfiere) |
+| `expire-transfer-requests-failsafe` | `*/5 * * * *` | Failsafe del cron anterior: si pg_net o el endpoint quedan down, marca pending vencidas como `expired` sin transferir |
+| `prune-stale-push-subscriptions` | `0 4 * * *` | Limpia suscripciones inactivas >14d |
+| `prune-idempotency-keys` | `0 5 * * *` | Limpia keys vencidas (TTL 24h) |
+| `prune-expired-rejections` | `0 5 * * *` | Limpia rejections vencidos (TTL 6h) |
+
+`pg_net` requiere secrets en `vault.decrypted_secrets`: `app_internal_api_url` y `service_role_key`. Sin estos, las funciones que invocan endpoints internos (`invoke_assign_one`, `invoke_assign_pending_orders`) loguean notice y retornan sin error.
 
 ## Stack reference
 

@@ -573,3 +573,60 @@ export class OrderTransferRejected extends BaseDomainEvent {
     this.payload = payload
   }
 }
+
+/**
+ * Driver A NO respondió en los 30s y el cron `process-expired-transfer-requests`
+ * ejecutó la transferencia automática a Driver B. Mismo efecto que
+ * OrderTransferAccepted (Order.reassignTo + OrderReassigned aparte) pero el
+ * trigger no fue una acción humana sino el timeout. Se emite distinto a
+ * OrderTransferAccepted para que send-push pueda mandar push diferenciado al
+ * dueño anterior ("tu pedido se transfirió porque no respondiste") además del
+ * push al solicitante.
+ */
+export class OrderTransferAutoAccepted extends BaseDomainEvent {
+  readonly eventType = 'OrderTransferAutoAccepted' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    transferRequestId: string
+    orderId: string
+    shortId: string
+    fromDriverId: string
+    toDriverId: string
+    acceptedAt: string
+  }
+
+  constructor(payload: OrderTransferAutoAccepted['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
+/**
+ * Una solicitud vencida no pudo auto-aceptarse porque el solicitante ya no es
+ * elegible al momento del timeout (mochila llena / desasignado del restaurante
+ * / pedido ya transferido). El pedido se queda con el dueño actual y se marca
+ * la solicitud como `expired`. Push al solicitante con el motivo para que
+ * busque otro pedido.
+ */
+export class OrderTransferExpired extends BaseDomainEvent {
+  readonly eventType = 'OrderTransferExpired' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    transferRequestId: string
+    orderId: string
+    shortId: string
+    fromDriverId: string
+    toDriverId: string
+    expiredAt: string
+    reason: 'requester_capacity_exceeded' | 'requester_not_authorized' | 'order_already_transferred'
+  }
+
+  constructor(payload: OrderTransferExpired['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}

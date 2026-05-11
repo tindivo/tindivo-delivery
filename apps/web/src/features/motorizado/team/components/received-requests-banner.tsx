@@ -17,9 +17,12 @@ type Props = {
  * solicitud RECIBIDA pending. Cada card tiene countdown live (30s desde
  * created_at) y botones Aceptar/Rechazar.
  *
- * Si el countdown llega a 0 antes de que el cron limpie la fila (1 min de
- * latencia), la card se queda "vencida" en gris hasta que el cron actualice.
- * El polling agresivo del hook (5s) la limpia rápido.
+ * Si el countdown llega a 0 antes de que el cron procese la fila (1 min de
+ * latencia), la card pasa a estado "Transferencia automática…" (naranja) para
+ * indicar que la solicitud no se rechazó, sino que está en cola para ser
+ * auto-aceptada por el cron `process-expired-transfer-requests`. Cuando el
+ * cron procesa la fila (status → 'accepted' o 'expired'), Realtime invalida
+ * el cache y la card desaparece.
  */
 export function ReceivedRequestsBanner({ items }: Props) {
   if (items.length === 0) return null
@@ -56,22 +59,26 @@ function RequestCard({ request }: { request: RequestItem }) {
       className="rounded-[20px] p-4"
       style={{
         background: isExpired
-          ? 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)'
+          ? 'linear-gradient(135deg, #C2410C 0%, #EA580C 100%)'
           : 'linear-gradient(135deg, #991B1B 0%, #BA1A1A 100%)',
         color: '#ffffff',
-        boxShadow: isExpired ? undefined : '0 12px 28px -8px rgba(186, 26, 26, 0.4)',
+        boxShadow: isExpired
+          ? '0 12px 28px -8px rgba(234, 88, 12, 0.4)'
+          : '0 12px 28px -8px rgba(186, 26, 26, 0.4)',
       }}
     >
       <div className="flex items-start gap-3">
-        <Icon name="swap_horiz" size={22} filled />
+        <Icon name={isExpired ? 'sync' : 'swap_horiz'} size={22} filled />
         <div className="flex-1 min-w-0">
           <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-90">
-            {isExpired ? 'Solicitud vencida' : 'Te piden un pedido'}
+            {isExpired ? 'Transferencia automática…' : 'Te piden un pedido'}
           </div>
           <div className="font-black text-base mt-0.5">
             {requesterName} · #{shortId}
           </div>
-          <div className="text-xs opacity-90 mt-0.5">{restaurantName}</div>
+          <div className="text-xs opacity-90 mt-0.5">
+            {isExpired ? `Pasando el pedido a ${requesterName}` : restaurantName}
+          </div>
         </div>
         {!isExpired && (
           <div className="text-right">

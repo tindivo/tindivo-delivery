@@ -44,8 +44,22 @@ export interface TransferRequestsRepository {
   /** Solicitudes pendientes ENVIADAS por el driver (es el solicitante to). */
   findPendingByRequester(driverId: string): Promise<TransferRequest[]>
 
+  /**
+   * Solicitudes pendientes cuyo `expires_at` ya pasó. Usado por el batch
+   * `AutoAcceptExpiredTransferRequestsUseCase` (invocado por el cron via
+   * endpoint interno). El `limit` previene procesar miles de filas en una
+   * sola corrida si el endpoint quedó down mucho tiempo.
+   */
+  findExpiredPending(now: Date, limit?: number): Promise<TransferRequest[]>
+
   markAccepted(id: string, now: Date): Promise<void>
   markRejected(id: string, now: Date): Promise<void>
+  /**
+   * Marca como `expired` (vs `rejected`) para distinguir el motivo en
+   * auditoría. Usado por el use case batch cuando el solicitante ya no es
+   * elegible al momento del timeout (fallback al comportamiento original).
+   */
+  markExpired(id: string, now: Date): Promise<void>
 
   /**
    * Cuando una solicitud se acepta, las OTRAS pending del mismo pedido

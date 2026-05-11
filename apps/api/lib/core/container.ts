@@ -9,6 +9,7 @@ import {
   AcceptOrderByRestaurantUseCase,
   AcceptOrderUseCase,
   AcceptTransferRequestUseCase,
+  AutoAcceptExpiredTransferRequestsUseCase,
   AutoAssignOrderUseCase,
   CancelOrderUseCase,
   ChangePaymentMethodUseCase,
@@ -129,6 +130,21 @@ export function buildAcceptTransferRequestUseCase(_sb: ServerClient) {
 export function buildRejectTransferRequestUseCase(_sb: ServerClient) {
   const { orders, transferRequests, events } = teamDeps()
   return new RejectTransferRequestUseCase(orders, transferRequests, events, clock)
+}
+
+export function buildAutoAcceptExpiredTransferRequestsUseCase(_sb: ServerClient) {
+  // Invocado por el cron `process-expired-transfer-requests` via endpoint
+  // interno. Reusa `teamDeps()` (admin client) porque muta orders.driver_id
+  // cross-driver y lee `driver_restaurants` con RLS restrictiva.
+  const { orders, drivers, transferRequests, assignmentRules, events } = teamDeps()
+  return new AutoAcceptExpiredTransferRequestsUseCase(
+    orders,
+    drivers,
+    transferRequests,
+    assignmentRules,
+    events,
+    clock,
+  )
 }
 
 export function buildAutoAssignOrderUseCase(sb: ServerClient) {

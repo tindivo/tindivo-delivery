@@ -49,7 +49,14 @@ type Notification = {
   vibrate?: number[]
 }
 
-type Recipient = { userId: string; role: Role }
+/**
+ * `kind` permite diferenciar mensajes para distintos recipients del MISMO rol
+ * en un evento. Caso de uso: `OrderTransferAutoAccepted` notifica al dueño
+ * anterior (kind='from') con un mensaje distinto al del nuevo dueño
+ * (kind='to'), aunque ambos son `role='driver'`. Para eventos donde no aplica,
+ * se omite y el agrupamiento usa solo el rol.
+ */
+type Recipient = { userId: string; role: Role; kind?: 'from' | 'to' }
 
 type OrderContext = {
   short_id: string | null
@@ -76,7 +83,12 @@ function fmtPEN(n: number | string | null | undefined): string {
  * generar push para ese rol). Las URLs por rol previenen 404s: el driver
  * navega bajo /motorizado y el restaurante bajo /restaurante.
  */
-function notificationFor(event: EventRow, context: EventContext, role: Role): Notification | null {
+function notificationFor(
+  event: EventRow,
+  context: EventContext,
+  role: Role,
+  kind?: 'from' | 'to',
+): Notification | null {
   if (event.aggregate_type === 'Order') {
     const order = context as OrderContext
     const restaurantName = order?.restaurants?.name ?? 'Tindivo'
@@ -187,6 +199,57 @@ function notificationFor(event: EventRow, context: EventContext, role: Role): No
           url: `/motorizado?tab=team`,
           tag: `transfer-reject-${event.payload?.transferRequestId ?? event.aggregate_id}`,
         }
+
+      case 'OrderTransferAutoAccepted': {
+        // Driver A NO respondió en 30s. El cron transfirió automáticamente
+        // a Driver B. Doble push: A recibe aviso (perdiste el pedido), B
+        // recibe el mismo mensaje que en accept manual ("¡fue aceptada!").
+        if (role !== 'driver') return null
+        const transferRequestId =
+          (event.payload as Record<string, unknown> | null)?.transferRequestId ?? event.aggregate_id
+        if (kind === 'from') {
+          return {
+            title: `Tu pedido se transfirió — #${shortId}`,
+            body: `No respondiste a tiempo. Ahora va con otro motorizado.`,
+            url: `/motorizado?tab=team`,
+            tag: `transfer-auto-from-${transferRequestId}`,
+          }
+        }
+        // kind === 'to' (solicitante)
+        return {
+          title: `¡Tu solicitud fue aceptada! — #${shortId}`,
+          body: `${restaurantName} · entrégalo lo antes posible`,
+          url: `/motorizado/pedidos/${event.aggregate_id}`,
+          tag: `transfer-auto-to-${transferRequestId}`,
+          requireInteraction: true,
+          vibrate: [300, 120, 300],
+        }
+      }
+
+      case 'OrderTransferExpired': {
+        // Expiró sin transferir porque el solicitante ya no es elegible.
+        // Push solo a B con el motivo para que entienda por qué no calificó.
+        if (role !== 'driver') return null
+        const transferRequestId =
+          (event.payload as Record<string, unknown> | null)?.transferRequestId ?? event.aggregate_id
+        const reason = (event.payload as Record<string, unknown> | null)?.reason as
+          | 'requester_capacity_exceeded'
+          | 'requester_not_authorized'
+          | 'order_already_transferred'
+          | undefined
+        const bodyByReason: Record<string, string> = {
+          requester_capacity_exceeded: 'Ya no calificas porque tu mochila está llena.',
+          requester_not_authorized: 'Ya no estás asignado a este restaurante.',
+          order_already_transferred: 'El pedido ya cambió de dueño.',
+        }
+        return {
+          title: `Solicitud vencida — #${shortId}`,
+          body:
+            (reason && bodyByReason[reason]) ?? 'Tu solicitud venció. Busca otro pedido en Equipo.',
+          url: `/motorizado?tab=team`,
+          tag: `transfer-expired-${transferRequestId}`,
+        }
+      }
 
       case 'OrderOverdue':
         if (role !== 'driver') return null
@@ -468,8 +531,9 @@ async function resolveRecipients(
       }
 
       case 'OrderTransferAccepted':
-      case 'OrderTransferRejected': {
-        // Push al solicitante (toDriverId): "tu solicitud fue aceptada/rechazada".
+      case 'OrderTransferRejected':
+      case 'OrderTransferExpired': {
+        // Push al solicitante (toDriverId): "tu solicitud fue aceptada/rechazada/expirada".
         const toDriverId = (event.payload as Record<string, unknown> | null)?.toDriverId
         if (typeof toDriverId === 'string') {
           const { data: driver } = await sb
@@ -481,12 +545,38 @@ async function resolveRecipients(
         }
         break
       }
+
+      case 'OrderTransferAutoAccepted': {
+        // Doble push: dueño anterior (kind='from') + solicitante (kind='to').
+        // Cada uno recibe un mensaje distinto via `kind` en notificationFor.
+        const payload = event.payload as Record<string, unknown> | null
+        const fromDriverId = payload?.fromDriverId
+        const toDriverId = payload?.toDriverId
+        if (typeof fromDriverId === 'string') {
+          const { data: driver } = await sb
+            .from('drivers')
+            .select('user_id')
+            .eq('id', fromDriverId)
+            .maybeSingle()
+          if (driver?.user_id) out.push({ userId: driver.user_id, role: 'driver', kind: 'from' })
+        }
+        if (typeof toDriverId === 'string') {
+          const { data: driver } = await sb
+            .from('drivers')
+            .select('user_id')
+            .eq('id', toDriverId)
+            .maybeSingle()
+          if (driver?.user_id) out.push({ userId: driver.user_id, role: 'driver', kind: 'to' })
+        }
+        break
+      }
     }
 
-    // Dedupe por userId + role
+    // Dedupe por userId + role + kind (kind diferencia recipients del mismo
+    // role en eventos como OrderTransferAutoAccepted).
     const seen = new Set<string>()
     return out.filter((r) => {
-      const key = `${r.userId}:${r.role}`
+      const key = `${r.userId}:${r.role}:${r.kind ?? ''}`
       if (seen.has(key)) return false
       seen.add(key)
       return true
@@ -651,26 +741,30 @@ Deno.serve(async () => {
       continue
     }
 
-    // Agrupar recipients por rol para elegir URL correcta en notificationFor.
-    const byRole = new Map<Role, string[]>()
+    // Agrupar recipients por (rol, kind) para que recipients del mismo rol
+    // pero distinto kind reciban notificaciones diferenciadas
+    // (ej: OrderTransferAutoAccepted → push 'from' ≠ push 'to').
+    type GroupKey = `${Role}:${'from' | 'to' | ''}`
+    const byGroup = new Map<GroupKey, { role: Role; kind?: 'from' | 'to'; userIds: string[] }>()
     for (const r of recipients) {
-      const list = byRole.get(r.role) ?? []
-      list.push(r.userId)
-      byRole.set(r.role, list)
+      const key = `${r.role}:${r.kind ?? ''}` as GroupKey
+      const entry = byGroup.get(key) ?? { role: r.role, kind: r.kind, userIds: [] }
+      entry.userIds.push(r.userId)
+      byGroup.set(key, entry)
     }
 
-    for (const [role, userIds] of byRole) {
-      const notification = notificationFor(event, context, role)
+    for (const [, group] of byGroup) {
+      const notification = notificationFor(event, context, group.role, group.kind)
       if (!notification) continue
 
       const { data: subs } = await sb
         .from('push_subscriptions')
         .select('id, endpoint, p256dh, auth, consecutive_failures')
-        .in('user_id', userIds)
+        .in('user_id', group.userIds)
 
       if (!subs || subs.length === 0) {
         console.log(
-          `[send-push:${requestId}] no_subs role=${role} users=${userIds.length} event=${event.event_type}`,
+          `[send-push:${requestId}] no_subs role=${group.role} kind=${group.kind ?? '-'} users=${group.userIds.length} event=${event.event_type}`,
         )
         continue
       }

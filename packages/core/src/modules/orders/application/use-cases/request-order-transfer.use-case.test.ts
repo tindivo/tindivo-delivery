@@ -2,10 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { DomainError } from '../../../../shared/errors/domain-error'
 import type { DomainEvent } from '../../../../shared/kernel/domain-event'
 import { Order } from '../../domain/entities/order'
-import {
-  type AssignmentRules,
-  DEFAULT_ASSIGNMENT_RULES,
-} from '../../domain/policies/assignment-rules'
+import { DEFAULT_ASSIGNMENT_RULES } from '../../domain/policies/assignment-rules'
 import { DriverId } from '../../domain/value-objects/driver-id'
 import { Money } from '../../domain/value-objects/money'
 import { PaymentIntent } from '../../domain/value-objects/payment-intent'
@@ -94,8 +91,10 @@ function buildTransferRepo(): TransferRequestsRepository & {
     findById: async () => null,
     findPendingForOwner: async () => [],
     findPendingByRequester: async () => [],
+    findExpiredPending: async () => [],
     markAccepted: async () => {},
     markRejected: async () => {},
+    markExpired: async () => {},
     invalidateOtherPendingForOrder: async () => {},
   }
 }

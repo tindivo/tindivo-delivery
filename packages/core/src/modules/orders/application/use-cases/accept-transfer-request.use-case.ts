@@ -30,7 +30,7 @@ export type AcceptTransferRequestCommand = {
 }
 
 export type AcceptTransferRequestResult = {
-  id: string                 // order id
+  id: string // order id
   status: string
   newDriverId: string
   acceptedAt: string
@@ -73,8 +73,7 @@ export class AcceptTransferRequestUseCase
     if (tr.status !== 'pending') return Result.fail(new TransferRequestNotPending())
 
     const now = this.clock.now()
-    if (tr.expiresAt.getTime() <= now.getTime())
-      return Result.fail(new TransferRequestExpired())
+    if (tr.expiresAt.getTime() <= now.getTime()) return Result.fail(new TransferRequestExpired())
 
     const order = await this.orders.findById(OrderId.of(tr.orderId))
     if (!order) return Result.fail(new OrderNotFound(tr.orderId))

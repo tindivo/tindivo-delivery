@@ -114,8 +114,10 @@ export function RequestOrderSheet({ order, onClose, onSuccess }: Props) {
             <div className="flex items-start gap-3">
               <Icon name="schedule" size={20} filled />
               <div className="text-sm font-semibold">
-                Tu compañero tiene <span className="font-black">30 segundos</span> para
-                aceptar. Si no responde o rechaza, el pedido sigue siendo de él.
+                Tu compañero tiene <span className="font-black">30 segundos</span> para responder.
+                Si no responde a tiempo, el pedido{' '}
+                <span className="font-black">se te transfiere automáticamente</span>. Si rechaza,
+                sigue siendo de él.
               </div>
             </div>
           </div>

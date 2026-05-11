@@ -1,6 +1,14 @@
 'use client'
 import { useNow } from '@/shared/hooks/use-now'
-import { Button, EmptyState, Icon, OrderCard, Skeleton, listItem, staggerContainer } from '@tindivo/ui'
+import {
+  Button,
+  EmptyState,
+  Icon,
+  OrderCard,
+  Skeleton,
+  listItem,
+  staggerContainer,
+} from '@tindivo/ui'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useTeamOrders } from '../hooks/use-team-orders'
@@ -85,14 +93,9 @@ export function TeamOrdersList() {
                       driverName={driverName}
                     />
                     {hasPending ? (
-                      <Button
-                        size="md"
-                        variant="secondary"
-                        className="w-full"
-                        disabled
-                      >
+                      <Button size="md" variant="secondary" className="w-full" disabled>
                         <Icon name="schedule" size={16} />
-                        Esperando respuesta de {driverName}…
+                        Esperando a {driverName} (30s)…
                       </Button>
                     ) : (
                       <Button
