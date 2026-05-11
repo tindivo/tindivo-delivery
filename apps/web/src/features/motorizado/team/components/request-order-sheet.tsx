@@ -1,6 +1,6 @@
 'use client'
 import { ApiError } from '@tindivo/api-client'
-import { BottomActionBar, Button, Icon, IconButton } from '@tindivo/ui'
+import { Button, Icon, IconButton } from '@tindivo/ui'
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import { useRequestTransfer } from '../hooks/use-request-transfer'
@@ -77,7 +77,8 @@ export function RequestOrderSheet({ order, onClose, onSuccess }: Props) {
       <motion.div
         initial={{ opacity: 0, y: 48 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative w-full sm:max-w-md bg-surface-container-lowest rounded-t-[28px] sm:rounded-[28px] p-5 pb-32 max-h-[80vh] overflow-y-auto"
+        className="relative w-full sm:max-w-md bg-surface-container-lowest rounded-t-[28px] sm:rounded-[28px] p-5 max-h-[90vh] overflow-y-auto"
+        style={{ paddingBottom: 'calc(20px + env(safe-area-inset-bottom))' }}
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-black text-on-surface">Solicitar pedido</h2>
@@ -129,14 +130,18 @@ export function RequestOrderSheet({ order, onClose, onSuccess }: Props) {
           )}
         </div>
 
-        <BottomActionBar zIndex={210}>
+        <div className="mt-5 flex flex-col gap-3">
           <Button
             size="lg"
             className="w-full"
             disabled={requestTransfer.isPending}
             onClick={handleConfirm}
           >
-            <Icon name={requestTransfer.isPending ? 'progress_activity' : 'swap_horiz'} filled />
+            <Icon
+              name={requestTransfer.isPending ? 'progress_activity' : 'swap_horiz'}
+              filled
+              className={requestTransfer.isPending ? 'animate-spin' : undefined}
+            />
             {requestTransfer.isPending ? 'Enviando solicitud...' : 'Solicitar pedido'}
           </Button>
           <Button
@@ -148,7 +153,7 @@ export function RequestOrderSheet({ order, onClose, onSuccess }: Props) {
           >
             Cancelar
           </Button>
-        </BottomActionBar>
+        </div>
       </motion.div>
     </dialog>
   )
