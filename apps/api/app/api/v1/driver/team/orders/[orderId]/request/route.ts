@@ -18,10 +18,7 @@ export const dynamic = 'force-dynamic'
  * Soporta Idempotency-Key (doble-click safety). El UNIQUE constraint en BD
  * es la barrera real — el wrapper de idempotencia es defensa adicional.
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ orderId: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   const auth = await requireAuth(req, ['driver'])
   if (!auth.ok) return auth.response
   if (!auth.auth.driverId) return problemCode('FORBIDDEN', 403)
@@ -30,10 +27,26 @@ export async function POST(
   const admin = createAdminClient()
   const requesterDriverId = auth.auth.driverId
 
-  return withIdempotency(req, 'request_order_transfer', { orderId, requesterDriverId }, admin, async () => {
-    const useCase = buildRequestOrderTransferUseCase(auth.auth.supabase)
-    const result = await useCase.execute({ orderId, requesterDriverId })
-    if (result.isFailure) return problem(result.error)
-    return NextResponse.json(result.value, { status: 201 })
-  })
+  try {
+    return await withIdempotency(
+      req,
+      'request_order_transfer',
+      { orderId, requesterDriverId },
+      admin,
+      async () => {
+        const useCase = buildRequestOrderTransferUseCase(auth.auth.supabase)
+        const result = await useCase.execute({ orderId, requesterDriverId })
+        if (result.isFailure) return problem(result.error)
+        return NextResponse.json(result.value, { status: 201 })
+      },
+    )
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[POST /driver/team/orders/[orderId]/request] crash', {
+      orderId,
+      requesterDriverId,
+      error: err instanceof Error ? { message: err.message, stack: err.stack } : err,
+    })
+    return problemCode('INTERNAL_ERROR', 500, err instanceof Error ? err.message : 'unknown')
+  }
 }

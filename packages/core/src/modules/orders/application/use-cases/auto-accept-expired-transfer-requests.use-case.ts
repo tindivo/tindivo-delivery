@@ -85,12 +85,18 @@ export class AutoAcceptExpiredTransferRequestsUseCase
         const outcome = await this.processOne(tr, now)
         if (outcome === 'accepted') accepted++
         else expiredCount++
-      } catch {
+      } catch (err) {
         // Un error inesperado en una sola solicitud (ej: race condition,
         // persistencia transitoria) no debe interrumpir el batch. La solicitud
         // queda en `pending` y el próximo tick del cron la recogerá. Si el
         // problema persiste, el failsafe `expire-transfer-requests-failsafe`
         // (cada 5 min) la marcará como `expired` sin transferir.
+        // eslint-disable-next-line no-console
+        console.error('[auto-accept-expired] processOne failed', {
+          transferRequestId: tr.id,
+          orderId: tr.orderId,
+          error: err instanceof Error ? { message: err.message, stack: err.stack } : err,
+        })
       }
     }
 
