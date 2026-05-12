@@ -286,7 +286,7 @@ async function getBusinessMenu(sb: any, id: string) {
       isOpen: business.is_active && business.is_published,
       isBlocked: false,
       catalogType: 'business',
-      deliveryEnabled: false,
+      deliveryEnabled: business.delivery_restaurant_id !== null,
       categories: mappedCategories.map((category: any) => category.name),
       featuredItemNames: (items ?? [])
         .filter((item: any) => item.is_featured)
