@@ -3,7 +3,7 @@ import { customer } from '@/lib/api/client'
 import { supabase } from '@/lib/supabase/client'
 import { ApiError } from '@tindivo/api-client'
 import { Button, Icon, IconButton, Input, Label } from '@tindivo/ui'
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 
 type Mode = 'login' | 'register'
@@ -26,6 +26,14 @@ export function LoginRegisterSheet({ initialMode = 'login', onClose, onSuccess }
   const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Bump a cada error nuevo para re-disparar la animacion del banner
+  // (Motion lo identifica por `key` y replay desde el initial state).
+  const [errorPulse, setErrorPulse] = useState(0)
+
+  function showError(msg: string) {
+    setError(msg)
+    setErrorPulse((n) => n + 1)
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -34,8 +42,10 @@ export function LoginRegisterSheet({ initialMode = 'login', onClose, onSuccess }
     try {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password })
       if (err) {
-        setError(
-          err.message.includes('Invalid login') ? 'Email o contrasena invalidos' : err.message,
+        showError(
+          err.message.includes('Invalid login')
+            ? 'Email o contrasena invalidos. Intenta de nuevo.'
+            : err.message,
         )
         return
       }
@@ -72,16 +82,16 @@ export function LoginRegisterSheet({ initialMode = 'login', onClose, onSuccess }
       }
       const { error: err } = await supabase.auth.signInWithPassword({ email, password })
       if (err) {
-        setError('Cuenta creada. Vuelve a intentar iniciar sesion.')
+        showError('Cuenta creada. Vuelve a intentar iniciar sesion.')
         setMode('login')
         return
       }
       onSuccess()
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.problem.detail ?? err.problem.title)
+        showError(err.problem.detail ?? err.problem.title)
       } else {
-        setError('No se pudo crear la cuenta. Intenta de nuevo.')
+        showError('No se pudo crear la cuenta. Intenta de nuevo.')
       }
     } finally {
       setLoading(false)
@@ -260,11 +270,42 @@ export function LoginRegisterSheet({ initialMode = 'login', onClose, onSuccess }
               />
             </Field>
 
-            {error && (
-              <div className="customer-reveal rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800">
-                {error}
-              </div>
-            )}
+            <AnimatePresence mode="wait">
+              {error && (
+                <motion.div
+                  key={`err-${errorPulse}`}
+                  role="alert"
+                  aria-live="assertive"
+                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                    x: [0, -10, 10, -8, 8, -4, 4, 0],
+                  }}
+                  exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                  transition={{
+                    opacity: { duration: 0.18 },
+                    y: { type: 'spring', damping: 22, stiffness: 320 },
+                    scale: { type: 'spring', damping: 22, stiffness: 320 },
+                    x: { duration: 0.5, ease: 'easeInOut' },
+                  }}
+                  className="relative overflow-hidden rounded-[24px] border border-red-200/80 bg-gradient-to-br from-red-50 via-rose-50 to-red-50 px-4 py-3 shadow-[0_18px_42px_-26px_rgba(220,38,38,0.55)]"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+                      <Icon name="error" size={20} filled />
+                    </span>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-red-700/80">
+                        No pudimos entrar
+                      </p>
+                      <p className="mt-0.5 text-sm font-bold leading-snug text-red-900">{error}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <Button type="submit" size="lg" className="w-full rounded-[24px]" disabled={loading}>
               <Icon

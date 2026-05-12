@@ -6,6 +6,7 @@ import { BottomActionBar, Button, GlassTopBar, Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { LoginButton } from '../../auth/components/login-button'
+import { WelcomeToast } from '../../auth/components/welcome-toast'
 import { InstallPromptBanner } from '../../pwa/components/install-prompt-banner'
 import { useCart } from '../hooks/use-cart'
 import { CheckoutSheet } from './checkout-sheet'
@@ -42,6 +43,7 @@ export function CustomerApp() {
       className="customer-page bg-transparent"
       style={{ paddingBottom: cart.items.length ? 132 : 32 }}
     >
+      <WelcomeToast />
       <GlassTopBar
         title="Tindivo"
         subtitle="Pide en San Jacinto"

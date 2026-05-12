@@ -1,5 +1,7 @@
 'use client'
+import { customer } from '@/lib/api/client'
 import { supabase } from '@/lib/supabase/client'
+import { useQuery } from '@tanstack/react-query'
 import { signOutLocal } from '@tindivo/supabase'
 import { useEffect, useState } from 'react'
 
@@ -72,6 +74,31 @@ export function useCustomerAuth() {
   }
 
   return { session, loading, logout }
+}
+
+/**
+ * Nombre a mostrar en topbar / saludos. Para business prioriza el nombre
+ * del negocio (fetch a /business/profile); para customer usa fullName del
+ * JWT (sin fetch extra). Si business todavía no respondió, fallback al
+ * fullName del JWT mientras carga.
+ */
+export function useDisplayName(): { displayName: string | null; loading: boolean } {
+  const { session } = useCustomerAuth()
+  const businessQuery = useQuery({
+    queryKey: ['business', 'profile-name'],
+    queryFn: () => customer.getBusinessProfile(),
+    enabled: session?.roles.includes('business') ?? false,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  if (!session) return { displayName: null, loading: false }
+  if (session.roles.includes('business')) {
+    return {
+      displayName: businessQuery.data?.business.name ?? session.fullName,
+      loading: businessQuery.isLoading,
+    }
+  }
+  return { displayName: session.fullName, loading: false }
 }
 
 /**
