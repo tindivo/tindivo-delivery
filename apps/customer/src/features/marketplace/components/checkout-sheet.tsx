@@ -281,7 +281,8 @@ export function CheckoutSheet({
                 deliveryAddress: address.trim(),
                 deliveryReference: reference.trim() || undefined,
                 deliveryCoordinates: coords,
-                locationAccuracyM: accuracy ?? undefined,
+                locationAccuracyM:
+                  accuracy != null ? Math.min(Math.round(accuracy), 5000) : undefined,
                 paymentStatus: payment,
                 clientPaysWith: payment === 'pending_cash' ? cashNumber : undefined,
                 items: cart.map((item) => ({
