@@ -18,8 +18,7 @@ export function useClaimUrgentOrder() {
   const qc = useQueryClient()
   const idem = useIdempotencyKey('motorizado:claim-urgent')
   return useMutation({
-    mutationFn: (orderId: string) =>
-      orders.claimUrgent(orderId, { idempotencyKey: idem.key }),
+    mutationFn: (orderId: string) => orders.claimUrgent(orderId, { idempotencyKey: idem.key }),
     onSuccess: () => {
       idem.consume()
       qc.invalidateQueries({ queryKey: ['driver', 'available-orders'] })

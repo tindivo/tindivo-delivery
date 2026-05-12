@@ -333,10 +333,7 @@ export function OrderPreview({ orderId }: Props) {
                 : undefined
             }
           >
-            <Icon
-              name={isFull ? 'block' : isClaimable ? 'priority_high' : 'check_circle'}
-              filled
-            />
+            <Icon name={isFull ? 'block' : isClaimable ? 'priority_high' : 'check_circle'} filled />
             {isFull
               ? `Al límite (${max}/${max})`
               : isPending

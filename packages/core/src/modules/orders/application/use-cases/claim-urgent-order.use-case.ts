@@ -70,12 +70,11 @@ export class ClaimUrgentOrderUseCase
     if (order.status.value !== 'waiting_driver' || order.urgentSince === null)
       return Result.fail(new UrgentNotAvailable())
 
-    const authorized = await this.drivers.canDriverServe(
-      cmd.driverId,
-      order.restaurantId.value,
-    )
+    const authorized = await this.drivers.canDriverServe(cmd.driverId, order.restaurantId.value)
     if (!authorized)
-      return Result.fail(new DriverNotAuthorizedForRestaurant(cmd.driverId, order.restaurantId.value))
+      return Result.fail(
+        new DriverNotAuthorizedForRestaurant(cmd.driverId, order.restaurantId.value),
+      )
 
     const rules = await this.loadRules()
     const activeCount = await this.orders.countActiveByDriver(driverId)

@@ -52,8 +52,7 @@ export class RejectTransferRequestUseCase
     if (tr.status !== 'pending') return Result.fail(new TransferRequestNotPending())
 
     const now = this.clock.now()
-    if (tr.expiresAt.getTime() <= now.getTime())
-      return Result.fail(new TransferRequestExpired())
+    if (tr.expiresAt.getTime() <= now.getTime()) return Result.fail(new TransferRequestExpired())
 
     await this.transferRequests.markRejected(tr.id, now)
 

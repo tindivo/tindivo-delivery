@@ -1,7 +1,4 @@
-import type {
-  CustomerProfile,
-  CustomerProfileUpdate,
-} from '../../domain/entities/customer-profile'
+import type { CustomerProfile, CustomerProfileUpdate } from '../../domain/entities/customer-profile'
 
 export type CustomerOrderHistoryItem = {
   id: string

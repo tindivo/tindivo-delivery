@@ -1,9 +1,9 @@
 import { buildAutoAssignOrderUseCase } from '@/lib/core/container'
 import { problemCode } from '@/lib/http/problem'
 import { createAdminClient } from '@tindivo/supabase'
-import { z } from 'zod'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 

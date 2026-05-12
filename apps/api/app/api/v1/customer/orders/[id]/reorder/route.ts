@@ -14,10 +14,7 @@ export const dynamic = 'force-dynamic'
  * pedido nuevo: solo retorna la estructura compatible con el flujo de
  * /public/customer-orders.
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(req, ['customer'])
   if (!auth.ok) return auth.response
 

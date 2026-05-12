@@ -1,10 +1,7 @@
 import type { DomainError } from '../../../../shared/errors/domain-error'
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
-import type {
-  CustomerProfile,
-  CustomerProfileUpdate,
-} from '../../domain/entities/customer-profile'
+import type { CustomerProfile, CustomerProfileUpdate } from '../../domain/entities/customer-profile'
 import type { CustomerProfileRepository } from '../ports/customer-profile.repository'
 
 export type UpdateMyProfileCommand = { userId: string; update: CustomerProfileUpdate }

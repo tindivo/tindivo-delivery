@@ -74,9 +74,7 @@ export class TransferOrderToDriverUseCase
       restaurantId: order.restaurantId.value,
     })
     if (!peer) {
-      return Result.fail(
-        new InvalidTransfer('El motorizado seleccionado no está disponible'),
-      )
+      return Result.fail(new InvalidTransfer('El motorizado seleccionado no está disponible'))
     }
 
     const rules = await this.loadRules()
@@ -86,11 +84,7 @@ export class TransferOrderToDriverUseCase
     }
 
     const previousStatus = order.status
-    const reassigned = order.reassignTo(
-      DriverId.of(cmd.toDriverId),
-      cmd.reason,
-      this.clock.now(),
-    )
+    const reassigned = order.reassignTo(DriverId.of(cmd.toDriverId), cmd.reason, this.clock.now())
     if (reassigned.isFailure) return Result.fail(reassigned.error)
 
     await this.orders.save(order, previousStatus)

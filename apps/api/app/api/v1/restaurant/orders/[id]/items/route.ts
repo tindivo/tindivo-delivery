@@ -13,10 +13,7 @@ export const dynamic = 'force-dynamic'
  * el desglose en `customer_order_items`. Para pedidos restaurant_pwa devuelve
  * lista vacía (el restaurante ya conoce los items que él mismo creó).
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(req, ['restaurant'])
   if (!auth.ok) return auth.response
   if (!auth.auth.restaurantId) return problemCode('FORBIDDEN', 403)
@@ -39,9 +36,7 @@ export async function GET(
   // Cargar items + modifiers
   const { data: items, error: itemsErr } = await auth.auth.supabase
     .from('customer_order_items')
-    .select(
-      'id, item_name, quantity, unit_price, modifiers_total, line_total, notes, created_at',
-    )
+    .select('id, item_name, quantity, unit_price, modifiers_total, line_total, notes, created_at')
     .eq('order_id', id)
     .order('created_at', { ascending: true })
 

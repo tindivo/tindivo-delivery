@@ -16,9 +16,7 @@ export async function GET(req: NextRequest) {
 
   let query = auth.auth.supabase
     .from('orders')
-    .select(
-      '*, restaurants!inner(name, accent_color), drivers!orders_driver_id_fkey(full_name)',
-    )
+    .select('*, restaurants!inner(name, accent_color), drivers!orders_driver_id_fkey(full_name)')
     .order('created_at', { ascending: false })
     .limit(100)
 

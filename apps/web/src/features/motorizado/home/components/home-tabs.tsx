@@ -36,14 +36,18 @@ export function HomeTabs() {
   //  1. Hay solicitudes recibidas pending → 'team' (tiene 30s para responder)
   //  2. Tiene pedidos activos → 'active'
   //  3. Sino → 'available' (cola fría)
+  // Esperamos a que la query de received-requests resuelva (success o error)
+  // antes de inicializar — evita seleccionar 'available' cuando en realidad
+  // hay una solicitud pending por mostrar.
   const [initialized, setInitialized] = useState(false)
+  const requestsResolved = receivedRequestsQuery.isSuccess || receivedRequestsQuery.isError
   useEffect(() => {
-    if (initialized) return
+    if (initialized || !requestsResolved) return
     if (receivedRequestsCount > 0) setTab('team')
     else if (activeCount > 0) setTab('active')
     else setTab('available')
     setInitialized(true)
-  }, [activeCount, receivedRequestsCount, initialized])
+  }, [activeCount, receivedRequestsCount, initialized, requestsResolved])
 
   return (
     <div className="space-y-5">

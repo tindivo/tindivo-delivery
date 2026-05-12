@@ -685,6 +685,11 @@ export class Order extends AggregateRoot<OrderId> {
 
   /**
    * Reasigna el pedido a otro driver. Permitido en:
+   *  - `waiting_driver`: pre-asignado y nadie aceptó aún. El nuevo driver
+   *    se vuelve el dueño pre-asignado y tendrá que aceptar/rechazar como
+   *    flujo normal. Limpiamos `urgentSince` para que B reciba sus 5 min
+   *    de tolerancia frescos sin que aparezca marcado como "Urgente".
+   *    El trigger `trg_orders_set_assigned_at` resetea `assigned_at` solo.
    *  - `heading_to_restaurant` y `waiting_at_restaurant`: el nuevo driver
    *    "hereda" la asignación pero debe (re)ir al local. Reseteamos el
    *    status a heading y los timestamps de ruta.
@@ -700,6 +705,7 @@ export class Order extends AggregateRoot<OrderId> {
   ): Result<void, InvalidStateTransition> {
     const status = this._state.status.value
     const allowed =
+      status === 'waiting_driver' ||
       status === 'heading_to_restaurant' ||
       status === 'waiting_at_restaurant' ||
       status === 'picked_up'
@@ -710,7 +716,14 @@ export class Order extends AggregateRoot<OrderId> {
     const previous = this._state.driverId
     this._state.driverId = newDriverId
 
-    if (status === 'picked_up') {
+    if (status === 'waiting_driver') {
+      // Pre-asignado sin acceptar: B reemplaza a A y aún tiene que aceptar.
+      this._state.urgentSince = null
+      this._state.acceptedAt = null
+      this._state.headingAt = null
+      this._state.waitingAt = null
+      this._state.updatedAt = now
+    } else if (status === 'picked_up') {
       // Solo cambia el dueño; status, pickedUpAt, occupancySlots intactos.
       this._state.updatedAt = now
     } else {

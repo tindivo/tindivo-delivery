@@ -5,10 +5,7 @@ import type {
   CustomerOrderHistoryItem,
   CustomerProfileRepository,
 } from '../application/ports/customer-profile.repository'
-import type {
-  CustomerProfile,
-  CustomerProfileUpdate,
-} from '../domain/entities/customer-profile'
+import type { CustomerProfile, CustomerProfileUpdate } from '../domain/entities/customer-profile'
 
 function readPoint(coords: unknown): { lat: number; lng: number } | null {
   // Las columnas geography vuelven como string WKB hex en supabase-js. Para
@@ -185,17 +182,12 @@ export class SupabaseCustomerProfileRepository implements CustomerProfileReposit
       optionByGroupAndName.set(`${o.group_id}|${o.name}`, o.id)
     }
 
-    const itemModifiers = new Map<
-      string,
-      Array<{ groupId: string; optionId: string }>
-    >()
+    const itemModifiers = new Map<string, Array<{ groupId: string; optionId: string }>>()
     for (const m of modifiers ?? []) {
       const item = items?.find((i) => i.id === m.order_item_id)
       if (!item?.menu_item_id) continue
       const groupId = groupByMenuItemAndName.get(`${item.menu_item_id}|${m.group_name}`)
-      const optionId = groupId
-        ? optionByGroupAndName.get(`${groupId}|${m.option_name}`)
-        : undefined
+      const optionId = groupId ? optionByGroupAndName.get(`${groupId}|${m.option_name}`) : undefined
       if (!groupId || !optionId) continue
       const list = itemModifiers.get(m.order_item_id) ?? []
       list.push({ groupId, optionId })

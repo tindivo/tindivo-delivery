@@ -1,7 +1,4 @@
-import {
-  buildGetMyProfileUseCase,
-  buildUpdateMyProfileUseCase,
-} from '@/lib/core/container'
+import { buildGetMyProfileUseCase, buildUpdateMyProfileUseCase } from '@/lib/core/container'
 import { problem, problemCode } from '@/lib/http/problem'
 import { requireAuth } from '@/lib/http/require-auth'
 import { parseJson } from '@/lib/http/validate'
@@ -21,10 +18,7 @@ const UpdateProfileSchema = z
       .optional(),
     defaultAddress: z.string().min(5).max(500).nullable().optional(),
     defaultReference: z.string().max(500).nullable().optional(),
-    defaultCoordinates: z
-      .object({ lat: z.number(), lng: z.number() })
-      .nullable()
-      .optional(),
+    defaultCoordinates: z.object({ lat: z.number(), lng: z.number() }).nullable().optional(),
     defaultLocationAccuracyM: z.number().min(0).max(10000).nullable().optional(),
   })
   .refine((d) => Object.keys(d).length > 0, {
