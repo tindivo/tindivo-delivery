@@ -181,6 +181,16 @@ export function customerApi(client: ApiClient) {
       sortOrder?: number
       isActive?: boolean
     }) => client.post<MenuModifierGroupRow>('business/menu/modifier-groups', body),
+    updateBusinessModifierGroup: (
+      id: string,
+      body: {
+        name?: string
+        minSelected?: number
+        maxSelected?: number
+        sortOrder?: number
+        isActive?: boolean
+      },
+    ) => client.patch<MenuModifierGroupRow>(`business/menu/modifier-groups/${id}`, body),
     deleteBusinessModifierGroup: (id: string) =>
       client.delete<void>(`business/menu/modifier-groups/${id}`),
     createBusinessModifierOption: (body: {
@@ -190,6 +200,15 @@ export function customerApi(client: ApiClient) {
       sortOrder?: number
       isAvailable?: boolean
     }) => client.post<MenuModifierOptionRow>('business/menu/modifier-options', body),
+    updateBusinessModifierOption: (
+      id: string,
+      body: {
+        name?: string
+        priceDelta?: number
+        sortOrder?: number
+        isAvailable?: boolean
+      },
+    ) => client.patch<MenuModifierOptionRow>(`business/menu/modifier-options/${id}`, body),
     deleteBusinessModifierOption: (id: string) =>
       client.delete<void>(`business/menu/modifier-options/${id}`),
   }

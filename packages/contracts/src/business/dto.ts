@@ -81,6 +81,29 @@ export const CreateOption = z.object({
 })
 export type CreateOption = z.infer<typeof CreateOption>
 
+export const UpdateGroup = z
+  .object({
+    name: z.string().min(2).max(60).optional(),
+    minSelected: z.number().int().min(0).max(20).optional(),
+    maxSelected: z.number().int().min(1).max(20).optional(),
+    sortOrder: z.number().int().min(0).max(9999).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine(
+    (d) =>
+      d.minSelected === undefined || d.maxSelected === undefined || d.maxSelected >= d.minSelected,
+    { message: 'maxSelected debe ser >= minSelected' },
+  )
+export type UpdateGroup = z.infer<typeof UpdateGroup>
+
+export const UpdateOption = z.object({
+  name: z.string().min(2).max(80).optional(),
+  priceDelta: z.number().min(0).max(9999.99).optional(),
+  sortOrder: z.number().int().min(0).max(9999).optional(),
+  isAvailable: z.boolean().optional(),
+})
+export type UpdateOption = z.infer<typeof UpdateOption>
+
 export const AdminUpdateBusiness = z
   .object({
     description: z.string().max(500).nullable().optional(),

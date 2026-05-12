@@ -65,10 +65,54 @@ export function useCreateBusinessModifierGroup() {
   })
 }
 
+export function useUpdateBusinessModifierGroup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string
+      body: Parameters<typeof customer.updateBusinessModifierGroup>[1]
+    }) => customer.updateBusinessModifierGroup(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: MENU_QK }),
+  })
+}
+
+export function useDeleteBusinessModifierGroup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => customer.deleteBusinessModifierGroup(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: MENU_QK }),
+  })
+}
+
 export function useCreateBusinessModifierOption() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: customer.createBusinessModifierOption,
+    onSuccess: () => qc.invalidateQueries({ queryKey: MENU_QK }),
+  })
+}
+
+export function useUpdateBusinessModifierOption() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string
+      body: Parameters<typeof customer.updateBusinessModifierOption>[1]
+    }) => customer.updateBusinessModifierOption(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: MENU_QK }),
+  })
+}
+
+export function useDeleteBusinessModifierOption() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => customer.deleteBusinessModifierOption(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: MENU_QK }),
   })
 }

@@ -11,7 +11,11 @@ import {
   useCreateBusinessItem,
   useCreateBusinessModifierGroup,
   useCreateBusinessModifierOption,
+  useDeleteBusinessModifierGroup,
+  useDeleteBusinessModifierOption,
   useUpdateBusinessItem,
+  useUpdateBusinessModifierGroup,
+  useUpdateBusinessModifierOption,
   useUpdateBusinessProfile,
 } from '../hooks/use-business'
 import { useUploadBusinessImage } from '../hooks/use-upload-business-image'
@@ -403,6 +407,30 @@ function Field({
   )
 }
 
+type GroupMode = 'single' | 'optional' | 'multi' | 'required'
+
+function modeOf(group: { min_selected: number; max_selected: number }): GroupMode {
+  if (group.max_selected === 1 && group.min_selected === 0) return 'single'
+  if (group.max_selected === 1 && group.min_selected === 1) return 'required'
+  if (group.min_selected === 0) return 'optional'
+  return 'multi'
+}
+
+function limitsToMinMax(mode: GroupMode, max: number) {
+  if (mode === 'single') return { minSelected: 0, maxSelected: 1 }
+  if (mode === 'required') return { minSelected: 1, maxSelected: 1 }
+  if (mode === 'optional') return { minSelected: 0, maxSelected: Math.max(1, max) }
+  return { minSelected: 1, maxSelected: Math.max(1, max) }
+}
+
+function groupLimitsLabel(group: MenuGroup): string {
+  const mode = modeOf(group)
+  if (mode === 'single') return 'Opcional · elige 1'
+  if (mode === 'required') return 'Obligatorio · elige 1'
+  if (mode === 'optional') return `Opcional · hasta ${group.max_selected}`
+  return `Mínimo 1 · hasta ${group.max_selected}`
+}
+
 function MenuItemCard({
   item,
   index,
@@ -418,13 +446,9 @@ function MenuItemCard({
 }) {
   const updateItem = useUpdateBusinessItem()
   const upload = useUploadBusinessImage()
-  const createGroup = useCreateBusinessModifierGroup()
 
-  const [groupName, setGroupName] = useState('')
-  const [groupMode, setGroupMode] = useState<'single' | 'optional' | 'multi' | 'required'>(
-    'optional',
-  )
-  const [groupMax, setGroupMax] = useState('3')
+  const [expanded, setExpanded] = useState(false)
+  const [showAddGroup, setShowAddGroup] = useState(false)
 
   async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -436,44 +460,19 @@ function MenuItemCard({
     event.target.value = ''
   }
 
-  async function handleCreateGroup(event: React.FormEvent) {
-    event.preventDefault()
-    let minSelected = 0
-    let maxSelected = 1
-    if (groupMode === 'single') {
-      minSelected = 0
-      maxSelected = 1
-    } else if (groupMode === 'optional') {
-      minSelected = 0
-      maxSelected = Math.max(1, Number.parseInt(groupMax || '3', 10) || 3)
-    } else if (groupMode === 'multi') {
-      minSelected = 1
-      maxSelected = Math.max(1, Number.parseInt(groupMax || '3', 10) || 3)
-    } else if (groupMode === 'required') {
-      minSelected = 1
-      maxSelected = 1
-    }
-    await createGroup.mutateAsync({
-      menuItemId: item.id,
-      name: groupName.trim() || 'Agregados',
-      minSelected,
-      maxSelected,
-    })
-    setGroupName('')
-    setGroupMode('optional')
-    setGroupMax('3')
-  }
-
-  const modeNeedsMax = groupMode === 'optional' || groupMode === 'multi'
-
   const photoBusy = upload.uploading || updateItem.isPending
+  const totalOptions = groups.reduce(
+    (sum, group) => sum + (optionsByGroup.get(group.id)?.length ?? 0),
+    0,
+  )
 
   return (
     <article
-      className="customer-panel-soft customer-reveal rounded-[30px] p-3"
+      className="customer-panel-soft customer-reveal overflow-hidden rounded-[30px]"
       style={{ animationDelay: `${Math.min(index * 35, 180)}ms` }}
     >
-      <div className="flex gap-3">
+      {/* Header */}
+      <div className="flex items-stretch gap-3 p-3">
         <label
           className={`relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-[24px] bg-surface-container ${photoBusy ? 'opacity-60' : ''}`}
         >
@@ -499,6 +498,7 @@ function MenuItemCard({
             disabled={photoBusy}
           />
         </label>
+
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <p className="font-black leading-tight text-on-surface">{item.name}</p>
@@ -507,180 +507,641 @@ function MenuItemCard({
             </p>
           </div>
           <p className="mt-1 line-clamp-2 text-sm font-semibold text-on-surface-variant">
-            {item.description || 'Sin descripcion'}
+            {item.description || 'Sin descripción'}
           </p>
-          <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-800">
-            <Icon name={item.is_available ? 'visibility' : 'visibility_off'} size={14} />
-            {item.is_available ? 'Visible' : 'Oculto'}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800">
+              <Icon name={item.is_available ? 'visibility' : 'visibility_off'} size={14} />
+              {item.is_available ? 'Visible' : 'Oculto'}
+            </span>
+            {groups.length > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary-fixed/60 px-2.5 py-1 text-[11px] font-black text-on-primary-fixed">
+                <Icon name="tune" size={14} />
+                {groups.length} {groups.length === 1 ? 'grupo' : 'grupos'} · {totalOptions}{' '}
+                {totalOptions === 1 ? 'opción' : 'opciones'}
+              </span>
+            )}
+          </div>
           {upload.error && (
             <p className="mt-2 text-xs font-bold text-red-700">{upload.error}</p>
           )}
         </div>
       </div>
 
-      <div className="mt-3 space-y-2">
-        {groups.map((group) => (
-          <ModifierGroupBlock
-            key={group.id}
-            group={group}
-            options={optionsByGroup.get(group.id) ?? []}
-          />
-        ))}
-      </div>
-
-      <form
-        className="mt-3 space-y-3 rounded-[22px] bg-white/64 p-4"
-        onSubmit={handleCreateGroup}
+      {/* Toggle bar */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center justify-between border-t border-outline-variant/15 bg-white/40 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-on-surface-variant transition hover:bg-white/64"
       >
-        <p className="text-xs font-black uppercase tracking-wider text-on-surface-variant">
-          Agregar grupo de opciones al plato
-        </p>
-        <div className="space-y-1.5">
-          <Label htmlFor={`group-name-${item.id}`}>Nombre del grupo</Label>
-          <Input
-            id={`group-name-${item.id}`}
-            value={groupName}
-            onChange={(event) => setGroupName(event.target.value)}
-            placeholder="Ej. Tamaño, Salsas, Agregados"
-            className="rounded-[18px] bg-white/86"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor={`group-mode-${item.id}`}>¿Cómo elige el cliente?</Label>
-          <select
-            id={`group-mode-${item.id}`}
-            value={groupMode}
-            onChange={(event) => setGroupMode(event.target.value as typeof groupMode)}
-            className="h-12 w-full rounded-[18px] border border-outline-variant/25 bg-white/86 px-3 text-sm font-semibold"
-          >
-            <option value="single">Una sola opción · opcional</option>
-            <option value="required">Una sola opción · obligatoria</option>
-            <option value="optional">Varias opciones · opcional</option>
-            <option value="multi">Varias opciones · al menos una</option>
-          </select>
-        </div>
-        {modeNeedsMax && (
-          <div className="space-y-1.5">
-            <Label htmlFor={`group-max-${item.id}`}>Máximo de opciones que puede elegir</Label>
-            <Input
-              id={`group-max-${item.id}`}
-              value={groupMax}
-              onChange={(event) => setGroupMax(event.target.value)}
-              inputMode="numeric"
-              placeholder="3"
-              className="rounded-[18px] bg-white/86"
+        <span className="inline-flex items-center gap-1.5">
+          <Icon name="restaurant_menu" size={14} />
+          {expanded ? 'Cerrar editor' : 'Agregados y opciones'}
+        </span>
+        <Icon name={expanded ? 'expand_less' : 'expand_more'} size={18} />
+      </button>
+
+      {/* Editor */}
+      {expanded && (
+        <div className="space-y-3 border-t border-outline-variant/15 bg-white/30 p-4">
+          {groups.length === 0 && !showAddGroup ? (
+            <div className="rounded-[22px] border border-dashed border-outline-variant/40 bg-white/40 p-5 text-center">
+              <Icon
+                name="tune"
+                size={28}
+                className="mx-auto text-on-surface-variant/60"
+              />
+              <p className="mt-2 text-sm font-black text-on-surface">
+                Aún no tiene grupos de opciones
+              </p>
+              <p className="mt-0.5 text-xs font-semibold text-on-surface-variant">
+                Crea un grupo (Tamaño, Salsas, Agregados…) y agrégale opciones.
+              </p>
+              <Button
+                type="button"
+                onClick={() => setShowAddGroup(true)}
+                className="mt-3 rounded-[18px]"
+                size="md"
+              >
+                <Icon name="add" />
+                Crear primer grupo
+              </Button>
+            </div>
+          ) : (
+            <>
+              {groups.map((group) => (
+                <ModifierGroupBlock
+                  key={group.id}
+                  group={group}
+                  options={optionsByGroup.get(group.id) ?? []}
+                />
+              ))}
+              {!showAddGroup ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAddGroup(true)}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-[18px] border border-dashed border-outline-variant/40 bg-white/40 py-2.5 text-sm font-black text-primary-container transition hover:bg-white/72"
+                >
+                  <Icon name="add" size={16} />
+                  Agregar otro grupo
+                </button>
+              ) : null}
+            </>
+          )}
+
+          {showAddGroup && (
+            <AddGroupForm
+              itemId={item.id}
+              onCancel={() => setShowAddGroup(false)}
+              onCreated={() => setShowAddGroup(false)}
             />
-          </div>
-        )}
-        <Button
-          type="submit"
-          className="w-full rounded-[20px]"
-          disabled={createGroup.isPending || !groupName.trim()}
-        >
-          <Icon
-            name={createGroup.isPending ? 'progress_activity' : 'add'}
-            className={createGroup.isPending ? 'animate-spin' : undefined}
-          />
-          Crear grupo
-        </Button>
-      </form>
+          )}
+        </div>
+      )}
     </article>
   )
 }
 
-function ModifierGroupBlock({ group, options }: { group: MenuGroup; options: MenuOption[] }) {
-  const createOption = useCreateBusinessModifierOption()
-  const [optName, setOptName] = useState('')
-  const [optPrice, setOptPrice] = useState('0')
+function AddGroupForm({
+  itemId,
+  onCancel,
+  onCreated,
+}: {
+  itemId: string
+  onCancel: () => void
+  onCreated: () => void
+}) {
+  const createGroup = useCreateBusinessModifierGroup()
+  const [name, setName] = useState('')
+  const [mode, setMode] = useState<GroupMode>('optional')
+  const [max, setMax] = useState('3')
 
-  async function handleAddOption(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
-    if (!optName.trim()) return
-    await createOption.mutateAsync({
-      groupId: group.id,
-      name: optName.trim(),
-      priceDelta: Number(optPrice || 0),
+    if (!name.trim()) return
+    const { minSelected, maxSelected } = limitsToMinMax(
+      mode,
+      Number.parseInt(max || '3', 10) || 3,
+    )
+    await createGroup.mutateAsync({
+      menuItemId: itemId,
+      name: name.trim(),
+      minSelected,
+      maxSelected,
     })
-    setOptName('')
-    setOptPrice('0')
+    setName('')
+    setMode('optional')
+    setMax('3')
+    onCreated()
   }
 
-  const limitsLabel =
-    group.min_selected === 0 && group.max_selected === 1
-      ? 'Opcional · elige 1'
-      : group.min_selected === group.max_selected
-        ? `Elige ${group.max_selected}`
-        : `Min ${group.min_selected} · Max ${group.max_selected}`
+  const needsMax = mode === 'optional' || mode === 'multi'
 
   return (
-    <div className="rounded-[22px] bg-white/64 p-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-black">{group.name}</p>
-        <span className="rounded-full bg-primary-fixed/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-on-primary-fixed">
-          {limitsLabel}
-        </span>
-      </div>
-      {options.length > 0 ? (
-        <ul className="space-y-1 text-sm font-semibold text-on-surface-variant">
-          {options.map((option) => (
-            <li key={option.id} className="flex items-center justify-between">
-              <span>{option.name}</span>
-              <span className="font-black text-primary-container">
-                +S/ {Number(option.price_delta).toFixed(2)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm font-semibold text-on-surface-variant/70">Sin opciones todavía</p>
-      )}
-      <form className="space-y-2 pt-2" onSubmit={handleAddOption}>
+    <form
+      className="space-y-3 rounded-[22px] border border-primary-container/30 bg-white/72 p-4"
+      onSubmit={handleSubmit}
+    >
+      <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-black uppercase tracking-wider text-on-surface-variant">
-          Agregar opción a este grupo
+          Nuevo grupo de opciones
         </p>
-        <div className="grid gap-2 md:grid-cols-[1fr_140px_auto]">
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Cancelar"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-on-surface-variant transition hover:bg-surface-container"
+        >
+          <Icon name="close" size={16} />
+        </button>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`add-group-name-${itemId}`}>Nombre</Label>
+        <Input
+          id={`add-group-name-${itemId}`}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Ej. Tamaño, Salsas, Agregados"
+          className="rounded-[18px] bg-white"
+          autoFocus
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`add-group-mode-${itemId}`}>¿Cómo elige el cliente?</Label>
+        <select
+          id={`add-group-mode-${itemId}`}
+          value={mode}
+          onChange={(event) => setMode(event.target.value as GroupMode)}
+          className="h-12 w-full rounded-[18px] border border-outline-variant/25 bg-white px-3 text-sm font-semibold"
+        >
+          <option value="single">Una sola opción · opcional</option>
+          <option value="required">Una sola opción · obligatoria</option>
+          <option value="optional">Varias opciones · opcional</option>
+          <option value="multi">Varias opciones · al menos una</option>
+        </select>
+      </div>
+      {needsMax && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`add-group-max-${itemId}`}>Máximo de opciones</Label>
+          <Input
+            id={`add-group-max-${itemId}`}
+            value={max}
+            onChange={(event) => setMax(event.target.value)}
+            inputMode="numeric"
+            placeholder="3"
+            className="rounded-[18px] bg-white"
+          />
+        </div>
+      )}
+      <div className="flex gap-2 pt-1">
+        <Button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 rounded-[18px] bg-white text-on-surface hover:bg-surface-container"
+          size="md"
+        >
+          Cancelar
+        </Button>
+        <Button
+          type="submit"
+          className="flex-1 rounded-[18px]"
+          size="md"
+          disabled={createGroup.isPending || !name.trim()}
+        >
+          <Icon
+            name={createGroup.isPending ? 'progress_activity' : 'check'}
+            className={createGroup.isPending ? 'animate-spin' : undefined}
+          />
+          Crear grupo
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function ModifierGroupBlock({ group, options }: { group: MenuGroup; options: MenuOption[] }) {
+  const updateGroup = useUpdateBusinessModifierGroup()
+  const deleteGroup = useDeleteBusinessModifierGroup()
+
+  const [editing, setEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showAddOption, setShowAddOption] = useState(false)
+
+  const [name, setName] = useState(group.name)
+  const [mode, setMode] = useState<GroupMode>(modeOf(group))
+  const [max, setMax] = useState(String(group.max_selected))
+
+  function startEdit() {
+    setName(group.name)
+    setMode(modeOf(group))
+    setMax(String(group.max_selected))
+    setEditing(true)
+    setConfirmDelete(false)
+  }
+
+  async function handleSave(event: React.FormEvent) {
+    event.preventDefault()
+    if (!name.trim()) return
+    const { minSelected, maxSelected } = limitsToMinMax(
+      mode,
+      Number.parseInt(max || '3', 10) || 3,
+    )
+    await updateGroup.mutateAsync({
+      id: group.id,
+      body: { name: name.trim(), minSelected, maxSelected },
+    })
+    setEditing(false)
+  }
+
+  async function handleDelete() {
+    await deleteGroup.mutateAsync(group.id)
+  }
+
+  const needsMax = mode === 'optional' || mode === 'multi'
+
+  return (
+    <div className="rounded-[22px] bg-white/72 p-3 space-y-2.5 ring-1 ring-outline-variant/15">
+      {/* Group header */}
+      {editing ? (
+        <form className="space-y-2" onSubmit={handleSave}>
           <div className="space-y-1">
-            <Label htmlFor={`opt-name-${group.id}`} className="text-[11px]">
-              Opción
+            <Label htmlFor={`edit-group-name-${group.id}`} className="text-[11px]">
+              Nombre del grupo
             </Label>
             <Input
-              id={`opt-name-${group.id}`}
-              value={optName}
-              onChange={(event) => setOptName(event.target.value)}
-              placeholder="Ej. Mayonesa, Doble queso"
-              className="rounded-[18px] bg-white/86"
+              id={`edit-group-name-${group.id}`}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="rounded-[16px] bg-white"
+              autoFocus
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor={`opt-price-${group.id}`} className="text-[11px]">
-              Precio extra (S/)
+            <Label htmlFor={`edit-group-mode-${group.id}`} className="text-[11px]">
+              ¿Cómo elige el cliente?
             </Label>
-            <Input
-              id={`opt-price-${group.id}`}
-              value={optPrice}
-              onChange={(event) => setOptPrice(event.target.value)}
-              inputMode="decimal"
-              placeholder="0.00"
-              className="rounded-[18px] bg-white/86"
-            />
+            <select
+              id={`edit-group-mode-${group.id}`}
+              value={mode}
+              onChange={(event) => setMode(event.target.value as GroupMode)}
+              className="h-11 w-full rounded-[16px] border border-outline-variant/25 bg-white px-3 text-sm font-semibold"
+            >
+              <option value="single">Una sola opción · opcional</option>
+              <option value="required">Una sola opción · obligatoria</option>
+              <option value="optional">Varias opciones · opcional</option>
+              <option value="multi">Varias opciones · al menos una</option>
+            </select>
           </div>
-          <div className="flex items-end">
+          {needsMax && (
+            <div className="space-y-1">
+              <Label htmlFor={`edit-group-max-${group.id}`} className="text-[11px]">
+                Máximo de opciones
+              </Label>
+              <Input
+                id={`edit-group-max-${group.id}`}
+                value={max}
+                onChange={(event) => setMax(event.target.value)}
+                inputMode="numeric"
+                className="rounded-[16px] bg-white"
+              />
+            </div>
+          )}
+          <div className="flex gap-2 pt-1">
+            <Button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="flex-1 rounded-[16px] bg-white text-on-surface hover:bg-surface-container"
+              size="md"
+            >
+              Cancelar
+            </Button>
             <Button
               type="submit"
+              className="flex-1 rounded-[16px]"
               size="md"
-              className="w-full rounded-[18px]"
-              disabled={createOption.isPending || !optName.trim()}
+              disabled={updateGroup.isPending || !name.trim()}
             >
               <Icon
-                name={createOption.isPending ? 'progress_activity' : 'add'}
-                className={createOption.isPending ? 'animate-spin' : undefined}
+                name={updateGroup.isPending ? 'progress_activity' : 'check'}
+                className={updateGroup.isPending ? 'animate-spin' : undefined}
               />
-              Agregar
+              Guardar
             </Button>
           </div>
+        </form>
+      ) : confirmDelete ? (
+        <div className="flex items-center justify-between gap-2 rounded-[16px] bg-red-50 p-3">
+          <div className="min-w-0">
+            <p className="text-sm font-black text-red-900">¿Eliminar "{group.name}"?</p>
+            <p className="text-[11px] font-semibold text-red-800/80">
+              Se borrarán también sus {options.length}{' '}
+              {options.length === 1 ? 'opción' : 'opciones'}.
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-1">
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(false)}
+              className="rounded-full border border-red-300/50 bg-white px-3 py-1.5 text-xs font-black text-red-900"
+              disabled={deleteGroup.isPending}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-black text-white"
+              disabled={deleteGroup.isPending}
+            >
+              <Icon
+                name={deleteGroup.isPending ? 'progress_activity' : 'delete'}
+                size={14}
+                className={deleteGroup.isPending ? 'animate-spin' : undefined}
+              />
+              Eliminar
+            </button>
+          </div>
         </div>
-      </form>
+      ) : (
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate font-black text-on-surface">{group.name}</p>
+            <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-primary-fixed/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-on-primary-fixed">
+              {groupLimitsLabel(group)}
+            </span>
+          </div>
+          <div className="flex shrink-0 gap-1">
+            <button
+              type="button"
+              onClick={startEdit}
+              aria-label="Editar grupo"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface"
+            >
+              <Icon name="edit" size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Eliminar grupo"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-red-700/80 transition hover:bg-red-50"
+            >
+              <Icon name="delete" size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Options */}
+      {!editing && !confirmDelete && (
+        <div className="space-y-1.5">
+          {options.length > 0 ? (
+            <ul className="space-y-1">
+              {options.map((option) => (
+                <OptionRow key={option.id} option={option} />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs font-semibold text-on-surface-variant/70">
+              Sin opciones todavía
+            </p>
+          )}
+
+          {showAddOption ? (
+            <AddOptionForm
+              groupId={group.id}
+              onCancel={() => setShowAddOption(false)}
+              onCreated={() => setShowAddOption(false)}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowAddOption(true)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-[14px] border border-dashed border-outline-variant/40 bg-white/40 py-1.5 text-xs font-black text-primary-container transition hover:bg-white"
+            >
+              <Icon name="add" size={14} />
+              Agregar opción
+            </button>
+          )}
+        </div>
+      )}
     </div>
+  )
+}
+
+function OptionRow({ option }: { option: MenuOption }) {
+  const updateOption = useUpdateBusinessModifierOption()
+  const deleteOption = useDeleteBusinessModifierOption()
+
+  const [editing, setEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [name, setName] = useState(option.name)
+  const [price, setPrice] = useState(String(option.price_delta))
+
+  function startEdit() {
+    setName(option.name)
+    setPrice(String(option.price_delta))
+    setEditing(true)
+    setConfirmDelete(false)
+  }
+
+  async function handleSave(event: React.FormEvent) {
+    event.preventDefault()
+    if (!name.trim()) return
+    await updateOption.mutateAsync({
+      id: option.id,
+      body: { name: name.trim(), priceDelta: Number(price || 0) },
+    })
+    setEditing(false)
+  }
+
+  async function handleDelete() {
+    await deleteOption.mutateAsync(option.id)
+  }
+
+  if (editing) {
+    return (
+      <li>
+        <form
+          className="grid gap-1.5 rounded-[14px] bg-white p-2 md:grid-cols-[1fr_110px_auto]"
+          onSubmit={handleSave}
+        >
+          <Input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            aria-label="Nombre de la opción"
+            placeholder="Nombre"
+            className="h-10 rounded-[12px] bg-white"
+            autoFocus
+          />
+          <Input
+            value={price}
+            onChange={(event) => setPrice(event.target.value)}
+            inputMode="decimal"
+            aria-label="Precio extra"
+            placeholder="0.00"
+            className="h-10 rounded-[12px] bg-white"
+          />
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              aria-label="Cancelar"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-[12px] bg-surface-container text-on-surface-variant"
+              disabled={updateOption.isPending}
+            >
+              <Icon name="close" size={16} />
+            </button>
+            <button
+              type="submit"
+              aria-label="Guardar"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-[12px] bg-primary text-on-primary disabled:opacity-50"
+              disabled={updateOption.isPending || !name.trim()}
+            >
+              <Icon
+                name={updateOption.isPending ? 'progress_activity' : 'check'}
+                size={16}
+                className={updateOption.isPending ? 'animate-spin' : undefined}
+              />
+            </button>
+          </div>
+        </form>
+      </li>
+    )
+  }
+
+  if (confirmDelete) {
+    return (
+      <li className="flex items-center justify-between gap-2 rounded-[14px] bg-red-50 px-3 py-2">
+        <p className="truncate text-xs font-black text-red-900">
+          ¿Eliminar "{option.name}"?
+        </p>
+        <div className="flex shrink-0 gap-1">
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(false)}
+            className="rounded-full border border-red-300/50 bg-white px-2.5 py-1 text-[11px] font-black text-red-900"
+            disabled={deleteOption.isPending}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-black text-white"
+            disabled={deleteOption.isPending}
+          >
+            <Icon
+              name={deleteOption.isPending ? 'progress_activity' : 'delete'}
+              size={12}
+              className={deleteOption.isPending ? 'animate-spin' : undefined}
+            />
+            Eliminar
+          </button>
+        </div>
+      </li>
+    )
+  }
+
+  return (
+    <li className="group flex items-center justify-between gap-2 rounded-[14px] px-2 py-1.5 transition hover:bg-white">
+      <span className="truncate text-sm font-semibold text-on-surface">{option.name}</span>
+      <div className="flex shrink-0 items-center gap-1">
+        <span className="text-sm font-black text-primary-container">
+          +S/ {Number(option.price_delta).toFixed(2)}
+        </span>
+        <div className="ml-1 flex items-center opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+          <button
+            type="button"
+            onClick={startEdit}
+            aria-label="Editar opción"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container"
+          >
+            <Icon name="edit" size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            aria-label="Eliminar opción"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-red-700/80 hover:bg-red-50"
+          >
+            <Icon name="delete" size={14} />
+          </button>
+        </div>
+      </div>
+    </li>
+  )
+}
+
+function AddOptionForm({
+  groupId,
+  onCancel,
+  onCreated,
+}: {
+  groupId: string
+  onCancel: () => void
+  onCreated: () => void
+}) {
+  const createOption = useCreateBusinessModifierOption()
+  const [name, setName] = useState('')
+  const [price, setPrice] = useState('0')
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    if (!name.trim()) return
+    await createOption.mutateAsync({
+      groupId,
+      name: name.trim(),
+      priceDelta: Number(price || 0),
+    })
+    setName('')
+    setPrice('0')
+    onCreated()
+  }
+
+  return (
+    <form
+      className="grid gap-1.5 rounded-[14px] bg-white p-2 md:grid-cols-[1fr_110px_auto]"
+      onSubmit={handleSubmit}
+    >
+      <Input
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        placeholder="Nueva opción (ej. Doble queso)"
+        aria-label="Nombre de la opción"
+        className="h-10 rounded-[12px] bg-white"
+        autoFocus
+      />
+      <Input
+        value={price}
+        onChange={(event) => setPrice(event.target.value)}
+        inputMode="decimal"
+        placeholder="0.00"
+        aria-label="Precio extra"
+        className="h-10 rounded-[12px] bg-white"
+      />
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Cancelar"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-[12px] bg-surface-container text-on-surface-variant"
+          disabled={createOption.isPending}
+        >
+          <Icon name="close" size={16} />
+        </button>
+        <button
+          type="submit"
+          aria-label="Agregar"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-[12px] bg-primary text-on-primary disabled:opacity-50"
+          disabled={createOption.isPending || !name.trim()}
+        >
+          <Icon
+            name={createOption.isPending ? 'progress_activity' : 'check'}
+            size={16}
+            className={createOption.isPending ? 'animate-spin' : undefined}
+          />
+        </button>
+      </div>
+    </form>
   )
 }
