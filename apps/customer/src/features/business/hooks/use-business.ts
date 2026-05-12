@@ -43,6 +43,20 @@ export function useCreateBusinessItem() {
   })
 }
 
+export function useUpdateBusinessItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: string
+      body: Parameters<typeof customer.updateBusinessMenuItem>[1]
+    }) => customer.updateBusinessMenuItem(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: MENU_QK }),
+  })
+}
+
 export function useCreateBusinessModifierGroup() {
   const qc = useQueryClient()
   return useMutation({

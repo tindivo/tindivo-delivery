@@ -11,9 +11,15 @@ import {
   useCreateBusinessItem,
   useCreateBusinessModifierGroup,
   useCreateBusinessModifierOption,
+  useUpdateBusinessItem,
   useUpdateBusinessProfile,
 } from '../hooks/use-business'
 import { useUploadBusinessImage } from '../hooks/use-upload-business-image'
+
+type MenuData = NonNullable<ReturnType<typeof useBusinessMenu>['data']>
+type MenuGroup = MenuData['groups'][number]
+type MenuOption = MenuData['options'][number]
+type MenuItem = MenuData['items'][number]
 
 export function BusinessDashboard() {
   const router = useRouter()
@@ -23,8 +29,6 @@ export function BusinessDashboard() {
   const updateProfile = useUpdateBusinessProfile()
   const createCategory = useCreateBusinessCategory()
   const createItem = useCreateBusinessItem()
-  const createGroup = useCreateBusinessModifierGroup()
-  const createOption = useCreateBusinessModifierOption()
   const upload = useUploadBusinessImage()
 
   const business = profile.data?.business
@@ -38,10 +42,6 @@ export function BusinessDashboard() {
   const [itemPrice, setItemPrice] = useState('')
   const [itemCategory, setItemCategory] = useState('')
   const [itemImageUrl, setItemImageUrl] = useState<string | null>(null)
-  const [modifierItemId, setModifierItemId] = useState('')
-  const [modifierGroupName, setModifierGroupName] = useState('')
-  const [modifierOptionName, setModifierOptionName] = useState('')
-  const [modifierOptionPrice, setModifierOptionPrice] = useState('0')
 
   useEffect(() => {
     if (!loading && (!session || !session.roles.includes('business'))) router.replace('/')
@@ -344,113 +344,14 @@ export function BusinessDashboard() {
               </div>
             ) : (
               items.map((item, index) => (
-                <article
+                <MenuItemCard
                   key={item.id}
-                  className="customer-panel-soft customer-reveal rounded-[30px] p-3"
-                  style={{ animationDelay: `${Math.min(index * 35, 180)}ms` }}
-                >
-                  <div className="flex gap-3">
-                    <span className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[24px] bg-surface-container">
-                      {item.image_url ? (
-                        <img src={item.image_url} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <Icon name="restaurant" />
-                      )}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-black leading-tight text-on-surface">{item.name}</p>
-                        <p className="whitespace-nowrap font-black text-primary-container">
-                          S/ {Number(item.price).toFixed(2)}
-                        </p>
-                      </div>
-                      <p className="mt-1 line-clamp-2 text-sm font-semibold text-on-surface-variant">
-                        {item.description || 'Sin descripcion'}
-                      </p>
-                      <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-800">
-                        <Icon
-                          name={item.is_available ? 'visibility' : 'visibility_off'}
-                          size={14}
-                        />
-                        {item.is_available ? 'Visible' : 'Oculto'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 space-y-2">
-                    {(groupsByItem.get(item.id) ?? []).map((group) => (
-                      <div key={group.id} className="rounded-[22px] bg-white/64 p-3">
-                        <p className="font-black">{group.name}</p>
-                        <p className="mt-1 text-sm font-semibold text-on-surface-variant">
-                          {(optionsByGroup.get(group.id) ?? [])
-                            .map(
-                              (option) =>
-                                `${option.name} +S/ ${Number(option.price_delta).toFixed(2)}`,
-                            )
-                            .join(' / ') || 'Sin opciones'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <form
-                    className="mt-3 grid gap-2 md:grid-cols-[1fr_1fr_110px_auto]"
-                    onSubmit={async (event) => {
-                      event.preventDefault()
-                      const group = await createGroup.mutateAsync({
-                        menuItemId: item.id,
-                        name: modifierGroupName.trim() || 'Agregados',
-                        minSelected: 0,
-                        maxSelected: 3,
-                      })
-                      setModifierItemId(item.id)
-                      if (modifierOptionName.trim()) {
-                        await createOption.mutateAsync({
-                          groupId: group.id,
-                          name: modifierOptionName.trim(),
-                          priceDelta: Number(modifierOptionPrice || 0),
-                        })
-                      }
-                      setModifierGroupName('')
-                      setModifierOptionName('')
-                      setModifierOptionPrice('0')
-                    }}
-                  >
-                    <Input
-                      value={modifierItemId === item.id ? modifierGroupName : ''}
-                      onFocus={() => setModifierItemId(item.id)}
-                      onChange={(event) => {
-                        setModifierItemId(item.id)
-                        setModifierGroupName(event.target.value)
-                      }}
-                      placeholder="Grupo"
-                      className="rounded-[18px] bg-white/86"
-                    />
-                    <Input
-                      value={modifierItemId === item.id ? modifierOptionName : ''}
-                      onFocus={() => setModifierItemId(item.id)}
-                      onChange={(event) => {
-                        setModifierItemId(item.id)
-                        setModifierOptionName(event.target.value)
-                      }}
-                      placeholder="Opcion"
-                      className="rounded-[18px] bg-white/86"
-                    />
-                    <Input
-                      value={modifierItemId === item.id ? modifierOptionPrice : '0'}
-                      onFocus={() => setModifierItemId(item.id)}
-                      onChange={(event) => {
-                        setModifierItemId(item.id)
-                        setModifierOptionPrice(event.target.value)
-                      }}
-                      inputMode="decimal"
-                      className="rounded-[18px] bg-white/86"
-                    />
-                    <Button type="submit" size="md" className="rounded-[18px]">
-                      <Icon name="add" />
-                    </Button>
-                  </form>
-                </article>
+                  item={item}
+                  index={index}
+                  restaurantId={business?.id ?? ''}
+                  groups={groupsByItem.get(item.id) ?? []}
+                  optionsByGroup={optionsByGroup}
+                />
               ))
             )}
           </div>
@@ -498,6 +399,231 @@ function Field({
         <Icon name={icon} size={20} className="shrink-0 text-primary-container" />
         <div className="min-w-0 flex-1">{children}</div>
       </div>
+    </div>
+  )
+}
+
+function MenuItemCard({
+  item,
+  index,
+  restaurantId,
+  groups,
+  optionsByGroup,
+}: {
+  item: MenuItem
+  index: number
+  restaurantId: string
+  groups: MenuGroup[]
+  optionsByGroup: Map<string, MenuOption[]>
+}) {
+  const updateItem = useUpdateBusinessItem()
+  const upload = useUploadBusinessImage()
+  const createGroup = useCreateBusinessModifierGroup()
+
+  const [groupName, setGroupName] = useState('')
+  const [groupMin, setGroupMin] = useState('0')
+  const [groupMax, setGroupMax] = useState('1')
+
+  async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file || !restaurantId) return
+    const result = await upload.upload(file, restaurantId)
+    if ('url' in result) {
+      await updateItem.mutateAsync({ id: item.id, body: { imageUrl: result.url } })
+    }
+    event.target.value = ''
+  }
+
+  async function handleCreateGroup(event: React.FormEvent) {
+    event.preventDefault()
+    const min = Math.max(0, Number.parseInt(groupMin || '0', 10) || 0)
+    const max = Math.max(min || 1, Number.parseInt(groupMax || '1', 10) || 1)
+    await createGroup.mutateAsync({
+      menuItemId: item.id,
+      name: groupName.trim() || 'Agregados',
+      minSelected: min,
+      maxSelected: max,
+    })
+    setGroupName('')
+    setGroupMin('0')
+    setGroupMax('1')
+  }
+
+  const photoBusy = upload.uploading || updateItem.isPending
+
+  return (
+    <article
+      className="customer-panel-soft customer-reveal rounded-[30px] p-3"
+      style={{ animationDelay: `${Math.min(index * 35, 180)}ms` }}
+    >
+      <div className="flex gap-3">
+        <label
+          className={`relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-[24px] bg-surface-container ${photoBusy ? 'opacity-60' : ''}`}
+        >
+          {item.image_url ? (
+            <img src={item.image_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Icon name="add_photo_alternate" size={28} className="text-on-surface-variant/70" />
+          )}
+          <span className="absolute inset-x-0 bottom-0 bg-black/55 py-1 text-center text-[10px] font-black uppercase tracking-wider text-white">
+            {photoBusy ? (
+              <Icon name="progress_activity" size={12} className="animate-spin" />
+            ) : item.image_url ? (
+              'Cambiar'
+            ) : (
+              'Subir foto'
+            )}
+          </span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={handlePhotoChange}
+            disabled={photoBusy}
+          />
+        </label>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-black leading-tight text-on-surface">{item.name}</p>
+            <p className="whitespace-nowrap font-black text-primary-container">
+              S/ {Number(item.price).toFixed(2)}
+            </p>
+          </div>
+          <p className="mt-1 line-clamp-2 text-sm font-semibold text-on-surface-variant">
+            {item.description || 'Sin descripcion'}
+          </p>
+          <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-800">
+            <Icon name={item.is_available ? 'visibility' : 'visibility_off'} size={14} />
+            {item.is_available ? 'Visible' : 'Oculto'}
+          </p>
+          {upload.error && (
+            <p className="mt-2 text-xs font-bold text-red-700">{upload.error}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {groups.map((group) => (
+          <ModifierGroupBlock
+            key={group.id}
+            group={group}
+            options={optionsByGroup.get(group.id) ?? []}
+          />
+        ))}
+      </div>
+
+      <form
+        className="mt-3 grid gap-2 rounded-[22px] bg-white/64 p-3 md:grid-cols-[1.4fr_90px_90px_auto]"
+        onSubmit={handleCreateGroup}
+      >
+        <Input
+          value={groupName}
+          onChange={(event) => setGroupName(event.target.value)}
+          placeholder="Nuevo grupo (Ej. Tamaño)"
+          className="rounded-[18px] bg-white/86"
+        />
+        <Input
+          value={groupMin}
+          onChange={(event) => setGroupMin(event.target.value)}
+          inputMode="numeric"
+          aria-label="Mínimo de selecciones"
+          placeholder="Min"
+          className="rounded-[18px] bg-white/86"
+        />
+        <Input
+          value={groupMax}
+          onChange={(event) => setGroupMax(event.target.value)}
+          inputMode="numeric"
+          aria-label="Máximo de selecciones"
+          placeholder="Max"
+          className="rounded-[18px] bg-white/86"
+        />
+        <Button type="submit" size="md" className="rounded-[18px]" disabled={createGroup.isPending}>
+          <Icon
+            name={createGroup.isPending ? 'progress_activity' : 'add'}
+            className={createGroup.isPending ? 'animate-spin' : undefined}
+          />
+        </Button>
+      </form>
+    </article>
+  )
+}
+
+function ModifierGroupBlock({ group, options }: { group: MenuGroup; options: MenuOption[] }) {
+  const createOption = useCreateBusinessModifierOption()
+  const [optName, setOptName] = useState('')
+  const [optPrice, setOptPrice] = useState('0')
+
+  async function handleAddOption(event: React.FormEvent) {
+    event.preventDefault()
+    if (!optName.trim()) return
+    await createOption.mutateAsync({
+      groupId: group.id,
+      name: optName.trim(),
+      priceDelta: Number(optPrice || 0),
+    })
+    setOptName('')
+    setOptPrice('0')
+  }
+
+  const limitsLabel =
+    group.min_selected === 0 && group.max_selected === 1
+      ? 'Opcional · elige 1'
+      : group.min_selected === group.max_selected
+        ? `Elige ${group.max_selected}`
+        : `Min ${group.min_selected} · Max ${group.max_selected}`
+
+  return (
+    <div className="rounded-[22px] bg-white/64 p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-black">{group.name}</p>
+        <span className="rounded-full bg-primary-fixed/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-on-primary-fixed">
+          {limitsLabel}
+        </span>
+      </div>
+      {options.length > 0 ? (
+        <ul className="space-y-1 text-sm font-semibold text-on-surface-variant">
+          {options.map((option) => (
+            <li key={option.id} className="flex items-center justify-between">
+              <span>{option.name}</span>
+              <span className="font-black text-primary-container">
+                +S/ {Number(option.price_delta).toFixed(2)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm font-semibold text-on-surface-variant/70">Sin opciones todavía</p>
+      )}
+      <form
+        className="grid gap-2 md:grid-cols-[1fr_110px_auto]"
+        onSubmit={handleAddOption}
+      >
+        <Input
+          value={optName}
+          onChange={(event) => setOptName(event.target.value)}
+          placeholder="Nombre de opción"
+          className="rounded-[18px] bg-white/86"
+        />
+        <Input
+          value={optPrice}
+          onChange={(event) => setOptPrice(event.target.value)}
+          inputMode="decimal"
+          placeholder="Precio extra"
+          className="rounded-[18px] bg-white/86"
+        />
+        <Button
+          type="submit"
+          size="md"
+          className="rounded-[18px]"
+          disabled={createOption.isPending}
+        >
+          <Icon
+            name={createOption.isPending ? 'progress_activity' : 'add'}
+            className={createOption.isPending ? 'animate-spin' : undefined}
+          />
+        </Button>
+      </form>
     </div>
   )
 }
