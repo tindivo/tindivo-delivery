@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const UserRole = z.enum(['admin', 'restaurant', 'driver'])
+export const UserRole = z.enum(['admin', 'restaurant', 'driver', 'customer', 'business'])
 export type UserRole = z.infer<typeof UserRole>
 
 export const OrderStatus = z.enum([

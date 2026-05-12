@@ -15,10 +15,13 @@ export const PublicRestaurantSummary = z.object({
   name: z.string(),
   phone: PhonePeSchema,
   address: z.string(),
+  description: z.string().nullable().optional(),
   accentColor: AccentColorSchema,
   coordinates: CoordinatesSchema.nullable(),
   isOpen: z.boolean(),
   isBlocked: z.boolean(),
+  catalogType: z.enum(['delivery', 'business']).default('delivery'),
+  deliveryEnabled: z.boolean().default(true),
   categories: z.array(z.string()),
   featuredItemNames: z.array(z.string()),
 })
