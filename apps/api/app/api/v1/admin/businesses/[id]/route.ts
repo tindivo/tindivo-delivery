@@ -12,14 +12,10 @@ export const dynamic = 'force-dynamic'
 /**
  * PATCH /api/v1/admin/businesses/[id]
  *
- * Admin enlaza el negocio a un restaurant existente (o desenlaza pasando
- * null en `deliveryRestaurantId`), o cambia los flags `is_verified` /
- * `is_active` / `is_published`.
- *
- * Si `mergeCredentials=true` y se enlaza con un restaurant: reasigna
- * `restaurants.user_id` al user del business, agrega 'restaurant' a
- * `users.roles[]`, y desactiva el user viejo del restaurant. Permite que
- * el dueño use una sola credencial para tindivo.com y delivery.tindivo.com.
+ * Admin actualiza flags del negocio/restaurant. Cuando `isDeliveryEnabled`
+ * pasa de false a true, requiere `commissionPerOrder` y agrega
+ * 'restaurant' a `users.roles[]` del dueno. Sin merge credentials porque
+ * despues de la unificacion negocio y restaurant son la misma entidad.
  */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(req, ['admin'])
@@ -31,84 +27,56 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await parseJson(req, Business.AdminUpdateBusiness)
   if (!body.ok) return body.response
 
-  const patch: TablesUpdate<'marketplace_businesses'> = {}
-
-  let businessUserId: string | null = null
-
-  if (body.data.deliveryRestaurantId !== undefined) {
-    if (body.data.deliveryRestaurantId !== null) {
-      const { data: r, error: rErr } = await sb
-        .from('restaurants')
-        .select('id, user_id')
-        .eq('id', body.data.deliveryRestaurantId)
-        .maybeSingle()
-      if (rErr) return problemCode('INTERNAL_ERROR', 500, rErr.message)
-      if (!r) return problemCode('NOT_FOUND', 404, 'Restaurant no encontrado')
-
-      if (body.data.mergeCredentials) {
-        const { data: business, error: bErr } = await sb
-          .from('marketplace_businesses')
-          .select('id, user_id')
-          .eq('id', id)
-          .maybeSingle()
-        if (bErr) return problemCode('INTERNAL_ERROR', 500, bErr.message)
-        if (!business) return problemCode('NOT_FOUND', 404)
-
-        businessUserId = business.user_id
-        const oldRestaurantUserId = r.user_id
-
-        if (oldRestaurantUserId !== businessUserId) {
-          // 1. Reasignar restaurants.user_id al user del business.
-          const { error: updRest } = await admin
-            .from('restaurants')
-            .update({ user_id: businessUserId })
-            .eq('id', body.data.deliveryRestaurantId)
-          if (updRest)
-            return problemCode('INTERNAL_ERROR', 500, `Reasignar restaurant: ${updRest.message}`)
-
-          // 2. Agregar 'restaurant' a users.roles del business user (sin duplicar).
-          const { data: bUser } = await admin
-            .from('users')
-            .select('roles')
-            .eq('id', businessUserId)
-            .single()
-          const currentRoles = (bUser?.roles ?? []) as string[]
-          if (!currentRoles.includes('restaurant')) {
-            const { error: updRoles } = await admin
-              .from('users')
-              .update({ roles: [...currentRoles, 'restaurant'] })
-              .eq('id', businessUserId)
-            if (updRoles)
-              return problemCode('INTERNAL_ERROR', 500, `Extender roles: ${updRoles.message}`)
-          }
-
-          // 3. Desactivar el user viejo del restaurant (no se borra para preservar histórico).
-          const { error: updOld } = await admin
-            .from('users')
-            .update({ is_active: false })
-            .eq('id', oldRestaurantUserId)
-          if (updOld)
-            return problemCode('INTERNAL_ERROR', 500, `Desactivar viejo user: ${updOld.message}`)
-        }
-      }
-    }
-    patch.delivery_restaurant_id = body.data.deliveryRestaurantId
+  // Si va a habilitar delivery, validar que commissionPerOrder este definido
+  if (body.data.isDeliveryEnabled === true && body.data.commissionPerOrder === undefined) {
+    return problemCode(
+      'VALIDATION_ERROR',
+      400,
+      'commissionPerOrder es requerido al habilitar delivery',
+    )
   }
 
+  const { data: current, error: cErr } = await sb
+    .from('restaurants')
+    .select('user_id, is_delivery_enabled')
+    .eq('id', id)
+    .maybeSingle()
+  if (cErr) return problemCode('INTERNAL_ERROR', 500, cErr.message)
+  if (!current) return problemCode('NOT_FOUND', 404)
+
+  const patch: TablesUpdate<'restaurants'> = {}
+  if (body.data.description !== undefined) patch.description = body.data.description
+  if (body.data.isMarketplacePublished !== undefined)
+    patch.is_marketplace_published = body.data.isMarketplacePublished
+  if (body.data.isDeliveryEnabled !== undefined)
+    patch.is_delivery_enabled = body.data.isDeliveryEnabled
   if (body.data.isVerified !== undefined) patch.is_verified = body.data.isVerified
   if (body.data.isActive !== undefined) patch.is_active = body.data.isActive
-  if (body.data.isPublished !== undefined) patch.is_published = body.data.isPublished
+  if (body.data.commissionPerOrder !== undefined)
+    patch.commission_per_order = body.data.commissionPerOrder
 
   const { data: updated, error: uErr } = await sb
-    .from('marketplace_businesses')
+    .from('restaurants')
     .update(patch)
     .eq('id', id)
     .select(
-      'id, name, phone, address, description, accent_color, is_active, is_published, is_verified, delivery_restaurant_id, created_at, updated_at',
+      'id, name, phone, address, description, accent_color, commission_per_order, is_active, is_marketplace_published, is_verified, is_delivery_enabled, created_at, updated_at',
     )
     .maybeSingle()
   if (uErr) return problemCode('INTERNAL_ERROR', 500, uErr.message)
   if (!updated) return problemCode('NOT_FOUND', 404)
+
+  // Si activamos delivery por primera vez, agregar 'restaurant' a roles[]
+  if (body.data.isDeliveryEnabled === true && !current.is_delivery_enabled) {
+    const { data: u } = await admin.from('users').select('roles').eq('id', current.user_id).single()
+    const currentRoles = (u?.roles ?? []) as string[]
+    if (!currentRoles.includes('restaurant')) {
+      await admin
+        .from('users')
+        .update({ roles: [...currentRoles, 'restaurant'] })
+        .eq('id', current.user_id)
+    }
+  }
 
   return NextResponse.json(updated)
 }

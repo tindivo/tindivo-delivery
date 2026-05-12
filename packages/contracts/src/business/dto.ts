@@ -81,17 +81,17 @@ export const CreateOption = z.object({
 })
 export type CreateOption = z.infer<typeof CreateOption>
 
-export const AdminUpdateBusiness = z.object({
-  deliveryRestaurantId: z.string().uuid().nullable().optional(),
-  isVerified: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-  isPublished: z.boolean().optional(),
-  /**
-   * Si true y `deliveryRestaurantId` no es null: reasigna `restaurants.user_id`
-   * al user del business, agrega 'restaurant' a `users.roles[]` y desactiva
-   * el user viejo del restaurant. Permite que el dueno use una sola credencial
-   * para tindivo.com y delivery.tindivo.com.
-   */
-  mergeCredentials: z.boolean().optional(),
-})
+export const AdminUpdateBusiness = z
+  .object({
+    description: z.string().max(500).nullable().optional(),
+    isMarketplacePublished: z.boolean().optional(),
+    isDeliveryEnabled: z.boolean().optional(),
+    isVerified: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+    commissionPerOrder: z.number().min(0).max(99.99).optional(),
+  })
+  .refine((data) => data.isDeliveryEnabled !== true || data.commissionPerOrder !== undefined, {
+    message: 'commissionPerOrder es requerido al habilitar delivery',
+    path: ['commissionPerOrder'],
+  })
 export type AdminUpdateBusiness = z.infer<typeof AdminUpdateBusiness>

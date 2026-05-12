@@ -11,7 +11,7 @@ import { getBusinessId } from '../_shared'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAuth(req, ['business'])
+  const auth = await requireAuth(req, ['business', 'restaurant'])
   if (!auth.ok) return auth.response
   const sb = auth.auth.supabase
   const business = await getBusinessId(sb, auth.auth.userId)
@@ -23,9 +23,9 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   return withIdempotency(req, 'business_categories', body.data, admin, async () => {
     const { data, error } = await sb
-      .from('marketplace_menu_categories')
+      .from('menu_categories')
       .insert({
-        business_id: business.id,
+        restaurant_id: business.id,
         name: body.data.name,
         description: body.data.description ?? null,
         sort_order: body.data.sortOrder,

@@ -1,6 +1,7 @@
 import { problemCode } from '@/lib/http/problem'
 import { parseJson } from '@/lib/http/validate'
 import { createAdminClient } from '@tindivo/supabase'
+import type { TablesInsert } from '@tindivo/supabase'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -38,14 +39,15 @@ const RegisterSchema = z
  * POST /api/v1/public/customer-auth/register
  *
  * Crea cuenta de cliente final (rol='customer') o negocio publico
- * (rol='business'). El negocio vive en marketplace_businesses, separado del
- * agregado operativo restaurants que usa delivery.tindivo.com.
+ * (rol='business'). El negocio se crea como una fila en `restaurants` con
+ * `is_delivery_enabled=false, is_marketplace_published=true`. Cuando admin
+ * "Habilita delivery", se prende el flag (sin crear nada nuevo).
  */
 export async function POST(req: NextRequest) {
   const body = await parseJson(req, RegisterSchema)
   if (!body.ok) return body.response
 
-  const admin = createAdminClient() as any
+  const admin = createAdminClient()
   const role = body.data.accountType === 'business' ? 'business' : 'customer'
 
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
@@ -77,20 +79,34 @@ export async function POST(req: NextRequest) {
     return problemCode('INTERNAL_ERROR', 500, usersError.message)
   }
 
-  const { error: profileError } =
-    role === 'business'
-      ? await admin.from('marketplace_businesses').insert({
-          user_id: userId,
-          name: body.data.businessName,
-          phone: body.data.phone,
-          address: body.data.address,
-          description: body.data.description ?? null,
-        })
-      : await admin.from('customer_profiles').insert({
-          user_id: userId,
-          full_name: body.data.fullName,
-          phone: body.data.phone ?? null,
-        })
+  let profileError: { message: string } | null = null
+  if (role === 'business') {
+    const restaurantInsert: TablesInsert<'restaurants'> = {
+      user_id: userId,
+      name: body.data.businessName as string,
+      phone: body.data.phone as string,
+      address: body.data.address as string,
+      description: body.data.description ?? null,
+      accent_color: Math.floor(Math.random() * 0xffffff)
+        .toString(16)
+        .padStart(6, '0')
+        .toUpperCase(),
+      commission_per_order: 3.0,
+      is_active: true,
+      is_marketplace_published: true,
+      is_delivery_enabled: false,
+      is_verified: false,
+    }
+    const { error } = await admin.from('restaurants').insert(restaurantInsert)
+    profileError = error
+  } else {
+    const { error } = await admin.from('customer_profiles').insert({
+      user_id: userId,
+      full_name: body.data.fullName,
+      phone: body.data.phone ?? null,
+    })
+    profileError = error
+  }
 
   if (profileError) {
     try {

@@ -7,7 +7,7 @@ import { getBusinessId } from './_shared'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAuth(req, ['business'])
+  const auth = await requireAuth(req, ['business', 'restaurant'])
   if (!auth.ok) return auth.response
 
   const sb = auth.auth.supabase
@@ -15,35 +15,35 @@ export async function GET(req: NextRequest) {
   if (!business.ok) return business.response
 
   const { data: categories, error: catErr } = await sb
-    .from('marketplace_menu_categories')
+    .from('menu_categories')
     .select('*')
-    .eq('business_id', business.id)
+    .eq('restaurant_id', business.id)
     .order('sort_order')
   if (catErr) return problemCode('INTERNAL_ERROR', 500, catErr.message)
 
   const { data: items, error: itemErr } = await sb
-    .from('marketplace_menu_items')
+    .from('menu_items')
     .select('*')
-    .eq('business_id', business.id)
+    .eq('restaurant_id', business.id)
     .order('sort_order')
   if (itemErr) return problemCode('INTERNAL_ERROR', 500, itemErr.message)
 
-  const itemIds = (items ?? []).map((i: any) => i.id)
+  const itemIds = (items ?? []).map((i) => i.id)
   const { data: groups, error: gErr } =
     itemIds.length > 0
       ? await sb
-          .from('marketplace_menu_modifier_groups')
+          .from('menu_modifier_groups')
           .select('*')
           .in('menu_item_id', itemIds)
           .order('sort_order')
       : { data: [], error: null }
   if (gErr) return problemCode('INTERNAL_ERROR', 500, gErr.message)
 
-  const groupIds = (groups ?? []).map((g: any) => g.id)
+  const groupIds = (groups ?? []).map((g) => g.id)
   const { data: options, error: oErr } =
     groupIds.length > 0
       ? await sb
-          .from('marketplace_menu_modifier_options')
+          .from('menu_modifier_options')
           .select('*')
           .in('group_id', groupIds)
           .order('sort_order')

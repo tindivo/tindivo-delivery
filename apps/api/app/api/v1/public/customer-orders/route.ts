@@ -52,34 +52,23 @@ async function createCustomerOrder(
     )
   }
 
-  // Si el restaurantId corresponde a un marketplace_business con
-  // delivery_restaurant_id seteado, redirigimos al restaurant enlazado.
-  // El cliente armo su carrito desde el catalogo del business (catalogType=
-  // business) pero el pedido se procesa contra el restaurant de delivery
-  // operativo. Los items del business viven en marketplace_menu_items con
-  // los mismos IDs que se copian a menu_items al hacer el merge (ver
-  // trigger sync_restaurant_business_pair). Esto cierra el "puente" entre
-  // las dos cartas.
-  let effectiveRestaurantId = data.restaurantId
-  const { data: business } = await sb
-    .from('marketplace_businesses')
-    .select('id, delivery_restaurant_id')
-    .eq('id', data.restaurantId)
-    .maybeSingle()
-  if (business?.delivery_restaurant_id) {
-    effectiveRestaurantId = business.delivery_restaurant_id
-  }
-
   const { data: restaurant, error: restaurantError } = await sb
     .from('restaurants')
-    .select('id, name, is_active, commission_per_order')
-    .eq('id', effectiveRestaurantId)
+    .select('id, name, is_active, is_delivery_enabled, commission_per_order')
+    .eq('id', data.restaurantId)
     .maybeSingle()
 
   if (restaurantError) return problemCode('INTERNAL_ERROR', 500, restaurantError.message)
   if (!restaurant || !restaurant.is_active) return problemCode('RESTAURANT_NOT_FOUND', 404)
+  if (!restaurant.is_delivery_enabled) {
+    return problemCode(
+      'VALIDATION_ERROR',
+      400,
+      'Este negocio no opera delivery. Contactalo por WhatsApp.',
+    )
+  }
 
-  const cart = await priceCart(sb, data.items, effectiveRestaurantId)
+  const cart = await priceCart(sb, data.items, data.restaurantId)
   if ('response' in cart) return cart.response
 
   const subtotal = roundMoney(cart.lines.reduce((sum, line) => sum + line.lineTotal, 0))
@@ -93,7 +82,7 @@ async function createCustomerOrder(
 
   const createOrder = buildCreateOrderUseCase(sb)
   const created = await createOrder.execute({
-    restaurantId: effectiveRestaurantId,
+    restaurantId: data.restaurantId,
     prepMinutes,
     paymentStatus: data.paymentStatus,
     orderAmount: subtotal,

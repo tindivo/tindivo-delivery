@@ -11,7 +11,7 @@ import { getBusinessId } from '../_shared'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAuth(req, ['business'])
+  const auth = await requireAuth(req, ['business', 'restaurant'])
   if (!auth.ok) return auth.response
   const sb = auth.auth.supabase
   const business = await getBusinessId(sb, auth.auth.userId)
@@ -21,17 +21,17 @@ export async function POST(req: NextRequest) {
   if (!body.ok) return body.response
 
   const { data: item } = await sb
-    .from('marketplace_menu_items')
+    .from('menu_items')
     .select('id')
     .eq('id', body.data.menuItemId)
-    .eq('business_id', business.id)
+    .eq('restaurant_id', business.id)
     .maybeSingle()
   if (!item) return problemCode('FORBIDDEN', 403)
 
   const admin = createAdminClient()
   return withIdempotency(req, 'business_modifier_groups', body.data, admin, async () => {
     const { data, error } = await sb
-      .from('marketplace_menu_modifier_groups')
+      .from('menu_modifier_groups')
       .insert({
         menu_item_id: body.data.menuItemId,
         name: body.data.name,
