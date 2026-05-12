@@ -10,6 +10,7 @@ import { WelcomeToast } from '../../auth/components/welcome-toast'
 import { InstallPromptBanner } from '../../pwa/components/install-prompt-banner'
 import { useCart } from '../hooks/use-cart'
 import { CheckoutSheet } from './checkout-sheet'
+import { MaintenancePopup } from './maintenance-popup'
 import { ProductSheet } from './product-sheet'
 import { RestaurantMarketplace } from './restaurant-marketplace'
 import { RestaurantMenu } from './restaurant-menu'
@@ -44,6 +45,7 @@ export function CustomerApp() {
       className="customer-page bg-transparent"
       style={{ paddingBottom: cart.items.length ? 132 : 32 }}
     >
+      <MaintenancePopup />
       <WelcomeToast />
       <GlassTopBar
         title="Tindivo"
@@ -125,8 +127,9 @@ export function CustomerApp() {
         />
       )}
 
-      {checkoutOpen && selectedRestaurant && (
-        selectedRestaurant.deliveryEnabled ? (
+      {checkoutOpen &&
+        selectedRestaurant &&
+        (selectedRestaurant.deliveryEnabled ? (
           <CheckoutSheet
             restaurant={selectedRestaurant}
             cart={cart.items}
@@ -148,8 +151,7 @@ export function CustomerApp() {
               setSelectedListing(null)
             }}
           />
-        )
-      )}
+        ))}
       <InstallPromptBanner />
     </div>
   )
