@@ -23,6 +23,7 @@ type Props = {
 }
 
 const STATUS_LABELS = {
+  pending_acceptance: 'El local está confirmando tu pedido',
   waiting_driver: 'Esperando motorizado',
   heading_to_restaurant: 'Motorizado en camino al local',
   waiting_at_restaurant: 'Recogiendo tu pedido',
@@ -32,6 +33,7 @@ const STATUS_LABELS = {
 } as const
 
 const WASH_BY_STATUS = {
+  pending_acceptance: 'wash-warning',
   waiting_driver: 'wash-warning',
   heading_to_restaurant: 'wash-active',
   waiting_at_restaurant: 'wash-active',
@@ -41,6 +43,7 @@ const WASH_BY_STATUS = {
 } as const
 
 const HERO_ICON_BY_STATUS = {
+  pending_acceptance: 'pending',
   waiting_driver: 'hourglass_top',
   heading_to_restaurant: 'two_wheeler',
   waiting_at_restaurant: 'restaurant',
@@ -50,6 +53,7 @@ const HERO_ICON_BY_STATUS = {
 } as const
 
 const HERO_VARIANT_BY_STATUS = {
+  pending_acceptance: 'warning',
   waiting_driver: 'warning',
   heading_to_restaurant: 'info',
   waiting_at_restaurant: 'info',

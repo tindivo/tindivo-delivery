@@ -4,6 +4,7 @@ export const UserRole = z.enum(['admin', 'restaurant', 'driver', 'customer', 'bu
 export type UserRole = z.infer<typeof UserRole>
 
 export const OrderStatus = z.enum([
+  'pending_acceptance',
   'waiting_driver',
   'heading_to_restaurant',
   'waiting_at_restaurant',
