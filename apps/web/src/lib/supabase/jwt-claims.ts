@@ -2,42 +2,33 @@ import type { Session } from '@supabase/supabase-js'
 
 /**
  * Claims custom que inyectamos desde el Custom Access Token Hook de Supabase.
- * Ver: supabase/migrations/*_custom_access_token_hook.sql
+ * El hook emite tanto `user_role` (legacy, = roles[0]) como `user_roles`
+ * (array completo). Frontend lee `user_roles ?? [user_role]` para back-compat.
  */
+export type Role = 'admin' | 'restaurant' | 'driver' | 'customer' | 'business'
+
 export type TindivoClaims = {
-  user_role?: 'admin' | 'restaurant' | 'driver' | 'customer'
+  user_role?: Role
+  user_roles?: Role[]
   is_active?: boolean
   restaurant_id?: string
   driver_id?: string
 }
 
-/**
- * Decodifica base64url (usado por JWT) a string UTF-8.
- * Isomórfico: usa `atob` en browser y `Buffer` en Node (middleware + SSR).
- */
 function base64UrlDecode(input: string): string {
-  // base64url → base64
   const normalized = input.replace(/-/g, '+').replace(/_/g, '/')
   const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
 
   if (typeof atob === 'function') {
-    // Browser / Edge Runtime
     const binary = atob(padded)
-    // Reinterpretar bytes como UTF-8
     const bytes = new Uint8Array(binary.length)
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
     return new TextDecoder('utf-8').decode(bytes)
   }
-  // Node SSR
   // biome-ignore lint/suspicious/noExplicitAny: node Buffer
   return (globalThis as any).Buffer.from(padded, 'base64').toString('utf8')
 }
 
-/**
- * Decodifica los claims del JWT sin verificar firma.
- * Seguro para leer claims emitidos por Supabase — en el backend (API Routes)
- * SIEMPRE validar con `supabase.auth.getUser(token)` antes de confiar en ellos.
- */
 export function decodeJwtClaims(accessToken: string): TindivoClaims & {
   sub?: string
   email?: string
@@ -58,24 +49,30 @@ export function getClaimsFromSession(session: Session | null): TindivoClaims {
 }
 
 /**
- * Decide la ruta dashboard del usuario según su rol. Para `customer`
- * retornamos `/login` porque apps/web es solo back-office staff: ese rol
- * vive en `apps/customer` (tindivo.com) y debe redirigirse fuera del
- * dominio. El middleware detecta el caso y hace logout.
+ * Devuelve los roles del JWT. Usa `user_roles` (array) si el hook nuevo
+ * lo emite; fallback a `[user_role]` para JWTs viejos durante la transición.
  */
-export function homePathForRole(role: TindivoClaims['user_role']): string {
-  switch (role) {
-    case 'admin':
-      return '/admin'
-    case 'restaurant':
-      return '/restaurante'
-    case 'driver':
-      return '/motorizado'
-    case 'customer':
-      // Customer no puede usar delivery.tindivo.com — el LoginForm hace
-      // signOut tras detectar role='customer' y muestra mensaje.
-      return '/login'
-    default:
-      return '/login'
-  }
+export function getRoles(claims: TindivoClaims): Role[] {
+  if (claims.user_roles && claims.user_roles.length > 0) return claims.user_roles
+  if (claims.user_role) return [claims.user_role]
+  return []
+}
+
+/**
+ * Decide la ruta dashboard del usuario en el back-office staff
+ * (delivery.tindivo.com). Prioriza admin > restaurant > driver. Si solo tiene
+ * roles de customer/business (sin staff), retorna `/login` — esos roles
+ * viven en `apps/customer` (tindivo.com) y deben redirigirse fuera del
+ * dominio. El middleware detecta el caso y muestra `wrong-app`.
+ */
+export function homePathForRoles(roles: Role[]): string {
+  if (roles.includes('admin')) return '/admin'
+  if (roles.includes('restaurant')) return '/restaurante'
+  if (roles.includes('driver')) return '/motorizado'
+  return '/login'
+}
+
+/** @deprecated Usa homePathForRoles. Mantenido para callsites que aún pasan un solo rol. */
+export function homePathForRole(role: Role | undefined): string {
+  return homePathForRoles(role ? [role] : [])
 }

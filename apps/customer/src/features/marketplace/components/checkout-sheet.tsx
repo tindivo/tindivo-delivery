@@ -39,7 +39,7 @@ export function CheckoutSheet({
   const profileQuery = useQuery({
     queryKey: ['customer', 'profile'],
     queryFn: () => customer.getMyProfile(),
-    enabled: session?.role === 'customer',
+    enabled: session?.roles.includes('customer') ?? false,
   })
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')

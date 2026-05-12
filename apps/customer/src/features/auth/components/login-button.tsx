@@ -27,7 +27,7 @@ export function LoginButton() {
   if (session) {
     return (
       <Link
-        href={session.role === 'business' ? '/negocio' : '/cuenta'}
+        href={session.roles.includes('business') ? '/negocio' : '/cuenta'}
         className="customer-lift relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/80 shadow-[0_10px_28px_-20px_rgba(171,53,0,0.8)] backdrop-blur"
         aria-label="Mi cuenta"
       >

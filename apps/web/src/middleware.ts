@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
-import { type TindivoClaims, decodeJwtClaims, homePathForRole } from './lib/supabase/jwt-claims'
+import { type Role, decodeJwtClaims, getRoles, homePathForRoles } from './lib/supabase/jwt-claims'
 
 /**
  * Rutas que NO requieren sesión. Todo lo demás exige login.
@@ -20,39 +20,39 @@ function isPublicPath(pathname: string): boolean {
  * Prefijo de rutas por rol. Mantener en un solo sitio para que
  * `resolveRedirect` y el `LoginForm` compartan el mapeo.
  */
-const ROLE_PATH_PREFIX: Partial<Record<NonNullable<TindivoClaims['user_role']>, string>> = {
+const ROLE_PATH_PREFIX: Partial<Record<Role, string>> = {
   admin: '/admin',
   restaurant: '/restaurante',
   driver: '/motorizado',
 }
 
+const STAFF_ROLES: ReadonlySet<Role> = new Set(['admin', 'restaurant', 'driver'])
+
 /**
- * Dado un path, ¿pertenece al área privada de algún rol?
- * Devuelve el rol dueño del path, o `null` si la ruta no corresponde a ningún
- * área rol-específica.
+ * Dado un path, ¿pertenece al área privada de algún rol staff?
+ * Devuelve el rol dueño del path, o `null` si la ruta no corresponde a
+ * ningún área rol-específica.
  */
-function ownerRoleOfPath(pathname: string): NonNullable<TindivoClaims['user_role']> | null {
-  for (const [role, prefix] of Object.entries(ROLE_PATH_PREFIX) as [
-    NonNullable<TindivoClaims['user_role']>,
-    string,
-  ][]) {
+function ownerRoleOfPath(pathname: string): Role | null {
+  for (const [role, prefix] of Object.entries(ROLE_PATH_PREFIX) as [Role, string][]) {
     if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return role
   }
   return null
 }
 
 /**
- * Cliente customer no debe poder usar el back-office staff. Si llega aquí
- * con sesión activa, el LoginForm o este middleware lo expulsan a /login
- * con flag wrong-app=customer para mostrarle "esta cuenta es de cliente".
+ * Customer puro (sin ningún rol staff) no debe poder usar el back-office.
+ * Si llega aquí con sesión activa, lo expulsamos a /login con flag
+ * `wrong-app=customer`. Lo mismo aplica para usuarios solo-`business`
+ * (sus credenciales viven en tindivo.com, no acá).
  */
-function isCustomerOnStaffApp(role: TindivoClaims['user_role']): boolean {
-  return role === 'customer'
+function isNonStaffOnly(roles: Role[]): boolean {
+  return roles.length > 0 && !roles.some((r) => STAFF_ROLES.has(r))
 }
 
 type RedirectContext = {
   pathname: string
-  role: TindivoClaims['user_role']
+  roles: Role[]
   isActive: boolean
   hasSession: boolean
 }
@@ -62,20 +62,21 @@ type RouteAction = { kind: 'redirect'; path: string } | null
 /**
  * Política de enrutamiento del back-office staff:
  *   1. Sin sesión + ruta privada → redirect `/login`
- *   2. Sesión inválida (sin `user_role`) → redirect `/login`
+ *   2. Sesión sin roles → redirect `/login`
  *   3. Usuario deshabilitado (`is_active = false`) → redirect `/login?suspended=1`
- *   4. Autenticado visitando `/login` → redirect al home del rol
- *   5. Autenticado entrando a área de OTRO rol → redirect a su propia home
- *   6. Cualquier otro caso → null (continuar).
+ *   4. Customer/business puro (sin staff role) → redirect `/login?wrong-app=customer`
+ *   5. Autenticado visitando `/login` → redirect al home (prioridad de roles)
+ *   6. Autenticado entrando a área de un rol que NO tiene → redirect a su propia home
+ *   7. Cualquier otro caso → null (continuar).
  */
 function resolveRedirect(ctx: RedirectContext): RouteAction {
-  const { pathname, role, isActive, hasSession } = ctx
+  const { pathname, roles, isActive, hasSession } = ctx
 
   if (!hasSession) {
     return isPublicPath(pathname) ? null : { kind: 'redirect', path: '/login' }
   }
 
-  if (!role) {
+  if (roles.length === 0) {
     return pathname === '/login' ? null : { kind: 'redirect', path: '/login' }
   }
 
@@ -84,17 +85,17 @@ function resolveRedirect(ctx: RedirectContext): RouteAction {
     return { kind: 'redirect', path: '/login?suspended=1' }
   }
 
-  if (isCustomerOnStaffApp(role)) {
+  if (isNonStaffOnly(roles)) {
     return pathname === '/login' ? null : { kind: 'redirect', path: '/login?wrong-app=customer' }
   }
 
   if (pathname === '/login') {
-    return { kind: 'redirect', path: homePathForRole(role) }
+    return { kind: 'redirect', path: homePathForRoles(roles) }
   }
 
   const owner = ownerRoleOfPath(pathname)
-  if (owner && owner !== role) {
-    return { kind: 'redirect', path: homePathForRole(role) }
+  if (owner && !roles.includes(owner)) {
+    return { kind: 'redirect', path: homePathForRoles(roles) }
   }
 
   return null
@@ -132,7 +133,7 @@ export async function middleware(request: NextRequest) {
 
   const ctx: RedirectContext = {
     pathname,
-    role: claims.user_role,
+    roles: getRoles(claims),
     isActive: claims.is_active ?? false,
     hasSession: Boolean(session),
   }
@@ -154,18 +155,6 @@ export async function middleware(request: NextRequest) {
  * matcher: corre middleware en todo salvo assets estáticos.
  */
 export const config = {
-  // Excluimos rutas que NO deben pasar por auth/redirect:
-  //  - _next/static, _next/image: assets de Next
-  //  - favicon (ico, png con sufijos como -16, -32): tags <link rel="icon">
-  //  - manifest.webmanifest: manifest PWA, cargado sin sesión por el browser
-  //  - sw.js + workbox-*.js + swe-worker-*.js: Service Worker y su entry de
-  //    @serwist/next (el browser rechaza registrar un SW detrás de cualquier
-  //    redirect; además si lo recibe como text/html explota con
-  //    "Unexpected token '<'" al ejecutarlo como JS)
-  //  - icon-*, apple-touch-icon*: íconos del manifest cargados sin sesión
-  //  - api/*: route handlers internos del web app (validan su propio auth y
-  //    no deben recibir el redirect a /login si la sesión es inválida — el
-  //    cliente debe poder llamarlos para CERRAR sesión, justamente)
   matcher: [
     '/((?!_next/static|_next/image|favicon|manifest\\.webmanifest|sw\\.js|workbox-.*\\.js|swe-worker-.*\\.js|icon-.*|apple-touch-icon.*|api/).*)',
   ],

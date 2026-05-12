@@ -26,7 +26,10 @@ export function AccountView() {
 
   useEffect(() => {
     if (!loading && !session) router.replace('/')
-    if (!loading && session?.role === 'business') router.replace('/negocio')
+    // Si el user solo tiene business (sin customer), su home es /negocio.
+    // Si tiene ambos, queda en /cuenta para ver historial — puede ir a /negocio
+    // explícitamente desde el botón del topbar.
+    if (!loading && session && !session.roles.includes('customer')) router.replace('/negocio')
   }, [loading, session, router])
 
   useEffect(() => {

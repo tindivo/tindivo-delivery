@@ -44,7 +44,7 @@ export function BusinessDashboard() {
   const [modifierOptionPrice, setModifierOptionPrice] = useState('0')
 
   useEffect(() => {
-    if (!loading && (!session || session.role !== 'business')) router.replace('/')
+    if (!loading && (!session || !session.roles.includes('business'))) router.replace('/')
   }, [loading, router, session])
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export function BusinessDashboard() {
     router.replace('/')
   }
 
-  if (loading || !session || session.role !== 'business') {
+  if (loading || !session || !session.roles.includes('business')) {
     return (
       <div className="customer-page">
         <GlassTopBar title="Negocio" />

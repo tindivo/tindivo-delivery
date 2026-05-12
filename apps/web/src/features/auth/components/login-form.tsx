@@ -1,7 +1,7 @@
 'use client'
 import { fullSignOut } from '@/features/auth/services/sign-out'
 import { supabase } from '@/lib/supabase/client'
-import { decodeJwtClaims, homePathForRole } from '@/lib/supabase/jwt-claims'
+import { decodeJwtClaims, getRoles, homePathForRoles } from '@/lib/supabase/jwt-claims'
 import { Button, Icon, Input, Label } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -32,11 +32,12 @@ export function LoginForm() {
     }
 
     const claims = decodeJwtClaims(data.session.access_token)
+    const roles = getRoles(claims)
     // fullSignOut en lugar de signOutLocal: ambos paths (rol inválido,
     // cuenta inactiva) deben limpiar la subscription push para no dejar
     // una fila huérfana en push_subscriptions apuntando al usuario que
     // acabamos de rechazar.
-    if (!claims.user_role) {
+    if (roles.length === 0) {
       setError('Tu cuenta no tiene rol asignado. Contacta al administrador.')
       await fullSignOut()
       return
@@ -47,7 +48,7 @@ export function LoginForm() {
       return
     }
 
-    router.push(homePathForRole(claims.user_role))
+    router.push(homePathForRoles(roles))
     router.refresh()
   }
 

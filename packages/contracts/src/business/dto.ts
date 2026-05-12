@@ -86,5 +86,12 @@ export const AdminUpdateBusiness = z.object({
   isVerified: z.boolean().optional(),
   isActive: z.boolean().optional(),
   isPublished: z.boolean().optional(),
+  /**
+   * Si true y `deliveryRestaurantId` no es null: reasigna `restaurants.user_id`
+   * al user del business, agrega 'restaurant' a `users.roles[]` y desactiva
+   * el user viejo del restaurant. Permite que el dueno use una sola credencial
+   * para tindivo.com y delivery.tindivo.com.
+   */
+  mergeCredentials: z.boolean().optional(),
 })
 export type AdminUpdateBusiness = z.infer<typeof AdminUpdateBusiness>

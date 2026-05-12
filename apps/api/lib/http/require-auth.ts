@@ -2,22 +2,26 @@ import { type ServerClient, createAdminClient, createClientFromJwt } from '@tind
 import type { NextRequest } from 'next/server'
 import { problemCode } from './problem'
 
+export type Role = 'admin' | 'restaurant' | 'driver' | 'customer' | 'business'
+
 export type AuthContext = {
   userId: string
   email: string
-  role: 'admin' | 'restaurant' | 'driver' | 'customer' | 'business'
+  /** Roles activos del user. Multi-role: un dueño business puede operar también delivery. */
+  roles: Role[]
+  /** Primer rol (legacy/back-compat). Igual a roles[0]. */
+  role: Role
   restaurantId: string | null
   driverId: string | null
   supabase: ServerClient
 }
 
-type Role = AuthContext['role']
-
 type AuthResult = { ok: true; auth: AuthContext } | { ok: false; response: Response }
 
 /**
  * Extrae el JWT del header Authorization Bearer y valida el usuario contra Supabase.
- * Si `allowedRoles` está definido, valida que el rol del usuario esté permitido.
+ * Si `allowedRoles` está definido, valida que el user tenga al menos uno de
+ * esos roles entre los suyos.
  */
 export async function requireAuth(req: NextRequest, allowedRoles?: Role[]): Promise<AuthResult> {
   const header = req.headers.get('authorization') ?? ''
@@ -30,7 +34,6 @@ export async function requireAuth(req: NextRequest, allowedRoles?: Role[]): Prom
     }
   }
 
-  // 1. Valida el JWT y obtiene el auth.user (service_role + jwt)
   const admin = createAdminClient()
   const {
     data: { user },
@@ -41,10 +44,9 @@ export async function requireAuth(req: NextRequest, allowedRoles?: Role[]): Prom
     return { ok: false, response: problemCode('INVALID_JWT', 401) }
   }
 
-  // 2. Obtiene perfil del usuario en public.users (con service role para bypass RLS)
   const { data: profile } = await admin
     .from('users')
-    .select('id, email, role, is_active')
+    .select('id, email, role, roles, is_active')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -52,30 +54,31 @@ export async function requireAuth(req: NextRequest, allowedRoles?: Role[]): Prom
     return { ok: false, response: problemCode('FORBIDDEN', 403, 'Usuario inactivo o sin perfil') }
   }
 
-  if (allowedRoles && !allowedRoles.includes(profile.role)) {
+  const roles = (profile.roles?.length ? profile.roles : [profile.role]) as Role[]
+
+  if (allowedRoles && !allowedRoles.some((r) => roles.includes(r))) {
     return {
       ok: false,
       response: problemCode('FORBIDDEN', 403, `Rol requerido: ${allowedRoles.join(', ')}`),
     }
   }
 
-  // 3. Obtiene restaurantId/driverId según rol
   let restaurantId: string | null = null
   let driverId: string | null = null
 
-  if (profile.role === 'restaurant') {
+  if (roles.includes('restaurant')) {
     const { data } = await admin
       .from('restaurants')
       .select('id')
       .eq('user_id', user.id)
       .maybeSingle()
     restaurantId = data?.id ?? null
-  } else if (profile.role === 'driver') {
+  }
+  if (roles.includes('driver')) {
     const { data } = await admin.from('drivers').select('id').eq('user_id', user.id).maybeSingle()
     driverId = data?.id ?? null
   }
 
-  // 4. Crea cliente con JWT del usuario (para queries que respeten RLS)
   const supabase = createClientFromJwt(token)
 
   return {
@@ -83,7 +86,8 @@ export async function requireAuth(req: NextRequest, allowedRoles?: Role[]): Prom
     auth: {
       userId: profile.id,
       email: profile.email,
-      role: profile.role,
+      roles,
+      role: roles[0]!,
       restaurantId,
       driverId,
       supabase,

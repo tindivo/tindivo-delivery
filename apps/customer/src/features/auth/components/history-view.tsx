@@ -18,7 +18,7 @@ export function HistoryView() {
 
   useEffect(() => {
     if (!loading && !session) router.replace('/')
-    if (!loading && session?.role === 'business') router.replace('/negocio')
+    if (!loading && session && !session.roles.includes('customer')) router.replace('/negocio')
   }, [loading, session, router])
 
   if (loading || !session) {

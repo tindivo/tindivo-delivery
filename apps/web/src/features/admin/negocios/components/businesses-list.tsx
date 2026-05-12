@@ -76,6 +76,7 @@ type BusinessRowProps = {
 function BusinessRow({ business, restaurants }: BusinessRowProps) {
   const update = useUpdateAdminBusiness(business.id)
   const [selected, setSelected] = useState<string>(business.delivery_restaurant_id ?? '')
+  const [mergeCreds, setMergeCreds] = useState(false)
 
   const linked = business.delivery_restaurant_id !== null
   const dirty = selected !== (business.delivery_restaurant_id ?? '')
@@ -83,7 +84,9 @@ function BusinessRow({ business, restaurants }: BusinessRowProps) {
   async function save() {
     await update.mutateAsync({
       deliveryRestaurantId: selected === '' ? null : selected,
+      mergeCredentials: mergeCreds && selected !== '' ? true : undefined,
     })
+    setMergeCreds(false)
   }
 
   async function toggleVerified() {
@@ -181,6 +184,23 @@ function BusinessRow({ business, restaurants }: BusinessRowProps) {
               {linked ? (selected === '' ? 'Desenlazar' : 'Reenlazar') : 'Enlazar'}
             </button>
           </div>
+          {selected !== '' && (
+            <label className="inline-flex items-start gap-2 text-[11px] text-on-surface-variant cursor-pointer">
+              <input
+                type="checkbox"
+                checked={mergeCreds}
+                onChange={(e) => setMergeCreds(e.target.checked)}
+                disabled={update.isPending}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-bold">Unificar credenciales</span>
+                <span className="block text-[10px] text-on-surface-variant/80">
+                  Reasigna el restaurant al dueño del negocio. Mismo email+password para ambos lados.
+                </span>
+              </span>
+            </label>
+          )}
           <button
             type="button"
             onClick={toggleVerified}
