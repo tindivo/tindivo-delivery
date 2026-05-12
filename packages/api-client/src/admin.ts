@@ -1,4 +1,4 @@
-import type { Drivers, RestaurantPayments, Restaurants, Settlements } from '@tindivo/contracts'
+import type { Business, Drivers, RestaurantPayments, Restaurants, Settlements } from '@tindivo/contracts'
 import type { ApiClient } from './client'
 
 export type AdminSettlementRow = Settlements.AdminSettlementRow
@@ -236,7 +236,30 @@ export function adminApi(client: ApiClient) {
         'admin/settings/assignment-rules',
         body,
       ),
+
+    listBusinesses: () =>
+      client.get<{ items: AdminBusinessRow[] }>('admin/businesses'),
+    updateBusiness: (id: string, body: Business.AdminUpdateBusiness) =>
+      client.patch<AdminBusinessRow>(`admin/businesses/${id}`, body),
   }
+}
+
+export type AdminBusinessRow = {
+  id: string
+  user_id: string
+  name: string
+  phone: string
+  address: string
+  description: string | null
+  accent_color: string
+  is_active: boolean
+  is_published: boolean
+  is_verified: boolean
+  delivery_restaurant_id: string | null
+  created_at: string
+  updated_at: string
+  users: { email: string } | null
+  restaurants: { id: string; name: string; is_active: boolean } | null
 }
 
 export type WeekdayCode = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'

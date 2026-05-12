@@ -10,6 +10,7 @@ const items = [
   { href: '/admin/orders', label: 'Pedidos', icon: 'receipt_long' },
   { href: '/admin/tracking', label: 'Envío tracking', icon: 'chat' },
   { href: '/admin/restaurants', label: 'Restaurantes', icon: 'restaurant' },
+  { href: '/admin/negocios', label: 'Negocios', icon: 'storefront' },
   { href: '/admin/drivers', label: 'Motorizados', icon: 'two_wheeler' },
   { href: '/admin/cobros', label: 'Cobros', icon: 'payments' },
   { href: '/admin/finance', label: 'Disputas', icon: 'gavel' },

@@ -80,3 +80,11 @@ export const CreateOption = z.object({
   isAvailable: z.boolean().default(true),
 })
 export type CreateOption = z.infer<typeof CreateOption>
+
+export const AdminUpdateBusiness = z.object({
+  deliveryRestaurantId: z.string().uuid().nullable().optional(),
+  isVerified: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  isPublished: z.boolean().optional(),
+})
+export type AdminUpdateBusiness = z.infer<typeof AdminUpdateBusiness>
