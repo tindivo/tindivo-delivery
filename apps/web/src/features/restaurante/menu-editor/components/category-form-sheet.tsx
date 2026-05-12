@@ -41,7 +41,12 @@ export function CategoryFormSheet({ category, onClose }: Props) {
 
   async function handleDelete() {
     if (!category) return
-    if (!confirm(`¿Eliminar "${category.name}"? Los productos en esta categoría quedarán sin categoría.`)) return
+    if (
+      !confirm(
+        `¿Eliminar "${category.name}"? Los productos en esta categoría quedarán sin categoría.`,
+      )
+    )
+      return
     setError(null)
     try {
       await remove.mutateAsync(category.id)
@@ -121,8 +126,16 @@ export function CategoryFormSheet({ category, onClose }: Props) {
             </div>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={create.isPending || update.isPending}>
-            <Icon name={create.isPending || update.isPending ? 'progress_activity' : 'check'} className={create.isPending || update.isPending ? 'animate-spin' : undefined} />
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={create.isPending || update.isPending}
+          >
+            <Icon
+              name={create.isPending || update.isPending ? 'progress_activity' : 'check'}
+              className={create.isPending || update.isPending ? 'animate-spin' : undefined}
+            />
             {isEdit ? 'Guardar cambios' : 'Crear categoría'}
           </Button>
 

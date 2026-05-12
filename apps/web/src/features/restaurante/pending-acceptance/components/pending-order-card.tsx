@@ -19,7 +19,9 @@ export function PendingOrderCard({ order, now, onClick }: Props) {
   const isUrgent = remainingSec <= 60
   const isOverdue = remainingSec <= 0
   const mm = Math.max(0, Math.floor(remainingSec / 60))
-  const ss = Math.max(0, remainingSec % 60).toString().padStart(2, '0')
+  const ss = Math.max(0, remainingSec % 60)
+    .toString()
+    .padStart(2, '0')
 
   return (
     <button
@@ -54,8 +56,7 @@ export function PendingOrderCard({ order, now, onClick }: Props) {
           S/ {Number(order.order_amount).toFixed(2)}
         </div>
         <div className="flex items-center gap-1.5 text-on-surface-variant">
-          <Icon name="schedule" size={14} />
-          ~{order.prep_minutes} min estimado
+          <Icon name="schedule" size={14} />~{order.prep_minutes} min estimado
         </div>
       </div>
 

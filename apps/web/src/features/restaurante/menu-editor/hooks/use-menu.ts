@@ -22,8 +22,10 @@ export function useCreateCategory() {
 export function useUpdateCategory() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { id: string; body: Parameters<typeof restaurant.updateMenuCategory>[1] }) =>
-      restaurant.updateMenuCategory(input.id, input.body),
+    mutationFn: (input: {
+      id: string
+      body: Parameters<typeof restaurant.updateMenuCategory>[1]
+    }) => restaurant.updateMenuCategory(input.id, input.body),
     onSuccess: () => qc.invalidateQueries({ queryKey: QK }),
   })
 }

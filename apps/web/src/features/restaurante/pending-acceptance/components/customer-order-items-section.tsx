@@ -54,9 +54,7 @@ export function CustomerOrderItemsSection({ orderId, order }: Props) {
                     >
                       {m.optionName}
                       {m.priceDelta > 0 && (
-                        <span className="ml-1 text-on-surface/60">
-                          +{m.priceDelta.toFixed(2)}
-                        </span>
+                        <span className="ml-1 text-on-surface/60">+{m.priceDelta.toFixed(2)}</span>
                       )}
                     </span>
                   ))}

@@ -7,7 +7,7 @@ import {
   type MenuModifierGroupRow,
   type MenuModifierOptionRow,
 } from '@tindivo/api-client'
-import { Button, Icon, IconButton, Input, Label, Skeleton } from '@tindivo/ui'
+import { Button, Icon, IconButton, Input, Label } from '@tindivo/ui'
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import {
@@ -51,7 +51,11 @@ export function ItemFormSheet({ item, categories, groups, options, onClose }: Pr
     async function loadRest() {
       const { data: u } = await supabase.auth.getUser()
       if (!u.user) return
-      const { data } = await supabase.from('restaurants').select('id').eq('user_id', u.user.id).maybeSingle()
+      const { data } = await supabase
+        .from('restaurants')
+        .select('id')
+        .eq('user_id', u.user.id)
+        .maybeSingle()
       setRestaurantId(data?.id ?? null)
     }
     loadRest()
@@ -112,9 +116,7 @@ export function ItemFormSheet({ item, categories, groups, options, onClose }: Pr
     }
   }
 
-  const itemGroups = item?.id
-    ? groups.filter((g) => g.menu_item_id === item.id)
-    : []
+  const itemGroups = item?.id ? groups.filter((g) => g.menu_item_id === item.id) : []
 
   return (
     <div className="fixed inset-0 z-[80] bg-black/40 flex items-end" role="dialog">
@@ -147,7 +149,10 @@ export function ItemFormSheet({ item, categories, groups, options, onClose }: Pr
                 )}
               </span>
               <label className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-outline-variant/30 cursor-pointer bg-surface-container-lowest text-sm font-bold">
-                <Icon name={upload.uploading ? 'progress_activity' : 'photo_camera'} className={upload.uploading ? 'animate-spin' : undefined} />
+                <Icon
+                  name={upload.uploading ? 'progress_activity' : 'photo_camera'}
+                  className={upload.uploading ? 'animate-spin' : undefined}
+                />
                 {upload.uploading ? 'Subiendo...' : imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
                 <input type="file" accept="image/*" className="hidden" onChange={handleImage} />
               </label>
@@ -157,7 +162,14 @@ export function ItemFormSheet({ item, categories, groups, options, onClose }: Pr
 
           <div className="space-y-1.5">
             <Label htmlFor="item-name">Nombre</Label>
-            <Input id="item-name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} maxLength={80} />
+            <Input
+              id="item-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              minLength={2}
+              maxLength={80}
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -257,7 +269,10 @@ export function ItemFormSheet({ item, categories, groups, options, onClose }: Pr
             className="w-full"
             disabled={create.isPending || update.isPending}
           >
-            <Icon name={create.isPending || update.isPending ? 'progress_activity' : 'check'} className={create.isPending || update.isPending ? 'animate-spin' : undefined} />
+            <Icon
+              name={create.isPending || update.isPending ? 'progress_activity' : 'check'}
+              className={create.isPending || update.isPending ? 'animate-spin' : undefined}
+            />
             {isEdit ? 'Guardar cambios' : 'Crear producto'}
           </Button>
           {isEdit && (

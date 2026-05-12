@@ -18,9 +18,9 @@ import { ItemFormSheet } from './item-form-sheet'
 export function MenuEditor() {
   const router = useRouter()
   const { data, isLoading } = useMenuTree()
-  const [categorySheetOpen, setCategorySheetOpen] = useState<{ category: MenuCategoryRow | null } | null>(
-    null,
-  )
+  const [categorySheetOpen, setCategorySheetOpen] = useState<{
+    category: MenuCategoryRow | null
+  } | null>(null)
   const [itemSheetOpen, setItemSheetOpen] = useState<{ item: MenuItemRow | null } | null>(null)
 
   const itemsByCategory = new Map<string | null, MenuItemRow[]>()
@@ -37,7 +37,11 @@ export function MenuEditor() {
         title="MI NEGOCIO"
         subtitle="Catálogo"
         left={
-          <IconButton variant="ghost" onClick={() => router.push('/restaurante')} aria-label="Volver">
+          <IconButton
+            variant="ghost"
+            onClick={() => router.push('/restaurante')}
+            aria-label="Volver"
+          >
             <Icon name="arrow_back" />
           </IconButton>
         }
@@ -78,7 +82,9 @@ export function MenuEditor() {
                 <div className="min-w-0 flex-1">
                   <h2 className="font-black text-on-surface truncate">{category.name}</h2>
                   {category.description && (
-                    <p className="text-xs text-on-surface-variant truncate">{category.description}</p>
+                    <p className="text-xs text-on-surface-variant truncate">
+                      {category.description}
+                    </p>
                   )}
                 </div>
                 {!category.is_active && (
@@ -112,7 +118,11 @@ export function MenuEditor() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <Icon name="restaurant" size={20} className="text-on-surface-variant/50" />
+                          <Icon
+                            name="restaurant"
+                            size={20}
+                            className="text-on-surface-variant/50"
+                          />
                         )}
                       </span>
                       <div className="min-w-0 flex-1">
@@ -131,7 +141,9 @@ export function MenuEditor() {
                 <li className="p-3">
                   <button
                     type="button"
-                    onClick={() => setItemSheetOpen({ item: { category_id: category.id } as MenuItemRow })}
+                    onClick={() =>
+                      setItemSheetOpen({ item: { category_id: category.id } as MenuItemRow })
+                    }
                     className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-outline-variant/40 text-sm font-bold text-primary-container"
                   >
                     <Icon name="add" size={16} />

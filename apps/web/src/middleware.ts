@@ -85,9 +85,7 @@ function resolveRedirect(ctx: RedirectContext): RouteAction {
   }
 
   if (isCustomerOnStaffApp(role)) {
-    return pathname === '/login'
-      ? null
-      : { kind: 'redirect', path: '/login?wrong-app=customer' }
+    return pathname === '/login' ? null : { kind: 'redirect', path: '/login?wrong-app=customer' }
   }
 
   if (pathname === '/login') {
