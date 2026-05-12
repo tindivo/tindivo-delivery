@@ -1,4 +1,3 @@
-import { MaintenanceOverlay } from '@/features/maintenance/components/maintenance-overlay'
 import { RegisterPWA } from '@/features/pwa/components/register-pwa'
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
@@ -56,7 +55,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-screen antialiased text-on-surface">
         <RegisterPWA />
         <Providers>{children}</Providers>
-        {process.env.NODE_ENV === 'production' && <MaintenanceOverlay />}
       </body>
     </html>
   )
