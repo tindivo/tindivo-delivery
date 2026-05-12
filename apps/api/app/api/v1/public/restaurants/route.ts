@@ -109,7 +109,7 @@ export async function GET() {
         isOpen: b.is_active && b.is_published,
         isBlocked: false,
         catalogType: 'business' as const,
-        deliveryEnabled: false,
+        deliveryEnabled: b.delivery_restaurant_id !== null,
         categories: categoriesByBusiness.get(b.id) ?? [],
         featuredItemNames: featuredByBusiness.get(b.id) ?? [],
       })),
