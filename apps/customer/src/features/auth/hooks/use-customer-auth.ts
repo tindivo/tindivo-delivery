@@ -1,12 +1,13 @@
 'use client'
+import { supabase } from '@/lib/supabase/client'
 import { signOutLocal } from '@tindivo/supabase'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
 
 export type CustomerSession = {
   userId: string
   email: string
   fullName: string | null
+  role: 'customer' | 'business'
 }
 
 /**
@@ -27,13 +28,15 @@ export function useCustomerAuth() {
       const { data } = await supabase.auth.getSession()
       if (cancelled) return
       const claims = (data.session?.user?.user_metadata ?? {}) as { full_name?: string }
-      const userRole = (data.session?.user?.app_metadata as { user_role?: string } | undefined)?.user_role
-        ?? readJwtRole(data.session?.access_token)
-      if (data.session && userRole === 'customer') {
+      const userRole =
+        (data.session?.user?.app_metadata as { user_role?: string } | undefined)?.user_role ??
+        readJwtRole(data.session?.access_token)
+      if (data.session && (userRole === 'customer' || userRole === 'business')) {
         setSession({
           userId: data.session.user.id,
           email: data.session.user.email ?? '',
           fullName: claims.full_name ?? null,
+          role: userRole,
         })
       } else {
         setSession(null)

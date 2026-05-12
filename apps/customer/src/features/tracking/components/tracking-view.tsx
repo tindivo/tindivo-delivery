@@ -12,7 +12,7 @@ const InteractiveMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[260px] w-full rounded-xl bg-surface-container animate-pulse" />
+      <div className="h-[260px] w-full animate-pulse rounded-[28px] bg-surface-container" />
     ),
   },
 )
@@ -111,32 +111,39 @@ export function TrackingView({ initial, shortId }: Props) {
   }, [tracking])
 
   return (
-    <div className={`min-h-screen ${washClass}`}>
+    <div className={`customer-page ${washClass}`}>
       <GlassTopBar
-        title="TINDIVO"
+        title="Tindivo"
+        left={
+          <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_-18px_rgba(171,53,0,0.8)]">
+            <img src="/icon.svg" alt="" className="h-8 w-8 object-contain" />
+          </span>
+        }
         right={
-          <div className="flex items-center gap-2 text-xs text-on-surface-variant font-mono">
+          <div className="flex items-center gap-2 font-mono text-xs text-on-surface-variant">
             <Icon name="receipt_long" size={18} />#{shortId}
           </div>
         }
       />
 
-      <main className="pt-24 pb-12 px-6 max-w-xl mx-auto">
+      <main className="mx-auto max-w-3xl px-4 pb-12 pt-24 md:px-6">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="flex flex-col items-center text-center space-y-6"
+          className="customer-soft-gradient flex flex-col items-center space-y-6 rounded-[36px] px-5 py-8 text-center text-white md:px-8"
         >
           <HeroBadge icon={heroIcon} variant={heroVariant} />
 
           <div className="space-y-3">
-            <h1 className="font-black text-3xl md:text-4xl tracking-tight text-on-surface">
+            <h1 className="text-3xl font-black leading-tight tracking-normal md:text-5xl">
               {label}
             </h1>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface-container-lowest rounded-full border border-outline-variant/20 shadow-[0_4px_20px_rgba(171,53,0,0.04)]">
+            <div className="customer-glass inline-flex items-center gap-2 rounded-full px-4 py-2">
               <ColorDot color={tracking.restaurantAccentColor} size={10} />
-              <span className="font-semibold text-sm">{tracking.restaurantName}</span>
+              <span className="text-sm font-extrabold text-on-surface">
+                {tracking.restaurantName}
+              </span>
             </div>
           </div>
         </motion.div>
@@ -145,7 +152,7 @@ export function TrackingView({ initial, shortId }: Props) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.4 }}
-          className="mt-10 bg-surface-container-lowest rounded-lg p-6 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)]"
+          className="customer-panel mt-5 rounded-[30px] p-6"
         >
           <Timeline steps={steps} />
         </motion.section>
@@ -155,13 +162,13 @@ export function TrackingView({ initial, shortId }: Props) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.4 }}
-            className="mt-4 bg-surface-container-lowest rounded-lg p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] flex items-center gap-4"
+            className="customer-panel mt-4 flex items-center gap-4 rounded-[28px] p-5"
           >
-            <div className="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-fixed">
               <Icon name="two_wheeler" size={24} className="text-on-primary-fixed" />
             </div>
             <div>
-              <p className="text-xs text-on-surface-variant">Tu motorizado</p>
+              <p className="text-sm text-on-surface-variant">Tu motorizado</p>
               <p className="font-bold text-on-surface">{tracking.driverFirstName}</p>
             </div>
           </motion.section>
@@ -174,7 +181,7 @@ export function TrackingView({ initial, shortId }: Props) {
             transition={{ delay: 0.35, duration: 0.4 }}
             className="mt-4"
           >
-            <h3 className="text-sm font-bold tracking-wide text-on-surface-variant mb-2 ml-1 flex items-center gap-1.5">
+            <h3 className="mb-2 ml-1 flex items-center gap-1.5 text-sm font-bold text-on-surface-variant">
               <Icon name="location_on" size={18} />
               Tu ubicación de entrega
             </h3>
@@ -187,7 +194,7 @@ export function TrackingView({ initial, shortId }: Props) {
           </motion.section>
         )}
 
-        <p className="text-center text-xs text-on-surface-variant mt-10">
+        <p className="mt-10 text-center text-xs text-on-surface-variant">
           Esta página se actualiza automáticamente en tiempo real.
         </p>
       </main>

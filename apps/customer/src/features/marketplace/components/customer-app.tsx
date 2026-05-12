@@ -6,6 +6,7 @@ import { BottomActionBar, Button, GlassTopBar, Icon } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { LoginButton } from '../../auth/components/login-button'
+import { InstallPromptBanner } from '../../pwa/components/install-prompt-banner'
 import { useCart } from '../hooks/use-cart'
 import { CheckoutSheet } from './checkout-sheet'
 import { ProductSheet } from './product-sheet'
@@ -23,11 +24,13 @@ export function CustomerApp() {
     queryKey: ['customer', 'restaurants'],
     queryFn: () => customer.listRestaurants(),
   })
-  const [restaurantId, setRestaurantId] = useState<string | null>(null)
+  const [selectedListing, setSelectedListing] = useState<Customer.PublicRestaurantSummary | null>(
+    null,
+  )
   const menu = useQuery({
-    queryKey: ['customer', 'menu', restaurantId],
-    queryFn: () => customer.getMenu(restaurantId as string),
-    enabled: Boolean(restaurantId),
+    queryKey: ['customer', 'menu', selectedListing?.id, selectedListing?.catalogType],
+    queryFn: () => customer.getMenu(selectedListing?.id as string, selectedListing?.catalogType),
+    enabled: Boolean(selectedListing),
   })
   const cart = useCart()
   const [selectedItem, setSelectedItem] = useState<Customer.MenuItem | null>(null)
@@ -36,12 +39,17 @@ export function CustomerApp() {
 
   return (
     <div
-      className="min-h-screen bg-surface"
+      className="customer-page bg-transparent"
       style={{ paddingBottom: cart.items.length ? 132 : 32 }}
     >
       <GlassTopBar
-        title="TINDIVO"
+        title="Tindivo"
         subtitle="Pide en San Jacinto"
+        left={
+          <span className="customer-pulse inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_-18px_rgba(171,53,0,0.8)]">
+            <img src="/icon.svg" alt="" className="h-8 w-8 object-contain" />
+          </span>
+        }
         right={
           <div className="flex items-center gap-2">
             <LoginButton />
@@ -49,12 +57,12 @@ export function CustomerApp() {
               type="button"
               onClick={() => setCheckoutOpen(true)}
               disabled={cart.items.length === 0}
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-lowest border border-outline-variant/30 disabled:opacity-40"
+              className="customer-lift relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/80 shadow-[0_10px_28px_-20px_rgba(171,53,0,0.8)] backdrop-blur disabled:opacity-40"
               aria-label="Ver carrito"
             >
               <Icon name="shopping_bag" size={20} filled />
               {cart.totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-5 h-5 rounded-full bg-primary-container text-white text-[10px] font-black flex items-center justify-center px-1">
+                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-container px-1 text-xs font-black text-white">
                   {cart.totalItems}
                 </span>
               )}
@@ -63,19 +71,22 @@ export function CustomerApp() {
         }
       />
 
-      <main className="pt-20 max-w-6xl mx-auto">
-        {!restaurantId ? (
+      <main className="mx-auto max-w-6xl pt-20">
+        {!selectedListing ? (
           <RestaurantMarketplace
             restaurants={restaurants.data?.items ?? []}
             loading={restaurants.isLoading}
-            onSelect={setRestaurantId}
+            onSelect={(id) => {
+              const listing = restaurants.data?.items.find((item) => item.id === id)
+              if (listing) setSelectedListing(listing)
+            }}
           />
         ) : (
           <RestaurantMenu
             data={menu.data ?? null}
             loading={menu.isLoading}
             onBack={() => {
-              setRestaurantId(null)
+              setSelectedListing(null)
               cart.reset()
             }}
             onSelectItem={setSelectedItem}
@@ -87,7 +98,7 @@ export function CustomerApp() {
         <BottomActionBar>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-on-surface-variant">
+              <p className="text-xs font-bold uppercase text-on-surface-variant">
                 {cart.totalItems} producto{cart.totalItems === 1 ? '' : 's'}
               </p>
               <p className="font-black text-xl text-on-surface">S/ {cart.subtotal.toFixed(2)}</p>
@@ -103,6 +114,8 @@ export function CustomerApp() {
       {selectedItem && (
         <ProductSheet
           item={selectedItem}
+          canOrder={Boolean(selectedRestaurant?.deliveryEnabled)}
+          phone={selectedRestaurant?.phone}
           onClose={() => setSelectedItem(null)}
           onAdd={(item) => {
             cart.add(item)
@@ -121,6 +134,7 @@ export function CustomerApp() {
           onSuccess={(shortId) => router.push(`/pedidos/${shortId}`)}
         />
       )}
+      <InstallPromptBanner />
     </div>
   )
 }

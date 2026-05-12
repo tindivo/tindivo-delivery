@@ -8,7 +8,7 @@ type Props = { params: Promise<{ shortId: string }> }
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { shortId } = await params
   return {
-    title: `Tindivo — Pedido #${shortId}`,
+    title: `Tindivo - Pedido #${shortId}`,
     description: 'Seguimiento en tiempo real de tu pedido Tindivo',
   }
 }

@@ -25,47 +25,51 @@ export function RestaurantMarketplace({ restaurants, loading, onSelect }: Props)
     activeCategory === 'Todos'
       ? restaurants
       : restaurants.filter((restaurant) => restaurant.categories.includes(activeCategory))
+  const openCount = restaurants.filter((restaurant) => restaurant.isOpen).length
 
   return (
-    <div className="px-4 pb-8">
-      <section className="relative overflow-hidden rounded-[32px] px-5 py-7 md:px-10 md:py-10 mb-6">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(135deg, rgba(171,53,0,0.96) 0%, rgba(255,107,53,0.92) 55%, rgba(255,140,66,0.9) 100%)',
-          }}
-        />
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.45) 0, transparent 26%), radial-gradient(circle at 90% 70%, rgba(255,255,255,0.28) 0, transparent 30%)',
-          }}
-        />
-        <div className="relative max-w-xl text-white">
-          <p className="text-xs font-bold tracking-[0.24em] uppercase opacity-85">
-            Zona de cobertura
-          </p>
-          <h1 className="mt-3 text-4xl md:text-6xl font-black leading-[0.92] tracking-normal">
-            Que comer hoy en San Jacinto
-          </h1>
-          <p className="mt-4 text-sm md:text-base opacity-90 max-w-md">
-            Elige tu local, arma tu pedido y Tindivo lo lleva a tu direccion.
-          </p>
+    <div className="px-4 pb-8 md:px-6">
+      <section className="customer-soft-gradient customer-fade-up relative mb-6 overflow-hidden rounded-[36px] px-5 py-7 text-white md:px-10 md:py-10">
+        <div className="customer-subtle-grid absolute inset-0 opacity-35" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/12 to-transparent" />
+        <div className="relative grid gap-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
+          <div className="max-w-[18rem] min-[380px]:max-w-[20rem] md:max-w-xl">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/18 px-3 py-1.5 text-xs font-extrabold uppercase backdrop-blur">
+              <Icon name="location_on" size={16} filled />
+              San Jacinto
+            </div>
+            <h1 className="mt-4 text-[2rem] font-black leading-[1.05] tracking-normal min-[380px]:text-[2.15rem] md:text-6xl md:leading-[0.98]">
+              Elige tu antojo, nosotros lo llevamos.
+            </h1>
+            <p className="mt-4 max-w-md text-base font-semibold text-white/90">
+              Restaurantes cercanos, carta clara y seguimiento en tiempo real desde el primer toque.
+            </p>
+          </div>
+
+          <div className="customer-glass flex items-center gap-4 rounded-[28px] p-4 text-[#4b210f] md:flex-col md:items-start">
+            <img
+              src="/icon.svg"
+              alt="Tindivo"
+              className="h-16 w-16 rounded-[22px] bg-white object-contain p-1"
+            />
+            <div>
+              <p className="text-3xl font-black leading-none">{openCount}</p>
+              <p className="mt-1 text-sm font-extrabold">locales abiertos ahora</p>
+            </div>
+          </div>
         </div>
       </section>
 
-      <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4">
+      <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-3 md:mx-0 md:px-0">
         {categories.map((category) => (
           <button
             key={category}
             type="button"
             onClick={() => setActiveCategory(category)}
-            className={`shrink-0 h-10 px-4 rounded-full text-sm font-bold border transition-colors ${
+            className={`customer-lift h-11 shrink-0 rounded-full border px-4 text-sm font-extrabold ${
               activeCategory === category
-                ? 'bg-on-surface text-white border-on-surface'
-                : 'bg-surface-container-lowest text-on-surface border-outline-variant/30'
+                ? 'border-on-surface bg-on-surface text-white'
+                : 'border-white/70 bg-white/78 text-on-surface backdrop-blur'
             }`}
           >
             {category}
@@ -76,11 +80,12 @@ export function RestaurantMarketplace({ restaurants, loading, onSelect }: Props)
       {loading ? (
         <div className="grid gap-3 md:grid-cols-3">
           {SKELETON_KEYS.map((key) => (
-            <div key={key} className="h-40 rounded-[28px] bg-surface-container animate-pulse" />
+            <div key={key} className="h-52 animate-pulse rounded-[28px] bg-white/70" />
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <div className="py-16 text-center text-on-surface-variant">
+        <div className="customer-panel rounded-[32px] px-6 py-16 text-center text-on-surface-variant">
+          <Icon name="storefront" size={44} className="mx-auto mb-3 opacity-45" />
           No hay locales con carta disponible todavia.
         </div>
       ) : (
@@ -93,33 +98,53 @@ export function RestaurantMarketplace({ restaurants, loading, onSelect }: Props)
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
-              className="text-left rounded-[28px] bg-surface-container-lowest border border-outline-variant/20 overflow-hidden active:scale-[0.99] transition-transform shadow-[0_4px_20px_rgba(171,53,0,0.04)]"
+              className="customer-lift customer-panel overflow-hidden rounded-[30px] text-left"
             >
               <div
-                className="h-28 relative"
+                className="relative h-32"
                 style={{
-                  background: `linear-gradient(135deg, #${restaurant.accentColor} 0%, #ff8c42 100%)`,
+                  background: `linear-gradient(135deg, #${restaurant.accentColor} 0%, #ff8c42 52%, #ffd166 100%)`,
                 }}
               >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.35),transparent_32%)]" />
-                <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/88 px-3 py-1 text-xs font-black text-on-surface">
-                    <Icon name={restaurant.isOpen ? 'bolt' : 'schedule'} size={14} filled />
-                    {restaurant.isOpen ? 'Abierto' : 'Cerrado'}
+                <div className="customer-subtle-grid absolute inset-0 opacity-25" />
+                <img
+                  src="/icon.svg"
+                  alt=""
+                  className="absolute right-4 top-4 h-16 w-16 rounded-[22px] bg-white/86 object-contain p-1 shadow-[0_14px_30px_-20px_rgba(0,0,0,0.7)]"
+                />
+                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/88 px-3 py-1.5 text-xs font-black text-on-surface backdrop-blur">
+                    <Icon
+                      name={
+                        restaurant.deliveryEnabled
+                          ? restaurant.isOpen
+                            ? 'bolt'
+                            : 'schedule'
+                          : 'storefront'
+                      }
+                      size={14}
+                      filled
+                    />
+                    {restaurant.deliveryEnabled
+                      ? restaurant.isOpen
+                        ? 'Delivery'
+                        : 'Cerrado'
+                      : 'Catalogo'}
                   </span>
-                  <Icon name="restaurant" size={30} className="text-white/85" filled />
                 </div>
               </div>
               <div className="p-4">
-                <h2 className="text-lg font-black text-on-surface">{restaurant.name}</h2>
-                <p className="mt-1 text-xs text-on-surface-variant line-clamp-2">
+                <h2 className="text-xl font-black leading-tight text-on-surface">
+                  {restaurant.name}
+                </h2>
+                <p className="mt-1 line-clamp-2 text-sm text-on-surface-variant">
                   {restaurant.address}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {restaurant.categories.slice(0, 3).map((category) => (
                     <span
                       key={category}
-                      className="rounded-full bg-surface-container px-2.5 py-1 text-[10px] font-bold text-on-surface-variant"
+                      className="rounded-full bg-surface-container px-2.5 py-1 text-xs font-bold text-on-surface-variant"
                     >
                       {category}
                     </span>

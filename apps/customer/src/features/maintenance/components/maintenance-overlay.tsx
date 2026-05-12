@@ -40,9 +40,6 @@ export function MaintenanceOverlay() {
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
-      onClick={(e) => {
-        e.stopPropagation()
-      }}
     >
       <div
         className="relative w-full max-w-[420px] overflow-hidden text-center"
@@ -55,22 +52,7 @@ export function MaintenanceOverlay() {
           WebkitBackdropFilter: 'blur(20px)',
         }}
       >
-        <div
-          aria-hidden="true"
-          className="absolute -top-24 -left-16 w-64 h-64 rounded-full pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(circle, rgba(255,140,66,0.35) 0%, transparent 65%)',
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute -bottom-24 -right-16 w-64 h-64 rounded-full pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(circle, rgba(171,53,0,0.25) 0%, transparent 65%)',
-          }}
-        />
+        <div aria-hidden="true" className="customer-subtle-grid absolute inset-0 opacity-20" />
 
         <div className="relative flex flex-col items-center gap-6">
           <span
@@ -79,8 +61,7 @@ export function MaintenanceOverlay() {
               width: '88px',
               height: '88px',
               borderRadius: '28px',
-              background:
-                'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)',
+              background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)',
               color: '#ffffff',
               boxShadow: '0 18px 40px -12px rgba(255, 107, 53, 0.6)',
             }}
@@ -90,7 +71,7 @@ export function MaintenanceOverlay() {
 
           <div className="flex flex-col gap-3">
             <span
-              className="inline-flex self-center items-center gap-1 px-3 py-1 text-[11px] font-bold tracking-wider uppercase"
+              className="inline-flex self-center items-center gap-1 px-3 py-1 text-xs font-bold uppercase"
               style={{
                 borderRadius: '999px',
                 background: 'rgba(171, 53, 0, 0.1)',
@@ -114,8 +95,8 @@ export function MaintenanceOverlay() {
               className="text-[15px] leading-relaxed"
               style={{ color: '#4a4a4a' }}
             >
-              Tindivo está en mantenimiento por unas horas. Muy pronto vas a
-              poder pedir tu comida favorita en San Jacinto desde aquí.
+              Tindivo está en mantenimiento por unas horas. Muy pronto vas a poder pedir tu comida
+              favorita en San Jacinto desde aquí.
             </p>
           </div>
 
@@ -174,10 +155,7 @@ export function MaintenanceOverlay() {
             </div>
           </div>
 
-          <div
-            className="text-[11px] font-bold tracking-[0.2em] uppercase"
-            style={{ color: '#AB3500' }}
-          >
+          <div className="text-xs font-bold uppercase" style={{ color: '#AB3500' }}>
             Tindivo · San Jacinto
           </div>
         </div>

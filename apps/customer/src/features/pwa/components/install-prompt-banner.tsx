@@ -62,20 +62,14 @@ export function InstallPromptBanner() {
       <div
         className="relative overflow-hidden"
         style={{
-          borderRadius: '22px',
-          background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)',
+          borderRadius: '24px',
+          background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFD166 100%)',
           color: '#ffffff',
           boxShadow: '0 16px 40px -12px rgba(255, 107, 53, 0.55)',
           padding: '14px 14px 14px 16px',
         }}
       >
-        <div
-          aria-hidden="true"
-          className="absolute -top-8 -right-8 w-32 h-32 rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 60%)',
-          }}
-        />
+        <div aria-hidden="true" className="customer-subtle-grid absolute inset-0 opacity-25" />
         <div className="relative flex items-center gap-3">
           <span
             className="inline-flex items-center justify-center shrink-0"
@@ -93,7 +87,7 @@ export function InstallPromptBanner() {
             <div className="font-black text-sm" style={{ letterSpacing: '-0.01em' }}>
               Instala Tindivo
             </div>
-            <div className="text-[11px] opacity-90 leading-snug">
+            <div className="text-xs leading-snug opacity-90">
               {ios
                 ? 'Toca Compartir → Añadir a pantalla de inicio'
                 : 'Un toque para instalarla en tu teléfono'}
@@ -106,7 +100,7 @@ export function InstallPromptBanner() {
                 const outcome = await promptInstall()
                 if (outcome === 'accepted' || outcome === 'dismissed') dismiss()
               }}
-              className="shrink-0 text-[11px] font-bold tracking-wider uppercase px-3 py-2 rounded-full transition active:scale-95"
+              className="shrink-0 rounded-full px-3 py-2 text-xs font-bold uppercase transition active:scale-95"
               style={{
                 background: '#ffffff',
                 color: '#AB3500',

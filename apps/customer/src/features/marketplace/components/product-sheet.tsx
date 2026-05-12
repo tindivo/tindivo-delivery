@@ -7,6 +7,8 @@ import type { CartItem } from '../hooks/use-cart'
 
 type Props = {
   item: Customer.MenuItem
+  canOrder?: boolean
+  phone?: string
   onClose: () => void
   onAdd: (item: CartItem) => void
 }
@@ -20,7 +22,7 @@ type Props = {
  * elements positioned se renderizan encima de los static aunque sean DOM
  * siblings posteriores).
  */
-export function ProductSheet({ item, onClose, onAdd }: Props) {
+export function ProductSheet({ item, canOrder = true, phone, onClose, onAdd }: Props) {
   const [quantity, setQuantity] = useState(1)
   const [selected, setSelected] = useState<Array<{ groupId: string; optionId: string }>>([])
   const [notes, setNotes] = useState('')
@@ -61,45 +63,49 @@ export function ProductSheet({ item, onClose, onAdd }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/30 flex items-end">
+    <div className="customer-sheet-overlay">
       <button type="button" aria-label="Cerrar" className="absolute inset-0" onClick={onClose} />
       <motion.div
-        initial={{ y: 520 }}
-        animate={{ y: 0 }}
+        initial={{ opacity: 0, y: 48, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', damping: 30, stiffness: 260 }}
-        className="relative z-10 w-full max-h-[92vh] overflow-y-auto rounded-t-[32px] bg-surface pb-32"
+        className="customer-sheet pb-32 md:w-[min(100%,42rem)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex justify-end p-4 bg-surface/85 backdrop-blur-xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between bg-[#fffaf6]/86 p-4 backdrop-blur-xl">
+          <div className="customer-sheet-handle md:opacity-0" />
           <IconButton variant="subtle" onClick={onClose} aria-label="Cerrar">
             <Icon name="close" />
           </IconButton>
         </div>
-        <div className="px-5 max-w-xl mx-auto">
-          <div className="h-52 rounded-[28px] overflow-hidden bg-primary-fixed mb-5">
+        <div className="mx-auto max-w-xl px-5">
+          <div className="customer-shimmer mb-5 h-56 overflow-hidden rounded-[30px] bg-primary-fixed shadow-[0_24px_60px_-44px_rgba(119,52,21,0.7)] md:h-72">
             {item.imageUrl ? (
               <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
             ) : (
-              <div className="h-full w-full flex items-center justify-center">
-                <Icon name="restaurant" size={54} className="text-on-primary-fixed" filled />
+              <div className="customer-soft-gradient flex h-full w-full items-center justify-center">
+                <img src="/icon.svg" alt="" className="h-24 w-24 rounded-[28px] bg-white/88 p-2" />
               </div>
             )}
           </div>
-          <h2 className="text-3xl font-black tracking-normal">{item.name}</h2>
-          {item.description && <p className="mt-2 text-on-surface-variant">{item.description}</p>}
+          <h2 className="text-3xl font-black leading-tight tracking-normal text-on-surface md:text-4xl">
+            {item.name}
+          </h2>
+          {item.description && (
+            <p className="mt-2 text-base leading-relaxed text-on-surface-variant">
+              {item.description}
+            </p>
+          )}
           <p className="mt-3 text-xl font-black text-primary-container">
             S/ {item.price.toFixed(2)}
           </p>
 
           <div className="mt-6 space-y-5">
             {item.modifierGroups.map((group) => (
-              <section
-                key={group.id}
-                className="rounded-[24px] bg-surface-container-lowest border border-outline-variant/20 p-4"
-              >
+              <section key={group.id} className="customer-panel-soft rounded-[26px] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="font-black text-on-surface">{group.name}</h3>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                  <span className="text-xs font-bold uppercase text-on-surface-variant">
                     {group.minSelected > 0 ? 'Obligatorio' : `Hasta ${group.maxSelected}`}
                   </span>
                 </div>
@@ -113,7 +119,7 @@ export function ProductSheet({ item, onClose, onAdd }: Props) {
                         key={option.id}
                         type="button"
                         onClick={() => toggle(group, option)}
-                        className="w-full flex items-center justify-between gap-3 rounded-2xl bg-surface-container px-4 py-3 text-left"
+                        className="customer-lift flex w-full items-center justify-between gap-3 rounded-[20px] border border-white/60 bg-white/78 px-4 py-3 text-left"
                       >
                         <span className="font-semibold">{option.name}</span>
                         <span className="flex items-center gap-2 text-sm font-bold">
@@ -121,7 +127,7 @@ export function ProductSheet({ item, onClose, onAdd }: Props) {
                             ? `+ S/ ${option.priceDelta.toFixed(2)}`
                             : 'Incluido'}
                           <span
-                            className={`h-5 w-5 rounded-full border flex items-center justify-center ${
+                            className={`flex h-5 w-5 items-center justify-center rounded-full border ${
                               active
                                 ? 'bg-primary-container border-primary-container text-white'
                                 : 'border-outline-variant'
@@ -145,18 +151,18 @@ export function ProductSheet({ item, onClose, onAdd }: Props) {
                 onChange={(event) => setNotes(event.target.value.slice(0, 300))}
                 rows={3}
                 placeholder="Sin cebolla, poco aji, salsa aparte..."
-                className="w-full rounded-[20px] border border-outline-variant/35 bg-surface-container-lowest px-4 py-3 text-sm resize-none"
+                className="customer-textarea"
               />
             </section>
           </div>
         </div>
         <BottomActionBar zIndex={80}>
           <div className="flex items-center gap-3">
-            <div className="flex h-14 items-center rounded-full bg-surface-container-lowest border border-outline-variant/30">
+            <div className="customer-glass flex h-14 items-center rounded-full">
               <button
                 type="button"
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="h-14 w-12 flex items-center justify-center"
+                className="flex h-14 w-12 items-center justify-center"
               >
                 <Icon name="remove" />
               </button>
@@ -164,7 +170,7 @@ export function ProductSheet({ item, onClose, onAdd }: Props) {
               <button
                 type="button"
                 onClick={() => setQuantity(quantity + 1)}
-                className="h-14 w-12 flex items-center justify-center"
+                className="flex h-14 w-12 items-center justify-center"
               >
                 <Icon name="add" />
               </button>
@@ -172,8 +178,12 @@ export function ProductSheet({ item, onClose, onAdd }: Props) {
             <Button
               size="lg"
               className="flex-1"
-              disabled={!valid}
-              onClick={() =>
+              disabled={canOrder ? !valid : false}
+              onClick={() => {
+                if (!canOrder) {
+                  if (phone) window.location.href = `tel:+51${phone}`
+                  return
+                }
                 onAdd({
                   key: `${item.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
                   menuItem: item,
@@ -181,9 +191,9 @@ export function ProductSheet({ item, onClose, onAdd }: Props) {
                   modifiers: selected,
                   notes,
                 })
-              }
+              }}
             >
-              Agregar S/ {total.toFixed(2)}
+              {canOrder ? `Agregar S/ ${total.toFixed(2)}` : 'Contactar negocio'}
             </Button>
           </div>
         </BottomActionBar>
