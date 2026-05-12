@@ -1,35 +1,24 @@
 'use client'
-import { Button, Icon } from '@tindivo/ui'
-import { useEffect, useState } from 'react'
-
-const STORAGE_KEY = 'tindivo-maintenance-dismissed-v1'
+import { Icon } from '@tindivo/ui'
+import { useEffect } from 'react'
 
 export function MaintenancePopup() {
-  const [open, setOpen] = useState(false)
-
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (sessionStorage.getItem(STORAGE_KEY) === '1') return
-    setOpen(true)
-  }, [])
-
-  function dismiss() {
-    try {
-      sessionStorage.setItem(STORAGE_KEY, '1')
-    } catch {
-      /* sessionStorage puede estar bloqueada en algunos browsers */
+    if (typeof document === 'undefined') return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
     }
-    setOpen(false)
-  }
-
-  if (!open) return null
+  }, [])
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-end justify-center bg-black/55 backdrop-blur-sm p-4 sm:items-center"
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 backdrop-blur-md p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="maintenance-title"
+      onKeyDown={(event) => event.stopPropagation()}
     >
       <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
         <div className="flex items-start gap-3">
@@ -47,15 +36,12 @@ export function MaintenancePopup() {
               Tindivo está en mantenimiento
             </h2>
             <p className="mt-2 text-sm font-semibold text-on-surface-variant">
-              Estamos ajustando la plataforma. Puedes navegar el catálogo, pero los pedidos
-              pueden tardar más de lo habitual o no completarse. Te avisaremos cuando todo
-              vuelva a la normalidad.
+              Estamos ajustando la plataforma. Por ahora no es posible navegar el catálogo
+              ni hacer pedidos. Vuelve a intentarlo más tarde — te avisaremos cuando todo
+              esté disponible nuevamente.
             </p>
           </div>
         </div>
-        <Button onClick={dismiss} className="mt-5 w-full rounded-[20px]" size="md">
-          Entendido
-        </Button>
       </div>
     </div>
   )
