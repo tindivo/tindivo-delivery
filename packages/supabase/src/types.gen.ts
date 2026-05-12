@@ -502,261 +502,6 @@ export type Database = {
         }
         Relationships: []
       }
-      marketplace_businesses: {
-        Row: {
-          accent_color: string
-          address: string
-          coordinates: unknown
-          created_at: string
-          delivery_restaurant_id: string | null
-          description: string | null
-          id: string
-          is_active: boolean
-          is_published: boolean
-          is_verified: boolean
-          name: string
-          phone: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          accent_color?: string
-          address: string
-          coordinates?: unknown
-          created_at?: string
-          delivery_restaurant_id?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          is_published?: boolean
-          is_verified?: boolean
-          name: string
-          phone: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          accent_color?: string
-          address?: string
-          coordinates?: unknown
-          created_at?: string
-          delivery_restaurant_id?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          is_published?: boolean
-          is_verified?: boolean
-          name?: string
-          phone?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "marketplace_businesses_delivery_restaurant_id_fkey"
-            columns: ["delivery_restaurant_id"]
-            isOneToOne: false
-            referencedRelation: "restaurants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "marketplace_businesses_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      marketplace_menu_categories: {
-        Row: {
-          business_id: string
-          created_at: string
-          description: string | null
-          id: string
-          is_active: boolean
-          name: string
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          business_id: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          business_id?: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "marketplace_menu_categories_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "marketplace_businesses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      marketplace_menu_items: {
-        Row: {
-          business_id: string
-          category_id: string | null
-          created_at: string
-          description: string | null
-          id: string
-          image_url: string | null
-          is_available: boolean
-          is_featured: boolean
-          name: string
-          prep_minutes: number | null
-          price: number
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          business_id: string
-          category_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          is_available?: boolean
-          is_featured?: boolean
-          name: string
-          prep_minutes?: number | null
-          price: number
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          business_id?: string
-          category_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          image_url?: string | null
-          is_available?: boolean
-          is_featured?: boolean
-          name?: string
-          prep_minutes?: number | null
-          price?: number
-          sort_order?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "marketplace_menu_items_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "marketplace_businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "marketplace_menu_items_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "marketplace_menu_categories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      marketplace_menu_modifier_groups: {
-        Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          max_selected: number
-          menu_item_id: string
-          min_selected: number
-          name: string
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          max_selected?: number
-          menu_item_id: string
-          min_selected?: number
-          name: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          max_selected?: number
-          menu_item_id?: string
-          min_selected?: number
-          name?: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "marketplace_menu_modifier_groups_menu_item_id_fkey"
-            columns: ["menu_item_id"]
-            isOneToOne: false
-            referencedRelation: "marketplace_menu_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      marketplace_menu_modifier_options: {
-        Row: {
-          created_at: string
-          group_id: string
-          id: string
-          is_available: boolean
-          name: string
-          price_delta: number
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          group_id: string
-          id?: string
-          is_available?: boolean
-          name: string
-          price_delta?: number
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          group_id?: string
-          id?: string
-          is_available?: boolean
-          name?: string
-          price_delta?: number
-          sort_order?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "marketplace_menu_modifier_options_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "marketplace_menu_modifier_groups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       menu_categories: {
         Row: {
           created_at: string
@@ -1399,9 +1144,13 @@ export type Database = {
           coordinates_lat: number | null
           coordinates_lng: number | null
           created_at: string
+          description: string | null
           id: string
           is_active: boolean
+          is_delivery_enabled: boolean
+          is_marketplace_published: boolean
           is_test_account: boolean
+          is_verified: boolean
           name: string
           phone: string
           qr_url: string | null
@@ -1419,9 +1168,13 @@ export type Database = {
           coordinates_lat?: number | null
           coordinates_lng?: number | null
           created_at?: string
+          description?: string | null
           id?: string
           is_active?: boolean
+          is_delivery_enabled?: boolean
+          is_marketplace_published?: boolean
           is_test_account?: boolean
+          is_verified?: boolean
           name: string
           phone: string
           qr_url?: string | null
@@ -1439,9 +1192,13 @@ export type Database = {
           coordinates_lat?: number | null
           coordinates_lng?: number | null
           created_at?: string
+          description?: string | null
           id?: string
           is_active?: boolean
+          is_delivery_enabled?: boolean
+          is_marketplace_published?: boolean
           is_test_account?: boolean
+          is_verified?: boolean
           name?: string
           phone?: string
           qr_url?: string | null
