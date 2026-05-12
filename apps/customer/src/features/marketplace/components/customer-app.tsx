@@ -13,6 +13,7 @@ import { CheckoutSheet } from './checkout-sheet'
 import { ProductSheet } from './product-sheet'
 import { RestaurantMarketplace } from './restaurant-marketplace'
 import { RestaurantMenu } from './restaurant-menu'
+import { WhatsappCheckoutSheet } from './whatsapp-checkout-sheet'
 
 /**
  * Orquestador principal de la PWA cliente. Mantiene el estado del carrito y
@@ -116,8 +117,6 @@ export function CustomerApp() {
       {selectedItem && (
         <ProductSheet
           item={selectedItem}
-          canOrder={Boolean(selectedRestaurant?.deliveryEnabled)}
-          phone={selectedRestaurant?.phone}
           onClose={() => setSelectedItem(null)}
           onAdd={(item) => {
             cart.add(item)
@@ -127,14 +126,29 @@ export function CustomerApp() {
       )}
 
       {checkoutOpen && selectedRestaurant && (
-        <CheckoutSheet
-          restaurant={selectedRestaurant}
-          cart={cart.items}
-          subtotal={cart.subtotal}
-          onClose={() => setCheckoutOpen(false)}
-          onQuantity={cart.updateQuantity}
-          onSuccess={(shortId) => router.push(`/pedidos/${shortId}`)}
-        />
+        selectedRestaurant.deliveryEnabled ? (
+          <CheckoutSheet
+            restaurant={selectedRestaurant}
+            cart={cart.items}
+            subtotal={cart.subtotal}
+            onClose={() => setCheckoutOpen(false)}
+            onQuantity={cart.updateQuantity}
+            onSuccess={(shortId) => router.push(`/pedidos/${shortId}`)}
+          />
+        ) : (
+          <WhatsappCheckoutSheet
+            restaurant={selectedRestaurant}
+            cart={cart.items}
+            subtotal={cart.subtotal}
+            onClose={() => setCheckoutOpen(false)}
+            onQuantity={cart.updateQuantity}
+            onSent={() => {
+              cart.reset()
+              setCheckoutOpen(false)
+              setSelectedListing(null)
+            }}
+          />
+        )
       )}
       <InstallPromptBanner />
     </div>

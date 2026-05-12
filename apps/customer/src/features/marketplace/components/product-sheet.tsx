@@ -7,8 +7,6 @@ import type { CartItem } from '../hooks/use-cart'
 
 type Props = {
   item: Customer.MenuItem
-  canOrder?: boolean
-  phone?: string
   onClose: () => void
   onAdd: (item: CartItem) => void
 }
@@ -22,7 +20,7 @@ type Props = {
  * elements positioned se renderizan encima de los static aunque sean DOM
  * siblings posteriores).
  */
-export function ProductSheet({ item, canOrder = true, phone, onClose, onAdd }: Props) {
+export function ProductSheet({ item, onClose, onAdd }: Props) {
   const [quantity, setQuantity] = useState(1)
   const [selected, setSelected] = useState<Array<{ groupId: string; optionId: string }>>([])
   const [notes, setNotes] = useState('')
@@ -178,12 +176,8 @@ export function ProductSheet({ item, canOrder = true, phone, onClose, onAdd }: P
             <Button
               size="lg"
               className="flex-1"
-              disabled={canOrder ? !valid : false}
+              disabled={!valid}
               onClick={() => {
-                if (!canOrder) {
-                  if (phone) window.location.href = `tel:+51${phone}`
-                  return
-                }
                 onAdd({
                   key: `${item.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
                   menuItem: item,
@@ -193,7 +187,7 @@ export function ProductSheet({ item, canOrder = true, phone, onClose, onAdd }: P
                 })
               }}
             >
-              {canOrder ? `Agregar S/ ${total.toFixed(2)}` : 'Contactar negocio'}
+              Agregar S/ {total.toFixed(2)}
             </Button>
           </div>
         </BottomActionBar>
