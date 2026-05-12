@@ -421,8 +421,10 @@ function MenuItemCard({
   const createGroup = useCreateBusinessModifierGroup()
 
   const [groupName, setGroupName] = useState('')
-  const [groupMin, setGroupMin] = useState('0')
-  const [groupMax, setGroupMax] = useState('1')
+  const [groupMode, setGroupMode] = useState<'single' | 'optional' | 'multi' | 'required'>(
+    'optional',
+  )
+  const [groupMax, setGroupMax] = useState('3')
 
   async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -436,18 +438,33 @@ function MenuItemCard({
 
   async function handleCreateGroup(event: React.FormEvent) {
     event.preventDefault()
-    const min = Math.max(0, Number.parseInt(groupMin || '0', 10) || 0)
-    const max = Math.max(min || 1, Number.parseInt(groupMax || '1', 10) || 1)
+    let minSelected = 0
+    let maxSelected = 1
+    if (groupMode === 'single') {
+      minSelected = 0
+      maxSelected = 1
+    } else if (groupMode === 'optional') {
+      minSelected = 0
+      maxSelected = Math.max(1, Number.parseInt(groupMax || '3', 10) || 3)
+    } else if (groupMode === 'multi') {
+      minSelected = 1
+      maxSelected = Math.max(1, Number.parseInt(groupMax || '3', 10) || 3)
+    } else if (groupMode === 'required') {
+      minSelected = 1
+      maxSelected = 1
+    }
     await createGroup.mutateAsync({
       menuItemId: item.id,
       name: groupName.trim() || 'Agregados',
-      minSelected: min,
-      maxSelected: max,
+      minSelected,
+      maxSelected,
     })
     setGroupName('')
-    setGroupMin('0')
-    setGroupMax('1')
+    setGroupMode('optional')
+    setGroupMax('3')
   }
+
+  const modeNeedsMax = groupMode === 'optional' || groupMode === 'multi'
 
   const photoBusy = upload.uploading || updateItem.isPending
 
@@ -513,36 +530,59 @@ function MenuItemCard({
       </div>
 
       <form
-        className="mt-3 grid gap-2 rounded-[22px] bg-white/64 p-3 md:grid-cols-[1.4fr_90px_90px_auto]"
+        className="mt-3 space-y-3 rounded-[22px] bg-white/64 p-4"
         onSubmit={handleCreateGroup}
       >
-        <Input
-          value={groupName}
-          onChange={(event) => setGroupName(event.target.value)}
-          placeholder="Nuevo grupo (Ej. Tamaño)"
-          className="rounded-[18px] bg-white/86"
-        />
-        <Input
-          value={groupMin}
-          onChange={(event) => setGroupMin(event.target.value)}
-          inputMode="numeric"
-          aria-label="Mínimo de selecciones"
-          placeholder="Min"
-          className="rounded-[18px] bg-white/86"
-        />
-        <Input
-          value={groupMax}
-          onChange={(event) => setGroupMax(event.target.value)}
-          inputMode="numeric"
-          aria-label="Máximo de selecciones"
-          placeholder="Max"
-          className="rounded-[18px] bg-white/86"
-        />
-        <Button type="submit" size="md" className="rounded-[18px]" disabled={createGroup.isPending}>
+        <p className="text-xs font-black uppercase tracking-wider text-on-surface-variant">
+          Agregar grupo de opciones al plato
+        </p>
+        <div className="space-y-1.5">
+          <Label htmlFor={`group-name-${item.id}`}>Nombre del grupo</Label>
+          <Input
+            id={`group-name-${item.id}`}
+            value={groupName}
+            onChange={(event) => setGroupName(event.target.value)}
+            placeholder="Ej. Tamaño, Salsas, Agregados"
+            className="rounded-[18px] bg-white/86"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`group-mode-${item.id}`}>¿Cómo elige el cliente?</Label>
+          <select
+            id={`group-mode-${item.id}`}
+            value={groupMode}
+            onChange={(event) => setGroupMode(event.target.value as typeof groupMode)}
+            className="h-12 w-full rounded-[18px] border border-outline-variant/25 bg-white/86 px-3 text-sm font-semibold"
+          >
+            <option value="single">Una sola opción · opcional</option>
+            <option value="required">Una sola opción · obligatoria</option>
+            <option value="optional">Varias opciones · opcional</option>
+            <option value="multi">Varias opciones · al menos una</option>
+          </select>
+        </div>
+        {modeNeedsMax && (
+          <div className="space-y-1.5">
+            <Label htmlFor={`group-max-${item.id}`}>Máximo de opciones que puede elegir</Label>
+            <Input
+              id={`group-max-${item.id}`}
+              value={groupMax}
+              onChange={(event) => setGroupMax(event.target.value)}
+              inputMode="numeric"
+              placeholder="3"
+              className="rounded-[18px] bg-white/86"
+            />
+          </div>
+        )}
+        <Button
+          type="submit"
+          className="w-full rounded-[20px]"
+          disabled={createGroup.isPending || !groupName.trim()}
+        >
           <Icon
             name={createGroup.isPending ? 'progress_activity' : 'add'}
             className={createGroup.isPending ? 'animate-spin' : undefined}
           />
+          Crear grupo
         </Button>
       </form>
     </article>
@@ -595,34 +635,51 @@ function ModifierGroupBlock({ group, options }: { group: MenuGroup; options: Men
       ) : (
         <p className="text-sm font-semibold text-on-surface-variant/70">Sin opciones todavía</p>
       )}
-      <form
-        className="grid gap-2 md:grid-cols-[1fr_110px_auto]"
-        onSubmit={handleAddOption}
-      >
-        <Input
-          value={optName}
-          onChange={(event) => setOptName(event.target.value)}
-          placeholder="Nombre de opción"
-          className="rounded-[18px] bg-white/86"
-        />
-        <Input
-          value={optPrice}
-          onChange={(event) => setOptPrice(event.target.value)}
-          inputMode="decimal"
-          placeholder="Precio extra"
-          className="rounded-[18px] bg-white/86"
-        />
-        <Button
-          type="submit"
-          size="md"
-          className="rounded-[18px]"
-          disabled={createOption.isPending}
-        >
-          <Icon
-            name={createOption.isPending ? 'progress_activity' : 'add'}
-            className={createOption.isPending ? 'animate-spin' : undefined}
-          />
-        </Button>
+      <form className="space-y-2 pt-2" onSubmit={handleAddOption}>
+        <p className="text-xs font-black uppercase tracking-wider text-on-surface-variant">
+          Agregar opción a este grupo
+        </p>
+        <div className="grid gap-2 md:grid-cols-[1fr_140px_auto]">
+          <div className="space-y-1">
+            <Label htmlFor={`opt-name-${group.id}`} className="text-[11px]">
+              Opción
+            </Label>
+            <Input
+              id={`opt-name-${group.id}`}
+              value={optName}
+              onChange={(event) => setOptName(event.target.value)}
+              placeholder="Ej. Mayonesa, Doble queso"
+              className="rounded-[18px] bg-white/86"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor={`opt-price-${group.id}`} className="text-[11px]">
+              Precio extra (S/)
+            </Label>
+            <Input
+              id={`opt-price-${group.id}`}
+              value={optPrice}
+              onChange={(event) => setOptPrice(event.target.value)}
+              inputMode="decimal"
+              placeholder="0.00"
+              className="rounded-[18px] bg-white/86"
+            />
+          </div>
+          <div className="flex items-end">
+            <Button
+              type="submit"
+              size="md"
+              className="w-full rounded-[18px]"
+              disabled={createOption.isPending || !optName.trim()}
+            >
+              <Icon
+                name={createOption.isPending ? 'progress_activity' : 'add'}
+                className={createOption.isPending ? 'animate-spin' : undefined}
+              />
+              Agregar
+            </Button>
+          </div>
+        </div>
       </form>
     </div>
   )
