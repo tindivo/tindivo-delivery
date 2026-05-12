@@ -1523,6 +1523,7 @@ export type Database = {
           id: string
           is_active: boolean
           role: Database["public"]["Enums"]["user_role"]
+          roles: string[]
           updated_at: string
         }
         Insert: {
@@ -1531,6 +1532,7 @@ export type Database = {
           id: string
           is_active?: boolean
           role: Database["public"]["Enums"]["user_role"]
+          roles?: string[]
           updated_at?: string
         }
         Update: {
@@ -1539,6 +1541,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           role?: Database["public"]["Enums"]["user_role"]
+          roles?: string[]
           updated_at?: string
         }
         Relationships: []
@@ -1592,6 +1595,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      current_user_roles: { Args: never; Returns: string[] }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       enqueue_orders_ready_for_drivers: { Args: never; Returns: undefined }
       enqueue_overdue_orders: { Args: never; Returns: undefined }
