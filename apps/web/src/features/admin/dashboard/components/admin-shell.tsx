@@ -7,6 +7,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 
 const items = [
   { href: '/admin', label: 'Dashboard', icon: 'dashboard' },
+  { href: '/admin/metricas', label: 'Métricas', icon: 'analytics' },
   { href: '/admin/orders', label: 'Pedidos', icon: 'receipt_long' },
   { href: '/admin/tracking', label: 'Envío tracking', icon: 'chat' },
   { href: '/admin/restaurants', label: 'Restaurantes', icon: 'restaurant' },

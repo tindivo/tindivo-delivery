@@ -36,6 +36,26 @@ export function AdminDashboard() {
         </Link>
       </header>
 
+      <Link
+        href="/admin/metricas"
+        className="group flex items-center gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary-container/30 to-surface-container-lowest p-4 md:p-5 shadow-[0_4px_20px_rgba(171,53,0,0.04)] transition hover:border-primary/40"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary">
+          <Icon name="analytics" size={20} filled />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-on-surface">Ver métricas completas del negocio</p>
+          <p className="text-xs text-on-surface-variant md:text-sm">
+            Ventas, motorizados, restaurantes y operación en cualquier rango temporal
+          </p>
+        </div>
+        <Icon
+          name="arrow_forward"
+          size={20}
+          className="shrink-0 text-primary transition-transform group-hover:translate-x-1"
+        />
+      </Link>
+
       <section>
         <h2 className="text-xs font-bold tracking-[0.15em] uppercase text-on-surface-variant mb-3">
           KPIs del día

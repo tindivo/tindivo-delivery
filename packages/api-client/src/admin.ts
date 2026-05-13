@@ -1,4 +1,5 @@
 import type {
+  AdminMetrics,
   Business,
   Drivers,
   RestaurantPayments,
@@ -6,6 +7,15 @@ import type {
   Settlements,
 } from '@tindivo/contracts'
 import type { ApiClient } from './client'
+
+export type MetricsRangeQuery = { from?: string; to?: string }
+export type AdminSalesTimeseriesResponse = AdminMetrics.SalesTimeseriesResponse
+export type AdminDriversPerformanceResponse = AdminMetrics.DriversPerformanceResponse
+export type AdminRestaurantsPerformanceResponse = AdminMetrics.RestaurantsPerformanceResponse
+export type AdminDemandHeatmapResponse = AdminMetrics.DemandHeatmapResponse
+export type AdminOperationsFunnelResponse = AdminMetrics.OperationsFunnelResponse
+export type AdminCancellationReasonsResponse = AdminMetrics.CancellationReasonsResponse
+export type AdminMetricsSummaryResponse = AdminMetrics.MetricsSummaryResponse
 
 export type AdminSettlementRow = Settlements.AdminSettlementRow
 export type RestaurantDebtSummaryRow = Settlements.RestaurantDebtSummaryRow
@@ -215,6 +225,23 @@ export function adminApi(client: ApiClient) {
       client.get<AdminMetricsResponse>('admin/metrics', { query: { from, to } }),
     getDailySummary: (from?: string, to?: string) =>
       client.get<AdminDailySummary>('admin/daily-summary', { query: { from, to } }),
+
+    getMetricsSummary: (query?: MetricsRangeQuery) =>
+      client.get<AdminMetricsSummaryResponse>('admin/metrics/summary', { query }),
+    getSalesTimeseries: (query?: MetricsRangeQuery) =>
+      client.get<AdminSalesTimeseriesResponse>('admin/metrics/sales-timeseries', { query }),
+    getDriversPerformance: (query?: MetricsRangeQuery) =>
+      client.get<AdminDriversPerformanceResponse>('admin/metrics/drivers-performance', { query }),
+    getRestaurantsPerformance: (query?: MetricsRangeQuery) =>
+      client.get<AdminRestaurantsPerformanceResponse>('admin/metrics/restaurants-performance', {
+        query,
+      }),
+    getDemandHeatmap: (query?: MetricsRangeQuery) =>
+      client.get<AdminDemandHeatmapResponse>('admin/metrics/demand-heatmap', { query }),
+    getOperationsFunnel: (query?: MetricsRangeQuery) =>
+      client.get<AdminOperationsFunnelResponse>('admin/metrics/operations-funnel', { query }),
+    getCancellationReasons: (query?: MetricsRangeQuery) =>
+      client.get<AdminCancellationReasonsResponse>('admin/metrics/cancellation-reasons', { query }),
 
     getSupportPhone: () =>
       client.get<{ phone: string; updatedAt: string | null }>('admin/settings/support-phone'),

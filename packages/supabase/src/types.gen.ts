@@ -1308,6 +1308,42 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_cancellation_reasons: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          avg_amount_lost: number
+          cancel_reason_code: string
+          count: number
+        }[]
+      }
+      admin_demand_heatmap: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          cancelled: number
+          delivered: number
+          dow: number
+          hour: number
+          orders: number
+        }[]
+      }
+      admin_drivers_performance: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          avg_delivery_minutes: number
+          avg_pickup_to_deliver_minutes: number
+          cancelled: number
+          cash_collected: number
+          commission_generated: number
+          delivered: number
+          driver_id: string
+          full_name: string
+          gmv_delivered: number
+          is_active: boolean
+          rejections_count: number
+          total_assigned: number
+          vehicle_type: string
+        }[]
+      }
       admin_generate_settlements: {
         Args: {
           p_due_date: string
@@ -1319,6 +1355,60 @@ export type Database = {
           restaurant_id: string
           settlement_id: string
           total_amount: number
+        }[]
+      }
+      admin_operations_funnel: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          avg_min_in_route_to_restaurant: number
+          avg_min_pickup_to_deliver: number
+          avg_min_to_accept: number
+          avg_min_to_assign: number
+          avg_min_total: number
+          avg_min_wait_at_restaurant: number
+          on_time_count: number
+          on_time_pct: number
+          p50_min_total: number
+          p90_min_total: number
+          p95_min_total: number
+          total_delivered: number
+        }[]
+      }
+      admin_restaurants_performance: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          accent_color: string
+          aov: number
+          avg_prep_minutes: number
+          balance_due: number
+          cancelled: number
+          commission: number
+          commission_per_order: number
+          delivered: number
+          gmv: number
+          name: string
+          repeat_phones: number
+          restaurant_id: string
+          total: number
+          unique_phones: number
+        }[]
+      }
+      admin_sales_timeseries: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          aov: number
+          cancelled: number
+          cash_orders: number
+          commission: number
+          day: string
+          delivered: number
+          gmv: number
+          marketplace_orders: number
+          mixed_orders: number
+          orders: number
+          prepaid_orders: number
+          restaurant_orders: number
+          yape_orders: number
         }[]
       }
       admin_settlements_summary: {
@@ -1361,6 +1451,10 @@ export type Database = {
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
       invoke_assign_one: { Args: { p_order_id: string }; Returns: undefined }
       invoke_assign_pending_orders: { Args: never; Returns: undefined }
+      invoke_process_expired_transfer_requests: {
+        Args: never
+        Returns: undefined
+      }
       list_available_for_driver: {
         Args: { p_driver_id: string }
         Returns: {
@@ -1501,6 +1595,14 @@ export type Database = {
       prune_expired_rejections: { Args: never; Returns: undefined }
       prune_stale_push_subscriptions: { Args: never; Returns: undefined }
       timeout_unaccepted_assignments: { Args: never; Returns: undefined }
+      user_is_driver_of_restaurant: {
+        Args: { p_restaurant_id: string }
+        Returns: boolean
+      }
+      user_is_restaurant_of_driver: {
+        Args: { p_driver_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       cash_settlement_status:
