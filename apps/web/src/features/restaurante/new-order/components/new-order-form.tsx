@@ -65,6 +65,12 @@ export function NewOrderForm() {
   // por sessionStorage. Se descarta tras 2xx/4xx (mutation onSettled abajo) para
   // que el próximo formulario tenga su propia key.
   const idem = useIdempotencyKey('restaurante:new-order')
+  // Guard síncrono contra doble-click dentro del mismo frame: `isPending` se
+  // refleja en el siguiente render (~16ms), abriendo una micro-ventana donde
+  // dos clicks ejecutan dos `mutate()` antes de que el botón aparezca disabled.
+  // El ref se actualiza fuera del ciclo de React, así que el segundo handler
+  // ve `true` inmediatamente. Defense-in-depth sobre el fix TOCTOU del backend.
+  const submittingRef = useRef(false)
   const platformStatus = usePlatformStatus()
   const isPlatformClosed = platformStatus.data ? !platformStatus.data.isOpen : false
 
@@ -116,7 +122,9 @@ export function NewOrderForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (submittingRef.current) return
     if (!canSubmit) return
+    submittingRef.current = true
     const body: Orders.CreateOrderRequest = {
       prepMinutes,
       paymentStatus: payment,
@@ -132,6 +140,7 @@ export function NewOrderForm() {
       {
         onSuccess: () => {
           idem.consume()
+          submittingRef.current = false
           router.replace('/restaurante')
         },
         onError: (err) => {
@@ -141,6 +150,8 @@ export function NewOrderForm() {
           // 5xx: NO consumir — permitir retry seguro con la misma key.
           const status = (err as { status?: number })?.status
           if (status !== undefined && status >= 400 && status < 500) idem.consume()
+          // Liberar el guard síncrono para que el usuario pueda reintentar.
+          submittingRef.current = false
         },
       },
     )

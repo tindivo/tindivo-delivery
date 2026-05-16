@@ -1429,6 +1429,14 @@ export type Database = {
       }
       auto_cancel_unaccepted_orders: { Args: never; Returns: undefined }
       auto_close_drivers_on_schedule_end: { Args: never; Returns: undefined }
+      claim_idempotency_key: {
+        Args: { p_key: string; p_request_hash: string; p_scope: string }
+        Returns: {
+          cached_body: Json
+          cached_status: number
+          outcome: string
+        }[]
+      }
       claim_pending_orders: {
         Args: { p_limit?: number }
         Returns: {
@@ -1447,6 +1455,15 @@ export type Database = {
       enqueue_orders_ready_for_drivers: { Args: never; Returns: undefined }
       enqueue_overdue_orders: { Args: never; Returns: undefined }
       expire_pending_transfer_requests: { Args: never; Returns: undefined }
+      finalize_idempotency_key: {
+        Args: {
+          p_key: string
+          p_response_body: Json
+          p_response_status: number
+          p_scope: string
+        }
+        Returns: undefined
+      }
       generate_short_id: { Args: never; Returns: string }
       get_tracking: { Args: { p_short_id: string }; Returns: Json }
       invoke_assign_one: { Args: { p_order_id: string }; Returns: undefined }
@@ -1594,6 +1611,10 @@ export type Database = {
       prune_expired_idempotency_keys: { Args: never; Returns: undefined }
       prune_expired_rejections: { Args: never; Returns: undefined }
       prune_stale_push_subscriptions: { Args: never; Returns: undefined }
+      release_idempotency_key: {
+        Args: { p_key: string; p_scope: string }
+        Returns: undefined
+      }
       timeout_unaccepted_assignments: { Args: never; Returns: undefined }
       user_is_driver_of_restaurant: {
         Args: { p_restaurant_id: string }

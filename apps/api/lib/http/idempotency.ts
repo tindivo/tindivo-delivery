@@ -6,28 +6,41 @@ import { NextResponse } from 'next/server'
 import { problemCode } from './problem'
 
 /**
- * Wrapper de idempotencia tipo Stripe para endpoints POST de creación.
+ * Wrapper de idempotencia tipo Stripe para endpoints POST de creacion.
  *
- * Resuelve el bug verificado en producción: 6 pares de pedidos duplicados
- * creados a <60s de diferencia (todos `restaurant_pwa`, todos cancelados a
- * los 5min por `auto_cancel_unaccepted_orders`). Causa: doble click /
- * reintento de browser sin barrera servidor.
+ * Implementa el patron claim-with-placeholder atomico:
+ * 1. `claim_idempotency_key` hace INSERT ON CONFLICT DO NOTHING. La PK
+ *    compuesta (key, scope) actua como mutex: exactamente un caller gana.
+ * 2. El ganador ejecuta el handler y llama `finalize_idempotency_key`.
+ * 3. Los perdedores reciben:
+ *    - 'cached'    -> respuesta lista, devolverla.
+ *    - 'in_flight' -> polling hasta que el ganador finalice (max 30s).
+ *    - 'mismatch'  -> 409 (mismo key con body distinto).
+ *
+ * Esto reemplaza el flujo previo SELECT->handler->INSERT, que tenia un
+ * TOCTOU race condition: dos requests paralelos veian cache vacio entre
+ * SELECT y handler, ejecutando ambos y creando recursos duplicados.
  *
  * Comportamiento:
- * - Sin header `Idempotency-Key`           → ejecuta handler tal cual (back-compat).
- * - Header inválido (no UUID v4)           → 400 VALIDATION_ERROR.
- * - Key+scope existe, body coincide        → devuelve respuesta cacheada.
- * - Key+scope existe, body distinto        → 409 IDEMPOTENCY_KEY_MISMATCH.
- * - Key nueva                              → ejecuta handler, cachea solo si status<500.
+ * - Sin header `Idempotency-Key`           -> ejecuta handler tal cual (back-compat).
+ * - Header invalido (no UUID v4)           -> 400 VALIDATION_ERROR.
+ * - Key+scope existe, body coincide        -> devuelve respuesta cacheada.
+ * - Key+scope existe, body distinto        -> 409 IDEMPOTENCY_KEY_MISMATCH.
+ * - Key nueva                              -> ejecuta handler, cachea solo si status<500.
  *
- * Las 5xx NO se cachean: permite que el cliente reintente con la misma key
- * tras un fallo transitorio del servidor.
+ * Las 5xx NO se cachean: el placeholder se borra (`release`) para que el
+ * cliente pueda reintentar con la misma key tras un fallo transitorio.
  *
- * El `scope` evita colisiones entre endpoints distintos: el cliente puede
- * reusar el mismo UUID para POSTs diferentes y cada uno se cachea por separado.
+ * El `scope` evita colisiones entre endpoints distintos.
  */
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Polling de in-flight: 150ms x 200 iteraciones = 30s max wait.
+// El handler tipico de creacion de pedido tarda 200-800ms, asi que el polling
+// converge casi siempre en la primera o segunda iteracion.
+const IN_FLIGHT_POLL_INTERVAL_MS = 150
+const IN_FLIGHT_POLL_MAX_ITERATIONS = 200
 
 export async function withIdempotency(
   req: NextRequest,
@@ -45,65 +58,137 @@ export async function withIdempotency(
   }
 
   const requestHash = sha256(stableStringify(body))
-  const table = admin.from('idempotency_keys') as ReturnType<SupabaseClient['from']>
 
-  const { data: cached } = await table
-    .select('request_hash, response_status, response_body')
-    .eq('key', key)
-    .eq('scope', scope)
-    .maybeSingle()
+  const { data: claimRows, error: claimErr } = await admin.rpc('claim_idempotency_key', {
+    p_key: key,
+    p_scope: scope,
+    p_request_hash: requestHash,
+  })
 
-  if (cached) {
-    if (cached.request_hash !== requestHash) {
-      return problemCode(
-        'IDEMPOTENCY_KEY_MISMATCH',
-        409,
-        'Esta Idempotency-Key fue usada con un body diferente',
-      )
-    }
-    return NextResponse.json(cached.response_body, { status: cached.response_status })
+  if (claimErr || !claimRows || claimRows.length === 0) {
+    // Falla del RPC mismo (no del handler): degrade graceful ejecutando el
+    // handler sin idempotencia en vez de tirar el endpoint completo. Un fallo
+    // de Supabase aqui es muy raro pero no debe bloquear pedidos.
+    console.warn('[idempotency] claim rpc failed, bypassing', {
+      scope,
+      error: claimErr?.message,
+    })
+    return handler()
   }
 
-  const response = await handler()
+  const claim = claimRows[0] as { outcome: string; cached_status: number; cached_body: unknown }
 
-  if (response.status < 500) {
-    let responseBody: unknown = null
-    try {
-      // clone() para no consumir el body que Next.js todavía debe enviar al cliente.
-      responseBody = await response
-        .clone()
-        .json()
-        .catch(() => null)
-    } catch {
-      // Respuesta sin JSON parseable (204, etc.) — cacheamos null.
+  if (claim.outcome === 'mismatch') {
+    console.warn('[idempotency] body mismatch', { scope })
+    return problemCode(
+      'IDEMPOTENCY_KEY_MISMATCH',
+      409,
+      'Esta Idempotency-Key fue usada con un body diferente',
+    )
+  }
+
+  if (claim.outcome === 'cached') {
+    return NextResponse.json(claim.cached_body, { status: claim.cached_status })
+  }
+
+  if (claim.outcome === 'in_flight') {
+    const started = Date.now()
+    for (let i = 0; i < IN_FLIGHT_POLL_MAX_ITERATIONS; i++) {
+      await sleep(IN_FLIGHT_POLL_INTERVAL_MS)
+      const { data } = await admin
+        .from('idempotency_keys')
+        .select('response_status, response_body')
+        .eq('key', key)
+        .eq('scope', scope)
+        .maybeSingle()
+
+      if (data && data.response_status > 0) {
+        console.info('[idempotency] in_flight resolved', {
+          scope,
+          waitedMs: Date.now() - started,
+        })
+        return NextResponse.json(data.response_body, { status: data.response_status })
+      }
+      // response_status === 0 sigue in-flight; o data === null si el
+      // ganador hizo release (5xx). En ambos casos seguimos polleando.
+      // Si fue release, el siguiente iter veremos null persistente y
+      // saldremos por timeout. Acepable: las 5xx son raras y el cliente
+      // ya tiene una key consumible (esta) que puede reusar.
     }
+    console.warn('[idempotency] in_flight timeout', { scope, waitedMs: Date.now() - started })
+    return problemCode('IDEMPOTENCY_TIMEOUT', 504, 'Otra request con la misma key sigue en curso')
+  }
 
-    const insert = await table.insert({
-      key,
+  // outcome === 'reserved': somos el ganador, ejecutamos el handler.
+  let response: NextResponse
+  try {
+    response = await handler()
+  } catch (err) {
+    // El handler lanzo. Liberamos el placeholder para que un retry con la
+    // misma key pueda ejecutarse de nuevo. Sin esto, la key queda bloqueada
+    // hasta el cleanup automatico de 5min de claim_idempotency_key.
+    await releaseQuietly(admin, key, scope)
+    throw err
+  }
+
+  if (response.status >= 500) {
+    // 5xx: error transitorio. Liberar placeholder para permitir retry seguro.
+    await releaseQuietly(admin, key, scope)
+    return response
+  }
+
+  // Status < 500: cachear respuesta final via UPDATE del placeholder.
+  let responseBody: unknown = null
+  try {
+    // clone() para no consumir el body que Next.js todavia debe enviar al cliente.
+    responseBody = await response
+      .clone()
+      .json()
+      .catch(() => null)
+  } catch {
+    // Respuesta sin JSON parseable (204, etc.) -> cacheamos {}.
+  }
+
+  const { error: finalizeErr } = await admin.rpc('finalize_idempotency_key', {
+    p_key: key,
+    p_scope: scope,
+    p_response_status: response.status,
+    // biome-ignore lint/suspicious/noExplicitAny: Json type del RPC acepta cualquier valor serializable.
+    p_response_body: (responseBody ?? {}) as any,
+  })
+
+  if (finalizeErr) {
+    console.warn('[idempotency] finalize failed', {
       scope,
-      request_hash: requestHash,
-      response_status: response.status,
-      response_body: (responseBody ?? {}) as never,
+      code: finalizeErr.code,
+      message: finalizeErr.message,
     })
-
-    // Race entre dos requests con la misma key llegando en simultáneo:
-    // la primera hizo el INSERT, esta falla por PK (23505). La respuesta
-    // del cliente es correcta de todas formas, solo no se cacheó esta vez.
-    if (insert.error && insert.error.code !== '23505') {
-      console.warn('[idempotency] insert failed', {
-        scope,
-        code: insert.error.code,
-        message: insert.error.message,
-      })
-    }
+    // No bloqueamos la respuesta al cliente por esto. El placeholder seguira
+    // como in_flight y el cleanup de 5min lo limpiara. Peor caso: el siguiente
+    // request con la misma key ejecuta de nuevo.
   }
 
   return response
 }
 
+async function releaseQuietly(admin: SupabaseClient, key: string, scope: string): Promise<void> {
+  const { error } = await admin.rpc('release_idempotency_key', { p_key: key, p_scope: scope })
+  if (error) {
+    console.warn('[idempotency] release failed', {
+      scope,
+      code: error.code,
+      message: error.message,
+    })
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 /**
- * Hash determinístico del body. JSON.stringify NO ordena keys, así que dos
- * objetos semánticamente iguales producen hashes distintos por orden de
+ * Hash deterministico del body. JSON.stringify NO ordena keys, asi que dos
+ * objetos semanticamente iguales producen hashes distintos por orden de
  * propiedades. Normalizamos ordenando recursivamente.
  */
 function stableStringify(value: unknown): string {
