@@ -1,8 +1,11 @@
 'use client'
 import { fullSignOut } from '@/features/auth/services/sign-out'
 import { PushToggleCard } from '@/features/pwa/components/push-toggle-card'
+import { usePushSubscription } from '@/features/pwa/hooks/use-push-subscription'
+import { messageFromSubscribeReason } from '@/features/pwa/lib/subscribe-messages'
 import { Button, Icon, Skeleton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useDriverProfile } from '../hooks/use-driver-profile'
 import { useToggleAvailability } from '../hooks/use-toggle-availability'
 
@@ -34,6 +37,8 @@ export function DriverProfileView() {
   const router = useRouter()
   const { data, isLoading } = useDriverProfile()
   const toggle = useToggleAvailability()
+  const push = usePushSubscription()
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
 
   if (isLoading || !data) {
     return (
@@ -49,6 +54,78 @@ export function DriverProfileView() {
     if (!confirm('¿Cerrar sesión?')) return
     await fullSignOut()
     router.replace('/login')
+  }
+
+  // Activar "Disponible" sin push válido pone al driver en la queue para
+  // recibir pedidos que nunca verá (push nunca llega → timeout 90s → pedido
+  // reasignado). Para evitar ese estado fantasma, antes de marcar disponible
+  // exigimos: (1) permiso `granted`, (2) suscripción registrada en backend.
+  // Si falta algo, pedimos permiso + subscribe directamente en este handler
+  // (gesto de usuario activo). Apagar la disponibilidad NO requiere nada.
+  async function handleToggleAvailability() {
+    if (!data) return
+    setAvailabilityError(null)
+
+    const turningOn = !data.isAvailable
+    if (!turningOn) {
+      toggle.mutate(false)
+      return
+    }
+
+    // Si ya está suscrito, ruta directa.
+    if (push.status === 'subscribed') {
+      toggle.mutate(true)
+      return
+    }
+
+    if (typeof Notification === 'undefined') {
+      setAvailabilityError('Tu dispositivo no soporta notificaciones. No podrás recibir pedidos.')
+      return
+    }
+
+    if (Notification.permission === 'denied') {
+      setAvailabilityError(
+        'Permiso bloqueado. Activa notificaciones en ajustes del navegador para recibir pedidos.',
+      )
+      return
+    }
+
+    // Pedir permiso si está en `default`. CRÍTICO iOS: `requestPermission`
+    // debe correr como primera operación async del gesto sin setState
+    // intermedio que rompa el contexto — el `setAvailabilityError(null)` de
+    // arriba es síncrono y no rompe. Timeout defensivo de 10s para que el
+    // UI no se atasque si iOS deja la promise colgada.
+    let permission: NotificationPermission = Notification.permission
+    if (permission === 'default') {
+      try {
+        permission = await Promise.race([
+          Notification.requestPermission(),
+          new Promise<NotificationPermission>((_, reject) =>
+            setTimeout(() => reject(new Error('permission-timeout')), 10_000),
+          ),
+        ])
+      } catch (err) {
+        console.error('[driver] requestPermission failed', err)
+        setAvailabilityError(
+          'No pudimos pedir el permiso. Si la app está instalada, actívalas desde Ajustes > Safari > Notificaciones.',
+        )
+        return
+      }
+    }
+
+    if (permission !== 'granted') {
+      setAvailabilityError('Sin permiso de notificaciones no podrás recibir pedidos nuevos.')
+      return
+    }
+
+    // Permiso OK → registrar la suscripción en backend.
+    const result = await push.subscribe()
+    if (!result.ok) {
+      setAvailabilityError(messageFromSubscribeReason(result.reason))
+      return
+    }
+
+    toggle.mutate(true)
   }
 
   return (
@@ -102,10 +179,10 @@ export function DriverProfileView() {
 
             <button
               type="button"
-              onClick={() => toggle.mutate(!data.isAvailable)}
-              disabled={toggle.isPending}
+              onClick={handleToggleAvailability}
+              disabled={toggle.isPending || push.loading}
               aria-label={data.isAvailable ? 'Desactivar disponibilidad' : 'Activar disponibilidad'}
-              className="relative shrink-0 transition-transform active:scale-95"
+              className="relative shrink-0 transition-transform active:scale-95 disabled:opacity-60"
               style={{
                 width: '68px',
                 height: '38px',
@@ -130,6 +207,20 @@ export function DriverProfileView() {
               />
             </button>
           </div>
+          {availabilityError && (
+            <div
+              role="alert"
+              className="mt-3 text-[11px] font-semibold rounded-xl px-3 py-2"
+              style={{
+                background: 'rgba(0,0,0,0.18)',
+                color: '#ffffff',
+                border: '1px solid rgba(255,255,255,0.25)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              {availabilityError}
+            </div>
+          )}
         </div>
       </section>
 

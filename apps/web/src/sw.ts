@@ -64,53 +64,88 @@ type PushPayload = {
 }
 
 self.addEventListener('push', (event) => {
-  if (!event.data) return
-
-  let payload: PushPayload
-  try {
-    payload = event.data.json() as PushPayload
-  } catch {
-    payload = {
-      title: 'Tindivo',
-      body: event.data.text(),
+  // CRÍTICO iOS — Silent push penalty.
+  // WebKit revoca PERMANENTEMENTE la suscripción si el handler no muestra
+  // una notificación visible (ver Apple Dev Forums thread 727887 y el blog
+  // de WebKit "Meet Declarative Web Push"). El comportamiento previo era:
+  //   - `if (!event.data) return` → no notif → iOS revoca tras 1-3 pushes.
+  //   - Si `event.data.json()` o `event.data.text()` lanzaba → tampoco se
+  //     mostraba la notif → mismo problema.
+  // Defensa: TODOS los caminos terminan en `showNotification`, con fallback
+  // genérico si el payload no se puede parsear. El `try/catch` envuelve solo
+  // el parsing — el `showNotification` siempre se ejecuta.
+  const promise = (async () => {
+    let title = 'Tindivo'
+    let options: NotificationOptions = {
+      body: 'Tienes una actualización',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
     }
-  }
 
-  const {
-    title = 'Tindivo',
-    body = '',
-    icon = '/icon-192.png',
-    badge = '/icon-192.png',
-    tag,
-    url = '/',
-    requireInteraction = false,
-    silent,
-    vibrate = [200, 100, 200],
-  } = payload
+    try {
+      if (event.data) {
+        let payload: PushPayload | null = null
+        try {
+          payload = event.data.json() as PushPayload
+        } catch {
+          try {
+            payload = { title: 'Tindivo', body: event.data.text() }
+          } catch {
+            payload = null
+          }
+        }
 
-  // Log para debug en DevTools del SW (Application > Service Workers).
-  // Permite confirmar entrega cuando el SO suprime la notificación visible
-  // (Doze Mode, iOS engagement signals, etc.).
-  console.log('[sw:push]', { tag, title, body, requireInteraction, hasUrl: !!url })
+        if (payload) {
+          const {
+            title: parsedTitle,
+            body = '',
+            icon = '/icon-192.png',
+            badge = '/icon-192.png',
+            tag,
+            url = '/',
+            requireInteraction = false,
+            silent,
+            vibrate = [200, 100, 200],
+          } = payload
 
-  // Construimos las options sin pasar `silent` cuando no viene explícito —
-  // declarar `silent: false` puede causar que algunos browsers traten la
-  // notificación como "low priority" y la silencien en background. Omitirlo
-  // permite al UA aplicar el comportamiento por default (con sonido).
-  const options: NotificationOptions = {
-    body,
-    icon,
-    badge,
-    tag,
-    requireInteraction,
-    data: { url },
-    // `vibrate` solo soportado en Android — browsers lo ignoran silenciosamente
-    // @ts-expect-error vibrate no está en TS lib por variar soporte
-    vibrate,
-  }
-  if (typeof silent === 'boolean') options.silent = silent
+          if (parsedTitle) title = parsedTitle
 
-  event.waitUntil(self.registration.showNotification(title, options))
+          // Construimos las options sin pasar `silent` cuando no viene
+          // explícito — declarar `silent: false` puede causar que algunos
+          // browsers traten la notif como "low priority" y la silencien en
+          // background. Omitirlo deja al UA aplicar el default (con sonido).
+          options = {
+            body,
+            icon,
+            badge,
+            tag,
+            requireInteraction,
+            data: { url },
+            // `vibrate` solo soportado en Android — browsers lo ignoran
+            // @ts-expect-error vibrate no está en TS lib por variar soporte
+            vibrate,
+          }
+          if (typeof silent === 'boolean') options.silent = silent
+
+          console.log('[sw:push]', { tag, title, body, requireInteraction, hasUrl: !!url })
+        } else {
+          console.warn('[sw:push] payload no parseable, mostrando notif genérica')
+        }
+      } else {
+        console.warn(
+          '[sw:push] sin event.data, mostrando notif genérica para no perder permiso iOS',
+        )
+      }
+    } catch (err) {
+      // Cualquier error en parsing cae aquí — igual mostramos la notif
+      // genérica de abajo para preservar el permiso iOS.
+      console.error('[sw:push] error procesando payload', err)
+    }
+
+    return self.registration.showNotification(title, options)
+  })()
+
+  event.waitUntil(promise)
 })
 
 // ─────────────────────────────────────────────────────────────────────────
