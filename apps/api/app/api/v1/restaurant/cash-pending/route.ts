@@ -43,6 +43,12 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response
   if (!auth.auth.restaurantId) return problemCode('FORBIDDEN', 403)
 
+  // Incluye:
+  //   - Pedidos con cash_owed_at_delivery > 0 (cualquier payment_status — cubre
+  //     el caso 3: cliente pagó yape al final pero el restaurante había
+  //     adelantado vuelto al driver, que ahora debe devolverlo).
+  //   - Pedidos legacy sin cash_owed_at_delivery: filtra por payment_status
+  //     pending_cash/mixed (fórmula vieja).
   const { data, error } = await auth.auth.supabase
     .from('orders')
     .select(
@@ -50,8 +56,10 @@ export async function GET(req: NextRequest) {
     )
     .eq('restaurant_id', auth.auth.restaurantId)
     .eq('status', 'delivered')
-    .in('payment_status', ['pending_cash', 'pending_mixed'])
     .is('cash_settlement_id', null)
+    .or(
+      'cash_owed_at_delivery.gt.0,and(cash_owed_at_delivery.is.null,payment_status.in.(pending_cash,pending_mixed))',
+    )
     .order('delivered_at', { ascending: false })
 
   if (error) return problemCode('INTERNAL_ERROR', 500, error.message)

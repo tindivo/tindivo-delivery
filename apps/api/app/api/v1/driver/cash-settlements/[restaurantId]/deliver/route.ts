@@ -41,17 +41,21 @@ export async function POST(
   const admin = createAdminClient()
 
   // 1) Pedidos pendientes de liquidación para este (driver, restaurant)
-  // Incluimos pending_cash (todo en efectivo) y pending_mixed (parte en
-  // efectivo). Para mixed, cash_amount marca el monto físico que pasó por
-  // las manos del driver — el resto fue por Yape directo al restaurante.
+  // Incluye:
+  //   - cash_owed_at_delivery > 0 (cualquier payment_status — cubre el caso
+  //     de cambio a yape al entregar pero con adelanto previo del restaurante).
+  //   - Pedidos legacy sin cash_owed_at_delivery: filtra por payment_status
+  //     pending_cash/mixed (fórmula vieja).
   const { data: pendingOrders, error: ordersErr } = await auth.auth.supabase
     .from('orders')
     .select('id, order_amount, cash_amount, client_pays_with, cash_owed_at_delivery')
     .eq('driver_id', auth.auth.driverId)
     .eq('restaurant_id', restaurantId)
     .eq('status', 'delivered')
-    .in('payment_status', ['pending_cash', 'pending_mixed'])
     .is('cash_settlement_id', null)
+    .or(
+      'cash_owed_at_delivery.gt.0,and(cash_owed_at_delivery.is.null,payment_status.in.(pending_cash,pending_mixed))',
+    )
 
   if (ordersErr) return problemCode('INTERNAL_ERROR', 500, ordersErr.message)
   if (!pendingOrders || pendingOrders.length === 0) {

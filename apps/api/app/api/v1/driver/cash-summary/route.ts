@@ -43,7 +43,12 @@ export async function GET(req: NextRequest) {
   if (!auth.auth.driverId) return problemCode('FORBIDDEN', 403)
 
   // Bucket 1: pedidos delivered con efectivo pendiente que aún no están
-  // liquidados. Incluye pending_cash (todo cash) y pending_mixed (parte cash).
+  // liquidados. Incluye:
+  //   - cash_owed_at_delivery > 0 (cualquier payment_status — cubre el caso
+  //     de cliente que paga yape pero driver debe devolver el vuelto que el
+  //     restaurante le adelantó).
+  //   - Pedidos legacy sin cash_owed_at_delivery: filtra por payment_status
+  //     pending_cash/mixed (fórmula vieja).
   const { data: unsettledOrders, error: ordersErr } = await auth.auth.supabase
     .from('orders')
     .select(
@@ -51,8 +56,10 @@ export async function GET(req: NextRequest) {
     )
     .eq('driver_id', auth.auth.driverId)
     .eq('status', 'delivered')
-    .in('payment_status', ['pending_cash', 'pending_mixed'])
     .is('cash_settlement_id', null)
+    .or(
+      'cash_owed_at_delivery.gt.0,and(cash_owed_at_delivery.is.null,payment_status.in.(pending_cash,pending_mixed))',
+    )
 
   if (ordersErr) return problemCode('INTERNAL_ERROR', 500, ordersErr.message)
 
