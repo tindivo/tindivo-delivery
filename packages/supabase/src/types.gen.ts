@@ -1052,6 +1052,51 @@ export type Database = {
           },
         ]
       }
+      push_delivery_log: {
+        Row: {
+          error_text: string | null
+          event_type: string
+          id: string
+          sent_at: string
+          status_code: number | null
+          subscription_id: string
+          user_id: string
+        }
+        Insert: {
+          error_text?: string | null
+          event_type: string
+          id?: string
+          sent_at?: string
+          status_code?: number | null
+          subscription_id: string
+          user_id: string
+        }
+        Update: {
+          error_text?: string | null
+          event_type?: string
+          id?: string
+          sent_at?: string
+          status_code?: number | null
+          subscription_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_delivery_log_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "push_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_delivery_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -1625,6 +1670,7 @@ export type Database = {
       }
       prune_expired_idempotency_keys: { Args: never; Returns: undefined }
       prune_expired_rejections: { Args: never; Returns: undefined }
+      prune_old_push_delivery_log: { Args: never; Returns: undefined }
       prune_stale_push_subscriptions: { Args: never; Returns: undefined }
       release_idempotency_key: {
         Args: { p_key: string; p_scope: string }

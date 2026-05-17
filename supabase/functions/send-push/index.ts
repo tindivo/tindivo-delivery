@@ -637,10 +637,12 @@ async function sendToSubscriptions(
     p256dh: string
     auth: string
     consecutive_failures?: number
+    user_id: string
   }>,
   notification: Notification,
   tag: string,
   requestId: string,
+  eventType: string,
 ): Promise<number> {
   let pushed = 0
   for (const sub of subs) {
@@ -656,12 +658,42 @@ async function sendToSubscriptions(
         .from('push_subscriptions')
         .update({ last_success_at: new Date().toISOString(), consecutive_failures: 0 })
         .eq('id', sub.id)
+      // Telemetría: log de entrega exitosa para auditar por usuario.
+      // Si la tabla todavía no existe (deploy ordenado: Edge Function vs
+      // migration), el insert falla silencioso — best-effort.
+      await sb
+        .from('push_delivery_log')
+        .insert({
+          subscription_id: sub.id,
+          user_id: sub.user_id,
+          event_type: eventType,
+          status_code: 200,
+          error_text: null,
+        })
+        .then(
+          () => null,
+          () => null,
+        )
     } catch (err) {
       const code = (err as { statusCode?: number } | null)?.statusCode
       const msg = (err as Error | null)?.message ?? 'unknown'
       console.error(
         `[send-push:${requestId}] failed sub=${sub.id.slice(0, 8)} code=${code ?? '?'} msg=${msg}`,
       )
+      // Telemetría: log de fallo (mismo motivo que arriba — best-effort).
+      await sb
+        .from('push_delivery_log')
+        .insert({
+          subscription_id: sub.id,
+          user_id: sub.user_id,
+          event_type: eventType,
+          status_code: code ?? null,
+          error_text: msg,
+        })
+        .then(
+          () => null,
+          () => null,
+        )
       if (code === 410 || code === 404) {
         // Endpoint muerto — limpiar
         await sb.from('push_subscriptions').delete().eq('id', sub.id)
@@ -759,7 +791,7 @@ Deno.serve(async () => {
 
       const { data: subs } = await sb
         .from('push_subscriptions')
-        .select('id, endpoint, p256dh, auth, consecutive_failures')
+        .select('id, endpoint, p256dh, auth, consecutive_failures, user_id')
         .in('user_id', group.userIds)
 
       if (!subs || subs.length === 0) {
@@ -775,6 +807,7 @@ Deno.serve(async () => {
         notification,
         notification.tag ?? event.event_type,
         requestId,
+        event.event_type,
       )
       pushed += count
     }
