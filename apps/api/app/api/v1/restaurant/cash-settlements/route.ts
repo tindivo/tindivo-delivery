@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     const { data: ordersData, error: ordersErr } = await auth.auth.supabase
       .from('orders')
       .select(
-        'id, short_id, client_name, order_amount, cash_amount, client_pays_with, cash_settlement_id, delivered_at',
+        'id, short_id, client_name, order_amount, cash_amount, client_pays_with, cash_owed_at_delivery, cash_settlement_id, delivered_at',
       )
       .in('cash_settlement_id', settlementIds)
 
@@ -54,9 +54,12 @@ export async function GET(req: NextRequest) {
 
     for (const o of ordersData ?? []) {
       if (!o.cash_settlement_id) continue
-      // Misma fórmula que cash-pending y driver/cash-summary: lo que físicamente
-      // pasó por manos del driver — cash puro o parte cash de un mixto.
-      const cashOwed = Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
+      // Prefiere el valor pre-calculado por el dominio al entregar; fallback
+      // legacy: client_pays_with ?? cash_amount ?? order_amount.
+      const cashOwed =
+        o.cash_owed_at_delivery != null
+          ? Number(o.cash_owed_at_delivery)
+          : Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
       const list = ordersBySettlementId.get(o.cash_settlement_id) ?? []
       list.push({
         id: o.id,

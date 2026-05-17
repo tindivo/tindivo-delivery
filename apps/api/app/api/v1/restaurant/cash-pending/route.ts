@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await auth.auth.supabase
     .from('orders')
     .select(
-      'id, short_id, client_name, order_amount, cash_amount, client_pays_with, delivered_at, driver_id, drivers!orders_driver_id_fkey!inner(id, full_name, phone, vehicle_type)',
+      'id, short_id, client_name, order_amount, cash_amount, client_pays_with, cash_owed_at_delivery, delivered_at, driver_id, drivers!orders_driver_id_fkey!inner(id, full_name, phone, vehicle_type)',
     )
     .eq('restaurant_id', auth.auth.restaurantId)
     .eq('status', 'delivered')
@@ -64,11 +64,13 @@ export async function GET(req: NextRequest) {
     const d = (Array.isArray(o.drivers) ? o.drivers[0] : o.drivers) as any
     if (!d) continue
 
-    // El restaurante recibe del driver:
-    //   - cash puro: client_pays_with ?? order_amount
-    //   - mixto: client_pays_with ?? cash_amount (la parte Yape ya le llegó
-    //     directa al restaurante, no la cobra el driver).
-    const cashOwed = Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
+    // Prefiere el valor pre-calculado por el dominio al entregar; si NULL
+    // (pedidos antes del feature de cambio en entrega), cae a la fórmula
+    // legacy: client_pays_with ?? cash_amount ?? order_amount.
+    const cashOwed =
+      o.cash_owed_at_delivery != null
+        ? Number(o.cash_owed_at_delivery)
+        : Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
 
     const existing: DriverGroup = byDriver.get(o.driver_id) ?? {
       driverId: o.driver_id,

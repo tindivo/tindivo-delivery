@@ -31,6 +31,7 @@ import { useSaveCustomerData } from '../hooks/use-save-customer-data'
 import { ChangePaymentMethodModal } from './change-payment-method-modal'
 import { ConfirmPickupModal } from './confirm-pickup-modal'
 import { CustomerDataForm } from './customer-data-form'
+import { MarkDeliveredSheet } from './mark-delivered-sheet'
 import { YapeQrCard } from './yape-qr-card'
 
 const PHONE_REGEX = /^9\d{8}$/
@@ -53,6 +54,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const { navigate: navigateMaps, isLocating } = useGeolocatedNavigation()
   const [changePaymentOpen, setChangePaymentOpen] = useState(false)
   const [confirmPickupOpen, setConfirmPickupOpen] = useState(false)
+  const [markDeliveredOpen, setMarkDeliveredOpen] = useState(false)
   const [pickupError, setPickupError] = useState<string | null>(null)
   const [timelineOpen, setTimelineOpen] = useState(false)
   const receivedFiredRef = useRef(false)
@@ -739,9 +741,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
               variant="success"
               className="w-full"
               disabled={delivered.isPending}
-              onClick={() => {
-                if (confirm('¿Confirmas que entregaste el pedido?')) delivered.mutate()
-              }}
+              onClick={() => setMarkDeliveredOpen(true)}
             >
               <Icon name="check_circle" filled />
               Pedido entregado
@@ -749,6 +749,23 @@ export function ActiveOrderDetail({ orderId }: Props) {
           </>
         )}
       </BottomActionBar>
+      {markDeliveredOpen &&
+        (() => {
+          // biome-ignore lint/suspicious/noExplicitAny: row dinámico de orders
+          const o = order as any
+          return (
+            <MarkDeliveredSheet
+              orderId={orderId}
+              orderAmount={Number(o?.order_amount ?? 0)}
+              paymentStatus={o?.payment_status ?? 'pending_cash'}
+              changeToGive={o?.change_to_give != null ? Number(o.change_to_give) : null}
+              clientPaysWith={o?.client_pays_with != null ? Number(o.client_pays_with) : null}
+              cashAmount={o?.cash_amount != null ? Number(o.cash_amount) : null}
+              yapeAmount={o?.yape_amount != null ? Number(o.yape_amount) : null}
+              onClose={() => setMarkDeliveredOpen(false)}
+            />
+          )
+        })()}
     </div>
   )
 }

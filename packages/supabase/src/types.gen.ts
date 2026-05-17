@@ -837,9 +837,11 @@ export type Database = {
           cancel_reason_code: string | null
           cancelled_at: string | null
           cash_amount: number | null
+          cash_owed_at_delivery: number | null
           cash_settlement_id: string | null
           change_to_give: number | null
           client_name: string | null
+          client_paid_exact_at_delivery: boolean
           client_pays_with: number | null
           client_phone: string | null
           created_at: string
@@ -865,6 +867,7 @@ export type Database = {
           occupancy_slots: number
           order_amount: number
           payment_status: Database["public"]["Enums"]["payment_status"]
+          payment_status_at_creation: Database["public"]["Enums"]["payment_status"]
           pending_acceptance_at: string | null
           picked_up_at: string | null
           prep_extended_at: string | null
@@ -896,9 +899,11 @@ export type Database = {
           cancel_reason_code?: string | null
           cancelled_at?: string | null
           cash_amount?: number | null
+          cash_owed_at_delivery?: number | null
           cash_settlement_id?: string | null
           change_to_give?: number | null
           client_name?: string | null
+          client_paid_exact_at_delivery?: boolean
           client_pays_with?: number | null
           client_phone?: string | null
           created_at?: string
@@ -924,6 +929,7 @@ export type Database = {
           occupancy_slots?: number
           order_amount: number
           payment_status: Database["public"]["Enums"]["payment_status"]
+          payment_status_at_creation: Database["public"]["Enums"]["payment_status"]
           pending_acceptance_at?: string | null
           picked_up_at?: string | null
           prep_extended_at?: string | null
@@ -955,9 +961,11 @@ export type Database = {
           cancel_reason_code?: string | null
           cancelled_at?: string | null
           cash_amount?: number | null
+          cash_owed_at_delivery?: number | null
           cash_settlement_id?: string | null
           change_to_give?: number | null
           client_name?: string | null
+          client_paid_exact_at_delivery?: boolean
           client_pays_with?: number | null
           client_phone?: string | null
           created_at?: string
@@ -983,6 +991,7 @@ export type Database = {
           occupancy_slots?: number
           order_amount?: number
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          payment_status_at_creation?: Database["public"]["Enums"]["payment_status"]
           pending_acceptance_at?: string | null
           picked_up_at?: string | null
           prep_extended_at?: string | null
@@ -1483,9 +1492,11 @@ export type Database = {
           cancel_reason_code: string | null
           cancelled_at: string | null
           cash_amount: number | null
+          cash_owed_at_delivery: number | null
           cash_settlement_id: string | null
           change_to_give: number | null
           client_name: string | null
+          client_paid_exact_at_delivery: boolean
           client_pays_with: number | null
           client_phone: string | null
           created_at: string
@@ -1511,6 +1522,7 @@ export type Database = {
           occupancy_slots: number
           order_amount: number
           payment_status: Database["public"]["Enums"]["payment_status"]
+          payment_status_at_creation: Database["public"]["Enums"]["payment_status"]
           pending_acceptance_at: string | null
           picked_up_at: string | null
           prep_extended_at: string | null
@@ -1551,9 +1563,11 @@ export type Database = {
           cancel_reason_code: string | null
           cancelled_at: string | null
           cash_amount: number | null
+          cash_owed_at_delivery: number | null
           cash_settlement_id: string | null
           change_to_give: number | null
           client_name: string | null
+          client_paid_exact_at_delivery: boolean
           client_pays_with: number | null
           client_phone: string | null
           created_at: string
@@ -1579,6 +1593,7 @@ export type Database = {
           occupancy_slots: number
           order_amount: number
           payment_status: Database["public"]["Enums"]["payment_status"]
+          payment_status_at_creation: Database["public"]["Enums"]["payment_status"]
           pending_acceptance_at: string | null
           picked_up_at: string | null
           prep_extended_at: string | null

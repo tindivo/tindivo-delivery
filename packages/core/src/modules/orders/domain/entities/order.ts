@@ -32,6 +32,7 @@ import {
   OrderReassigned,
   OrderReceived,
   OrderUrgencyCleared,
+  PaymentChangedAtDelivery,
   PaymentMethodChanged,
   TrackingLinkSent,
 } from '../events/order-events'
@@ -39,11 +40,11 @@ import { CancellationPolicy, type Role } from '../policies/cancellation.policy'
 import { StateTransitionPolicy } from '../policies/state-transition.policy'
 import type { Coordinates } from '../value-objects/coordinates'
 import type { DriverId } from '../value-objects/driver-id'
-import type { Money } from '../value-objects/money'
+import { Money } from '../value-objects/money'
 import { OccupancySlots } from '../value-objects/occupancy-slots'
 import { OrderId } from '../value-objects/order-id'
 import { OrderStatus } from '../value-objects/order-status'
-import type { PaymentIntent } from '../value-objects/payment-intent'
+import { PaymentIntent, type PaymentStatusValue } from '../value-objects/payment-intent'
 import { PrepTime } from '../value-objects/prep-time'
 import type { RestaurantId } from '../value-objects/restaurant-id'
 import { ShortId } from '../value-objects/short-id'
@@ -89,6 +90,13 @@ export type OrderProps = {
   prepExtensionMinutes: 5 | 10 | null
   readyEarlyAt: Date | null
   occupancySlots: OccupancySlots
+  /**
+   * Deuda pre-calculada del driver con el restaurante al momento de entregar.
+   * Se setea solo dentro de `markDelivered`. NULL antes de la entrega o para
+   * pedidos legacy sin esta info (en cuyo caso los consumidores caen a la
+   * fórmula `COALESCE(client_pays_with, cash_amount, order_amount)`).
+   */
+  cashOwedAtDelivery: Money | null
   /**
    * Cola "Urgente": NULL = no urgente. Timestamp = momento en que entró a la
    * cola urgente (post-timeout o post-rechazo). Sirve como FIFO de la cola y
@@ -192,6 +200,7 @@ export class Order extends AggregateRoot<OrderId> {
       prepExtensionMinutes: null,
       readyEarlyAt: null,
       occupancySlots: OccupancySlots.default(),
+      cashOwedAtDelivery: null,
       urgentSince: null,
       createdAt: now,
       updatedAt: now,
@@ -645,10 +654,84 @@ export class Order extends AggregateRoot<OrderId> {
     return Result.okVoid()
   }
 
-  markDelivered(now: Date): Result<void, InvalidStateTransition> {
+  /**
+   * Marca el pedido como entregado y, opcionalmente, registra que el método
+   * de pago real difiere del planeado (caso 1: cliente pagó exacto manteniendo
+   * el vuelto adelantado; caso 2: cliente cambió de método al pagar).
+   *
+   * Reglas:
+   * - Solo desde `picked_up`.
+   * - `cash_exact` requiere que el método actual sea `pending_cash` o
+   *   `pending_mixed` con `changeToGive > 0` (de otro modo no aporta info).
+   * - `change_to` no permite `prepaid` como destino.
+   * - `orderAmount` permanece inmutable.
+   * - Siempre calcula `cashOwedAtDelivery` (puede ser 0 si no aplica cash).
+   * - Emite `OrderDelivered`. Si `kind !== 'unchanged'` también emite
+   *   `PaymentChangedAtDelivery` para auditoría.
+   */
+  markDelivered(
+    now: Date,
+    input: DeliveryPaymentInput = { kind: 'unchanged' },
+  ): Result<void, InvalidStateTransition | InvalidPaymentChange> {
     if (!StateTransitionPolicy.canTransition(this._state.status.value, 'delivered'))
       return Result.fail(new InvalidStateTransition(this._state.status.value, 'delivered'))
 
+    const previous = this._state.payment
+
+    // Vuelto que el restaurante le adelantó físicamente al driver. Si el método
+    // actual ya no es cash/mixed, el restaurante no le dio nada al driver
+    // (porque la entrega del adelanto ocurre al cambiar el método en picked_up
+    // o al pickup mismo).
+    const changeAdvance =
+      previous.status === 'pending_cash' || previous.status === 'pending_mixed'
+        ? (previous.changeToGive?.amount ?? 0)
+        : 0
+
+    let newPayment: PaymentIntent = previous
+    let paymentChanged = false
+
+    if (input.kind === 'cash_exact') {
+      if (previous.status !== 'pending_cash' && previous.status !== 'pending_mixed')
+        return Result.fail(
+          new InvalidPaymentChange(
+            'cash_exact requiere que el método actual sea pending_cash o pending_mixed',
+          ),
+        )
+      if (!previous.changeToGive || previous.changeToGive.amount <= 0)
+        return Result.fail(
+          new InvalidPaymentChange(
+            'cash_exact requiere change_to_give > 0 (no hubo vuelto adelantado)',
+          ),
+        )
+      newPayment = previous.withClientPaidExact()
+      paymentChanged = true
+    } else if (input.kind === 'change_to') {
+      if (input.paymentStatus === 'prepaid')
+        return Result.fail(
+          new InvalidPaymentChange('No se permite convertir a prepaid desde el motorizado'),
+        )
+      try {
+        newPayment = PaymentIntent.create(
+          input.paymentStatus,
+          previous.orderAmount,
+          input.clientPaysWith != null ? Money.pen(input.clientPaysWith) : null,
+          input.yapeAmount != null ? Money.pen(input.yapeAmount) : null,
+          input.cashAmount != null ? Money.pen(input.cashAmount) : null,
+          previous.paymentStatusAtCreation,
+          false,
+        )
+      } catch (e) {
+        return Result.fail(
+          new InvalidPaymentChange((e as Error).message ?? 'PaymentIntent inválido'),
+        )
+      }
+      paymentChanged = true
+    }
+
+    const cashOwed = computeCashOwed(newPayment, input.kind === 'cash_exact', changeAdvance)
+
+    this._state.payment = newPayment
+    this._state.cashOwedAtDelivery = Money.pen(cashOwed)
     this._state.status = OrderStatus.delivered()
     this._state.deliveredAt = now
     this._state.updatedAt = now
@@ -660,6 +743,30 @@ export class Order extends AggregateRoot<OrderId> {
         deliveredAt: now.toISOString(),
       }),
     )
+
+    if (paymentChanged) {
+      this.raise(
+        new PaymentChangedAtDelivery({
+          orderId: this.id.value,
+          driverId: this._state.driverId?.value ?? '',
+          restaurantId: this._state.restaurantId.value,
+          paymentStatusAtCreation: previous.paymentStatusAtCreation,
+          previousStatus: previous.status,
+          newStatus: newPayment.status,
+          clientPaidExact: newPayment.clientPaidExactAtDelivery,
+          previousYapeAmount: previous.yapeAmount?.amount ?? null,
+          previousCashAmount: previous.cashAmount?.amount ?? null,
+          previousClientPaysWith: previous.clientPaysWith?.amount ?? null,
+          previousChangeToGive: previous.changeToGive?.amount ?? null,
+          newYapeAmount: newPayment.yapeAmount?.amount ?? null,
+          newCashAmount: newPayment.cashAmount?.amount ?? null,
+          newClientPaysWith: newPayment.clientPaysWith?.amount ?? null,
+          newChangeToGive: newPayment.changeToGive?.amount ?? null,
+          cashOwedAtDelivery: cashOwed,
+          changedAt: now.toISOString(),
+        }),
+      )
+    }
     return Result.okVoid()
   }
 
@@ -938,4 +1045,62 @@ export class Order extends AggregateRoot<OrderId> {
 
 function buildMapsUrl(coords: Coordinates): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`
+}
+
+/**
+ * Entrada para `Order.markDelivered`. Tres variantes:
+ * - `unchanged`: el método de pago real fue el planeado (caso por defecto).
+ * - `cash_exact`: el cliente pagó exacto sin usar el vuelto que el restaurante
+ *   le había adelantado al driver. El método de pago no cambia, solo se marca
+ *   un flag para auditoría. La deuda del driver queda intacta (incluye el
+ *   adelanto que se quedó en el bolsillo).
+ * - `change_to`: el cliente cambió el método de pago. Reemplaza el PaymentIntent.
+ */
+export type DeliveryPaymentInput =
+  | { kind: 'unchanged' }
+  | { kind: 'cash_exact' }
+  | {
+      kind: 'change_to'
+      paymentStatus: PaymentStatusValue
+      yapeAmount?: number
+      cashAmount?: number
+      clientPaysWith?: number
+    }
+
+/**
+ * cashOwed = change_advance + cash_collected_from_client - change_given_to_client
+ *
+ * - change_advance: vuelto físico que el restaurante le dio al driver al pickup
+ *   (depende del payment_status anterior al cambio).
+ * - cash_collected_from_client: lo que el cliente le entregó al driver
+ *   (depende del método final declarado).
+ * - change_given_to_client: vuelto que el driver le dio al cliente
+ *   (= cash_collected - cash_portion_of_order).
+ */
+function computeCashOwed(
+  payment: PaymentIntent,
+  clientPaidExact: boolean,
+  changeAdvance: number,
+): number {
+  let cashPortionOfOrder: number
+  let cashCollectedFromClient: number
+
+  if (payment.status === 'pending_cash') {
+    cashPortionOfOrder = payment.orderAmount.amount
+    cashCollectedFromClient = clientPaidExact
+      ? payment.orderAmount.amount
+      : (payment.clientPaysWith?.amount ?? payment.orderAmount.amount)
+  } else if (payment.status === 'pending_mixed') {
+    cashPortionOfOrder = payment.cashAmount?.amount ?? 0
+    cashCollectedFromClient = clientPaidExact
+      ? cashPortionOfOrder
+      : (payment.clientPaysWith?.amount ?? cashPortionOfOrder)
+  } else {
+    // pending_yape o prepaid: el driver no cobra cash al cliente
+    cashPortionOfOrder = 0
+    cashCollectedFromClient = 0
+  }
+
+  const changeGivenToClient = cashCollectedFromClient - cashPortionOfOrder
+  return Math.round((changeAdvance + cashCollectedFromClient - changeGivenToClient) * 100) / 100
 }

@@ -1,14 +1,24 @@
 import type { DomainError } from '../../../../shared/errors/domain-error'
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
+import type { DeliveryPaymentInput } from '../../domain/entities/order'
 import { OrderNotFound } from '../../domain/errors/order-errors'
 import { OrderId } from '../../domain/value-objects/order-id'
 import type { Clock } from '../ports/clock'
 import type { EventPublisher } from '../ports/event-publisher'
 import type { OrderRepository } from '../ports/order.repository'
 
-export type MarkDeliveredCommand = { orderId: string; driverId: string }
-export type MarkDeliveredResult = { id: string; status: string; deliveredAt: string }
+export type MarkDeliveredCommand = {
+  orderId: string
+  driverId: string
+  payment?: DeliveryPaymentInput
+}
+export type MarkDeliveredResult = {
+  id: string
+  status: string
+  deliveredAt: string
+  cashOwedAtDelivery: number | null
+}
 
 export class MarkDeliveredUseCase
   implements UseCase<MarkDeliveredCommand, MarkDeliveredResult, DomainError>
@@ -24,7 +34,7 @@ export class MarkDeliveredUseCase
     if (!order) return Result.fail(new OrderNotFound(cmd.orderId))
 
     const previous = order.status
-    const res = order.markDelivered(this.clock.now())
+    const res = order.markDelivered(this.clock.now(), cmd.payment ?? { kind: 'unchanged' })
     if (res.isFailure) return Result.fail(res.error)
 
     await this.orders.save(order, previous)
@@ -35,6 +45,7 @@ export class MarkDeliveredUseCase
       status: order.status.value,
       // biome-ignore lint/style/noNonNullAssertion: set by markDelivered
       deliveredAt: order.props.deliveredAt!.toISOString(),
+      cashOwedAtDelivery: order.props.cashOwedAtDelivery?.amount ?? null,
     })
   }
 }

@@ -46,7 +46,7 @@ export async function POST(
   // las manos del driver — el resto fue por Yape directo al restaurante.
   const { data: pendingOrders, error: ordersErr } = await auth.auth.supabase
     .from('orders')
-    .select('id, order_amount, cash_amount, client_pays_with')
+    .select('id, order_amount, cash_amount, client_pays_with, cash_owed_at_delivery')
     .eq('driver_id', auth.auth.driverId)
     .eq('restaurant_id', restaurantId)
     .eq('status', 'delivered')
@@ -62,12 +62,17 @@ export async function POST(
     )
   }
 
-  // total_cash refleja lo que físicamente pasó por las manos del driver:
-  //   - cash puro: client_pays_with ?? order_amount
-  //   - mixto: client_pays_with ?? cash_amount (la parte Yape NO entra)
+  // total_cash refleja lo que físicamente pasó por las manos del driver.
+  // Prefiere el valor pre-calculado por el dominio al entregar; fallback
+  // legacy: client_pays_with ?? cash_amount ?? order_amount.
   const totalCash = Number(
     pendingOrders
-      .reduce((s, o) => s + Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount), 0)
+      .reduce(
+        (s, o) =>
+          s +
+          Number(o.cash_owed_at_delivery ?? o.client_pays_with ?? o.cash_amount ?? o.order_amount),
+        0,
+      )
       .toFixed(2),
   )
   const orderCount = pendingOrders.length

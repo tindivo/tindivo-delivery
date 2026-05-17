@@ -384,6 +384,44 @@ export class PaymentMethodChanged extends BaseDomainEvent {
 }
 
 /**
+ * Emitido cuando el motorizado entrega el pedido y registra que el método
+ * real de pago difiere del planeado, o que el cliente pagó exacto (mantiene
+ * el vuelto adelantado). Acompaña a `OrderDelivered` en estos casos.
+ * Sirve para auditoría y para que el restaurante vea por qué la deuda del
+ * driver cambió respecto al plan original.
+ */
+export class PaymentChangedAtDelivery extends BaseDomainEvent {
+  readonly eventType = 'PaymentChangedAtDelivery' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    driverId: string
+    restaurantId: string
+    paymentStatusAtCreation: string
+    previousStatus: string
+    newStatus: string
+    clientPaidExact: boolean
+    previousYapeAmount: number | null
+    previousCashAmount: number | null
+    previousClientPaysWith: number | null
+    previousChangeToGive: number | null
+    newYapeAmount: number | null
+    newCashAmount: number | null
+    newClientPaysWith: number | null
+    newChangeToGive: number | null
+    cashOwedAtDelivery: number
+    changedAt: string
+  }
+
+  constructor(payload: PaymentChangedAtDelivery['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
+/**
  * Emitido cuando un pedido `source='customer_pwa'` se crea y queda esperando
  * que el restaurante acepte y defina el prep_time real. La Edge Function
  * send-push lo mapea a un push al restaurante con requireInteraction=true

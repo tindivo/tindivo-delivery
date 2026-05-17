@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
   const { data: unsettledOrders, error: ordersErr } = await auth.auth.supabase
     .from('orders')
     .select(
-      'id, short_id, client_name, order_amount, cash_amount, client_pays_with, restaurant_id, restaurants!inner(name, accent_color)',
+      'id, short_id, client_name, order_amount, cash_amount, client_pays_with, cash_owed_at_delivery, restaurant_id, restaurants!inner(name, accent_color)',
     )
     .eq('driver_id', auth.auth.driverId)
     .eq('status', 'delivered')
@@ -74,12 +74,15 @@ export async function GET(req: NextRequest) {
     const { data: settlementOrders } = await auth.auth.supabase
       .from('orders')
       .select(
-        'id, short_id, client_name, order_amount, cash_amount, client_pays_with, cash_settlement_id',
+        'id, short_id, client_name, order_amount, cash_amount, client_pays_with, cash_owed_at_delivery, cash_settlement_id',
       )
       .in('cash_settlement_id', activeSettlementIds)
     for (const o of settlementOrders ?? []) {
       if (!o.cash_settlement_id) continue
-      const cashOwed = Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
+      const cashOwed =
+        o.cash_owed_at_delivery != null
+          ? Number(o.cash_owed_at_delivery)
+          : Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
       const list = settlementOrdersBySettlementId.get(o.cash_settlement_id) ?? []
       list.push({
         orderId: o.id,
@@ -107,11 +110,12 @@ export async function GET(req: NextRequest) {
       settlementStatus: null,
       orders: [],
     }
-    // El driver entrega lo que físicamente pasó por sus manos:
-    //   - cash puro: client_pays_with ?? order_amount
-    //   - mixto: client_pays_with ?? cash_amount (la parte Yape va directa al
-    //     restaurante y no requiere liquidación con el driver).
-    const cashOwed = Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
+    // Prefiere el valor pre-calculado por el dominio al entregar; fallback
+    // legacy: client_pays_with ?? cash_amount ?? order_amount.
+    const cashOwed =
+      o.cash_owed_at_delivery != null
+        ? Number(o.cash_owed_at_delivery)
+        : Number(o.client_pays_with ?? o.cash_amount ?? o.order_amount)
     existing.totalCash = Number((existing.totalCash + cashOwed).toFixed(2))
     existing.orderCount += 1
     existing.orders.push({

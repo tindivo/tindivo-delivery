@@ -10,6 +10,19 @@ type Props = {
   cashAmount: Money | null
   clientPaysWith: Money | null
   changeToGive: Money | null
+  /**
+   * Snapshot del `status` al momento de creación del pedido. Inmutable.
+   * Permite saber si el restaurante le adelantó vuelto al driver (afecta
+   * el cálculo de la deuda al liquidar si el método cambia al entregar).
+   */
+  paymentStatusAtCreation: PaymentStatusValue
+  /**
+   * Flag de "cliente pagó exacto al entregar". Solo se marca cuando el
+   * restaurante adelantó vuelto y al final el cliente pagó exacto — el driver
+   * mantiene el vuelto en mano y debe devolverlo. Sin este flag, el sistema
+   * asumiría que la transacción fue como se planeó.
+   */
+  clientPaidExactAtDelivery: boolean
 }
 
 /**
@@ -32,6 +45,8 @@ export class PaymentIntent extends ValueObject<Props> {
     clientPaysWith: Money | null = null,
     yapeAmount: Money | null = null,
     cashAmount: Money | null = null,
+    paymentStatusAtCreation: PaymentStatusValue | null = null,
+    clientPaidExactAtDelivery = false,
   ): PaymentIntent {
     if (status === 'pending_mixed') {
       if (!yapeAmount || !cashAmount)
@@ -67,6 +82,8 @@ export class PaymentIntent extends ValueObject<Props> {
       cashAmount: status === 'pending_mixed' ? cashAmount : null,
       clientPaysWith: persistedClientPaysWith,
       changeToGive: change,
+      paymentStatusAtCreation: paymentStatusAtCreation ?? status,
+      clientPaidExactAtDelivery,
     })
   }
 
@@ -88,6 +105,12 @@ export class PaymentIntent extends ValueObject<Props> {
   get changeToGive(): Money | null {
     return this.props.changeToGive
   }
+  get paymentStatusAtCreation(): PaymentStatusValue {
+    return this.props.paymentStatusAtCreation
+  }
+  get clientPaidExactAtDelivery(): boolean {
+    return this.props.clientPaidExactAtDelivery
+  }
 
   isPendingCash(): boolean {
     return this.props.status === 'pending_cash'
@@ -97,5 +120,15 @@ export class PaymentIntent extends ValueObject<Props> {
   }
   isMixed(): boolean {
     return this.props.status === 'pending_mixed'
+  }
+
+  /**
+   * Retorna una copia con `clientPaidExactAtDelivery = true`. Los demás
+   * campos quedan iguales — incluido `clientPaysWith`, que sigue
+   * representando el billete que el restaurante adelantó al driver para
+   * vuelto (aunque el cliente al final no lo usó).
+   */
+  withClientPaidExact(): PaymentIntent {
+    return new PaymentIntent({ ...this.props, clientPaidExactAtDelivery: true })
   }
 }

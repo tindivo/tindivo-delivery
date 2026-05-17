@@ -159,6 +159,78 @@ export const ChangePaymentMethodRequest = z
   )
 export type ChangePaymentMethodRequest = z.infer<typeof ChangePaymentMethodRequest>
 
+/**
+ * Payload del endpoint `POST /driver/orders/[id]/delivered`.
+ *
+ * Permite al motorizado registrar el método real al entregar:
+ * - `unchanged`: el plan original se cumplió (default si no se manda body).
+ * - `cash_exact`: el cliente pagó exacto y el driver mantiene el vuelto
+ *   adelantado por el restaurante (caso pending_cash/mixed con change > 0).
+ * - `change_to`: cambio total de método (mismos campos que ChangePaymentMethod).
+ */
+export const MarkDeliveredRequest = z
+  .object({
+    payment: z
+      .discriminatedUnion('kind', [
+        z.object({ kind: z.literal('unchanged') }),
+        z.object({ kind: z.literal('cash_exact') }),
+        z.object({
+          kind: z.literal('change_to'),
+          paymentStatus: PaymentStatus,
+          yapeAmount: MoneyPenSchema.optional(),
+          cashAmount: MoneyPenSchema.optional(),
+          clientPaysWith: MoneyPenSchema.optional(),
+        }),
+      ])
+      .default({ kind: 'unchanged' }),
+  })
+  .superRefine((data, ctx) => {
+    if (data.payment.kind !== 'change_to') return
+    const p = data.payment
+    if (p.paymentStatus === 'prepaid') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['payment', 'paymentStatus'],
+        message: 'No se permite convertir a prepaid desde el motorizado',
+      })
+      return
+    }
+    if (p.paymentStatus === 'pending_mixed') {
+      if (
+        p.yapeAmount === undefined ||
+        p.cashAmount === undefined ||
+        p.yapeAmount <= 0 ||
+        p.cashAmount <= 0
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['payment', 'yapeAmount'],
+          message: 'pending_mixed requiere yapeAmount y cashAmount > 0',
+        })
+      }
+      if (
+        p.clientPaysWith !== undefined &&
+        p.cashAmount !== undefined &&
+        p.clientPaysWith < p.cashAmount
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['payment', 'clientPaysWith'],
+          message: 'clientPaysWith debe ser ≥ cashAmount en pending_mixed',
+        })
+      }
+    } else {
+      if (p.yapeAmount !== undefined || p.cashAmount !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['payment', 'yapeAmount'],
+          message: 'yapeAmount/cashAmount solo aplican en pending_mixed',
+        })
+      }
+    }
+  })
+export type MarkDeliveredRequest = z.infer<typeof MarkDeliveredRequest>
+
 export const RequestExtensionRequest = z.object({
   additionalMinutes: z.union([z.literal(5), z.literal(10)]),
 })

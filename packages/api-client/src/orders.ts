@@ -53,7 +53,13 @@ export function ordersApi(client: ApiClient) {
       client.post<Orders.SaveCustomerDataResponse>(`driver/orders/${id}/customer-data`, body),
     markPickedUp: (id: string, body: Orders.MarkPickedUpRequest) =>
       client.post<Orders.PickedUpResponse>(`driver/orders/${id}/picked-up`, body),
-    markDelivered: (id: string) => client.post<void>(`driver/orders/${id}/delivered`),
+    markDelivered: (id: string, body?: Orders.MarkDeliveredRequest) =>
+      client.post<{
+        id: string
+        status: string
+        deliveredAt: string
+        cashOwedAtDelivery: number | null
+      }>(`driver/orders/${id}/delivered`, body ?? { payment: { kind: 'unchanged' } }),
     changePaymentMethod: (id: string, body: Orders.ChangePaymentMethodRequest) =>
       client.post<Orders.ChangePaymentMethodResponse>(
         `driver/orders/${id}/change-payment-method`,
