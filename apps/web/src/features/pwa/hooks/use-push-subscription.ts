@@ -24,6 +24,36 @@ export type SubscribeResult = { ok: true } | { ok: false; reason: SubscribeFailR
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
 const AUTO_HEAL_MIN_INTERVAL_MS = 60_000
+// Recordamos el último endpoint enviado al backend para detectar rotaciones
+// silenciosas. Chrome casi nunca dispara `pushsubscriptionchange` (caniuse
+// + chromium tracker confirman) — refrescar el endpoint en cada visita es la
+// práctica recomendada por MDN. Si el endpoint actual en `pushManager`
+// difiere del guardado, re-enviamos al backend.
+const LAST_SENT_ENDPOINT_KEY = 'tindivo:push:last-sent-endpoint'
+
+function rememberSentEndpoint(endpoint: string): void {
+  try {
+    window.localStorage.setItem(LAST_SENT_ENDPOINT_KEY, endpoint)
+  } catch {
+    // Modo privado o storage full — ignorar; el cliente reenviará al próximo tick.
+  }
+}
+
+function recallSentEndpoint(): string | null {
+  try {
+    return window.localStorage.getItem(LAST_SENT_ENDPOINT_KEY)
+  } catch {
+    return null
+  }
+}
+
+function forgetSentEndpoint(): void {
+  try {
+    window.localStorage.removeItem(LAST_SENT_ENDPOINT_KEY)
+  } catch {
+    // ignore
+  }
+}
 
 /**
  * Indica si hay sesión Supabase activa. Lo usamos como guard antes de cualquier
@@ -108,6 +138,7 @@ export function usePushSubscription() {
         },
         userAgent: navigator.userAgent.slice(0, 300),
       })
+      rememberSentEndpoint(sub.endpoint)
     } catch (err) {
       if (err instanceof ApiError) {
         return { ok: false, reason: `api-error:${err.problem.code}:${err.status}` }
@@ -169,6 +200,7 @@ export function usePushSubscription() {
             .catch(() => ({ owned: true }))
           if (!owned.owned) {
             await sub.unsubscribe().catch(() => null)
+            forgetSentEndpoint()
             lastAutoHealAtRef.current = 0
             void tryAutoHeal().then(() => {
               void (async () => {
@@ -179,6 +211,16 @@ export function usePushSubscription() {
             })
             setStatus('granted')
             return 'granted'
+          }
+
+          // El endpoint puede haber rotado sin que el SW emita
+          // `pushsubscriptionchange` (Chrome rara vez lo dispara).
+          // Si el endpoint actual ≠ el último que enviamos al backend,
+          // reenviar en silencio. Lo hace `subscribeInternal` (que
+          // re-postea endpoint + keys y actualiza `rememberSentEndpoint`).
+          if (recallSentEndpoint() !== sub.endpoint) {
+            lastAutoHealAtRef.current = 0
+            void tryAutoHeal()
           }
         }
         setStatus('subscribed')
@@ -295,6 +337,7 @@ export function usePushSubscription() {
           .catch(() => null)
         await sub.unsubscribe()
       }
+      forgetSentEndpoint()
       // Evitar que el polling re-suscriba inmediatamente.
       lastAutoHealAtRef.current = Date.now()
       await checkStatus()

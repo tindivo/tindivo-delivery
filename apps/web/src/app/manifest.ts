@@ -1,7 +1,13 @@
 import type { MetadataRoute } from 'next'
 
+// `id` (W3C App Manifest) identifica la PWA de forma estable entre updates.
+// iOS Safari lo usa como clave de identidad de la app instalada: sin `id`
+// explícito, cambios en `start_url` o `scope` pueden hacer que iOS trate
+// la app como nueva post-update y resetee permisos (incluido el de Web
+// Push). Fijar `id='/'` (mismo origen) evita ese reset.
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: '/',
     name: 'Tindivo — Delivery para tu ciudad',
     short_name: 'Tindivo',
     description: 'Pedidos, motorizados y restaurantes conectados en tiempo real',
