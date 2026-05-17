@@ -30,6 +30,7 @@ type DriverGroup = {
   orders: Array<{
     id: string
     shortId: string
+    clientName: string | null
     orderAmount: number
     clientPaysWith: number | null
     cashOwed: number
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await auth.auth.supabase
     .from('orders')
     .select(
-      'id, short_id, order_amount, cash_amount, client_pays_with, delivered_at, driver_id, drivers!inner(id, full_name, phone, vehicle_type)',
+      'id, short_id, client_name, order_amount, cash_amount, client_pays_with, delivered_at, driver_id, drivers!inner(id, full_name, phone, vehicle_type)',
     )
     .eq('restaurant_id', auth.auth.restaurantId)
     .eq('status', 'delivered')
@@ -83,6 +84,7 @@ export async function GET(req: NextRequest) {
     existing.orders.push({
       id: o.id,
       shortId: o.short_id,
+      clientName: o.client_name,
       orderAmount: Number(o.order_amount),
       clientPaysWith: o.client_pays_with == null ? null : Number(o.client_pays_with),
       cashOwed,

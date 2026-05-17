@@ -64,6 +64,7 @@ export type RestaurantPendingCashGroup = {
   orders: Array<{
     id: string
     shortId: string
+    clientName: string | null
     orderAmount: number
     clientPaysWith: number | null
     cashOwed: number
@@ -93,6 +94,13 @@ export type RestaurantCashSettlementRow = {
     phone: string
     vehicle_type: string
   } | null
+  orders: Array<{
+    id: string
+    shortId: string
+    clientName: string | null
+    cashOwed: number
+    deliveredAt: string | null
+  }>
 }
 
 /**

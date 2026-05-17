@@ -136,19 +136,26 @@ function DriverGroupCard({
             </a>
           </div>
           <ul className="divide-y divide-amber-200/40">
-            {group.orders.map((o: RestaurantPendingCashGroup['orders'][number]) => (
-              <li key={o.id} className="py-2 flex items-center gap-3">
-                <span className="text-[11px] font-mono tracking-wider text-on-surface-variant">
-                  #{o.shortId}
-                </span>
-                <span className="flex-1 text-[11px] text-on-surface-variant">
-                  {o.deliveredAt ? `Entregado ${formatTime(o.deliveredAt)}` : 'Entregado'}
-                </span>
-                <span className="text-sm font-bold font-mono tabular-nums text-on-surface">
-                  S/ {o.cashOwed.toFixed(2)}
-                </span>
-              </li>
-            ))}
+            {group.orders.map((o: RestaurantPendingCashGroup['orders'][number]) => {
+              const name = o.clientName?.trim()
+              return (
+                <li key={o.id} className="py-2 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-on-surface truncate">
+                      {name || `#${o.shortId}`}
+                    </div>
+                    <div className="text-[10px] text-on-surface-variant truncate">
+                      {name && <span className="font-mono tracking-wider">#{o.shortId}</span>}
+                      {name && o.deliveredAt && <span className="mx-1">·</span>}
+                      {o.deliveredAt && <span>Entregado {formatTime(o.deliveredAt)}</span>}
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold font-mono tabular-nums text-on-surface shrink-0">
+                    S/ {o.cashOwed.toFixed(2)}
+                  </span>
+                </li>
+              )
+            })}
           </ul>
         </div>
       )}

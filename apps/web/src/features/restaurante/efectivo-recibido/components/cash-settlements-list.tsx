@@ -19,6 +19,14 @@ function formatDate(iso: string): string {
   })
 }
 
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-PE', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Lima',
+  })
+}
+
 const STATUS_ORDER: Record<string, number> = {
   delivered: 0,
   disputed: 1,
@@ -115,9 +123,11 @@ function SettlementCard({
   const [reportedAmount, setReportedAmount] = useState<string>('')
   const [note, setNote] = useState('')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [ordersOpen, setOrdersOpen] = useState(false)
 
   const declared = Number(settlement.delivered_amount ?? 0)
   const driverName = settlement.drivers?.full_name ?? 'Motorizado'
+  const orders = settlement.orders ?? []
 
   function handleConfirm() {
     setErrorMsg(null)
@@ -198,6 +208,52 @@ function SettlementCard({
           </div>
         )}
       </div>
+
+      {orders.length > 0 && (
+        <div className="mt-3 rounded-xl border border-outline-variant/25 bg-white/60 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setOrdersOpen((v) => !v)}
+            aria-expanded={ordersOpen}
+            className="w-full flex items-center gap-2 px-3 py-2 text-left active:scale-[0.99] transition-transform"
+          >
+            <Icon name="receipt_long" size={16} className="text-on-surface-variant" filled />
+            <span className="flex-1 text-[11px] font-bold tracking-wider uppercase text-on-surface-variant">
+              {ordersOpen ? 'Ocultar pedidos' : `Ver pedidos (${orders.length})`}
+            </span>
+            <span
+              className="inline-flex transition-transform"
+              style={{ transform: ordersOpen ? 'rotate(180deg)' : 'none' }}
+            >
+              <Icon name="expand_more" size={16} className="text-on-surface-variant" />
+            </span>
+          </button>
+          {ordersOpen && (
+            <ul className="divide-y divide-outline-variant/20 border-t border-outline-variant/20">
+              {orders.map((o) => {
+                const name = o.clientName?.trim()
+                return (
+                  <li key={o.id} className="px-3 py-2 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-on-surface truncate">
+                        {name || `#${o.shortId}`}
+                      </div>
+                      <div className="text-[10px] text-on-surface-variant truncate">
+                        {name && <span className="font-mono tracking-wider">#{o.shortId}</span>}
+                        {name && o.deliveredAt && <span className="mx-1">·</span>}
+                        {o.deliveredAt && <span>Entregado {formatTime(o.deliveredAt)}</span>}
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold font-mono tabular-nums text-on-surface shrink-0">
+                      S/ {o.cashOwed.toFixed(2)}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      )}
 
       {settlement.status === 'delivered' && !isDisputeOpen && (
         <div className="mt-4 space-y-2">
