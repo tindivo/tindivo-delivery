@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await auth.auth.supabase
     .from('orders')
     .select(
-      'id, short_id, client_name, order_amount, cash_amount, client_pays_with, delivered_at, driver_id, drivers!inner(id, full_name, phone, vehicle_type)',
+      'id, short_id, client_name, order_amount, cash_amount, client_pays_with, delivered_at, driver_id, drivers!orders_driver_id_fkey!inner(id, full_name, phone, vehicle_type)',
     )
     .eq('restaurant_id', auth.auth.restaurantId)
     .eq('status', 'delivered')
