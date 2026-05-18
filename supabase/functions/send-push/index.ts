@@ -459,12 +459,25 @@ async function resolveRecipients(
     switch (event.event_type) {
       case 'OrderReadyForDrivers':
       case 'OrderOverdue': {
+        // Push se envía a TODOS los drivers activos con suscripción push,
+        // sin importar `driver_availability.is_available`. El motorizado "No
+        // disponible" recibe el push informativo y puede:
+        //   1) activar disponibilidad manualmente, o
+        //   2) reclamar el pedido directamente desde el deeplink del push
+        //      (`/motorizado/pedidos/{id}/preview` → claimUrgentOrderUseCase
+        //      que tampoco valida availability).
+        // El filtro `is_available=true` SIGUE vigente en la asignación
+        // automática (policy R1-R5 / findAssignmentCandidates) — esto es
+        // solo desacoplar la NOTIFICACIÓN. Sin esto, drivers con sub válida
+        // pero "No disponible" nunca recibían ofertas, dejándolos en un
+        // limbo donde no podían volver a participar sin entrar primero a
+        // la PWA por azar.
         const { data: drivers } = await sb
           .from('drivers')
-          .select('user_id, driver_availability(is_available)')
+          .select('user_id')
           .eq('is_active', true)
         for (const d of drivers ?? []) {
-          if (d.driver_availability?.is_available && d.user_id) {
+          if (d.user_id) {
             out.push({ userId: d.user_id, role: 'driver' })
           }
         }
