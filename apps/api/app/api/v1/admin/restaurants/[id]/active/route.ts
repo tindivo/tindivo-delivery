@@ -2,6 +2,7 @@ import { problemCode } from '@/lib/http/problem'
 import { requireAuth } from '@/lib/http/require-auth'
 import { parseJson } from '@/lib/http/validate'
 import { Restaurants } from '@tindivo/contracts'
+import { createAdminClient } from '@tindivo/supabase'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
@@ -60,6 +61,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) return problemCode('INTERNAL_ERROR', 500, error.message)
   if (!data) return problemCode('RESTAURANT_NOT_FOUND', 404)
+
+  // Al desactivar, invalidar todas las sesiones vivas del usuario dueño
+  // del restaurante. Misma lógica que drivers/active (RPC borra
+  // auth.sessions + revoca refresh_tokens). Best-effort.
+  if (!isActive && data.user_id) {
+    const admin = createAdminClient()
+    const { error: revokeErr } = await admin.rpc('revoke_user_sessions', {
+      p_user_id: data.user_id,
+    })
+    if (revokeErr) {
+      console.warn('[restaurants/active] revoke_user_sessions failed', {
+        restaurantId: id,
+        userId: data.user_id,
+        error: revokeErr.message,
+      })
+    }
+  }
 
   return NextResponse.json(data)
 }

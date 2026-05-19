@@ -2,6 +2,7 @@ import { problemCode } from '@/lib/http/problem'
 import { requireAuth } from '@/lib/http/require-auth'
 import { parseJson } from '@/lib/http/validate'
 import { Drivers } from '@tindivo/contracts'
+import { createAdminClient } from '@tindivo/supabase'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
@@ -60,6 +61,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) return problemCode('INTERNAL_ERROR', 500, error.message)
   if (!data) return problemCode('DRIVER_NOT_FOUND', 404)
+
+  // Al desactivar, invalidar todas las sesiones vivas del usuario para
+  // que no siga operando con su JWT viejo (que sería válido hasta ~1h por
+  // el access_token). La RPC borra auth.sessions y revoca auth.refresh_tokens
+  // del usuario; el próximo refresh falla -> middleware redirige al login.
+  // Best-effort: si la RPC falla, NO bloqueamos el toggle (el refresh
+  // natural del JWT recogerá igualmente is_active=false del hook).
+  if (!isActive && data.user_id) {
+    const admin = createAdminClient()
+    const { error: revokeErr } = await admin.rpc('revoke_user_sessions', {
+      p_user_id: data.user_id,
+    })
+    if (revokeErr) {
+      console.warn('[drivers/active] revoke_user_sessions failed', {
+        driverId: id,
+        userId: data.user_id,
+        error: revokeErr.message,
+      })
+    }
+  }
 
   return NextResponse.json(data)
 }

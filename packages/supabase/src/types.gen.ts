@@ -1676,6 +1676,7 @@ export type Database = {
         Args: { p_key: string; p_scope: string }
         Returns: undefined
       }
+      revoke_user_sessions: { Args: { p_user_id: string }; Returns: number }
       timeout_unaccepted_assignments: { Args: never; Returns: undefined }
       user_is_driver_of_restaurant: {
         Args: { p_restaurant_id: string }

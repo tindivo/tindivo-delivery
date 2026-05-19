@@ -10,7 +10,17 @@ export type Role = 'admin' | 'restaurant' | 'driver' | 'customer' | 'business'
 export type TindivoClaims = {
   user_role?: Role
   user_roles?: Role[]
+  /**
+   * Estado efectivo del usuario para acceder al back-office. AND lógico de:
+   * users.is_active AND (no es driver OR drivers.is_active) AND (no es
+   * restaurant OR restaurants.is_active). Lo calcula el Custom Access Token
+   * Hook en cada emisión/refresh de JWT.
+   */
   is_active?: boolean
+  /** drivers.is_active. Solo presente si el usuario tiene rol driver. */
+  driver_active?: boolean
+  /** restaurants.is_active. Solo presente si el usuario tiene rol restaurant. */
+  restaurant_active?: boolean
   restaurant_id?: string
   driver_id?: string
 }

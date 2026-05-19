@@ -42,6 +42,17 @@ export function LoginForm() {
       await fullSignOut()
       return
     }
+    // `=== false` distingue "perfil desactivado" de "no tiene ese rol" (undef).
+    if (claims.driver_active === false) {
+      setError('Tu cuenta de motorizado está desactivada. Contacta al administrador.')
+      await fullSignOut()
+      return
+    }
+    if (claims.restaurant_active === false) {
+      setError('Tu restaurante está desactivado. Contacta al administrador.')
+      await fullSignOut()
+      return
+    }
     if (!claims.is_active) {
       setError('Tu cuenta está desactivada.')
       await fullSignOut()

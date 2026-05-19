@@ -46,7 +46,9 @@ export async function requireAuth(req: NextRequest, allowedRoles?: Role[]): Prom
 
   const { data: profile } = await admin
     .from('users')
-    .select('id, email, role, roles, is_active')
+    .select(
+      'id, email, role, roles, is_active, drivers:drivers!user_id(id, is_active), restaurants:restaurants!user_id(id, is_active)',
+    )
     .eq('id', user.id)
     .maybeSingle()
 
@@ -56,6 +58,29 @@ export async function requireAuth(req: NextRequest, allowedRoles?: Role[]): Prom
 
   const roles = (profile.roles?.length ? profile.roles : [profile.role]) as Role[]
 
+  // PostgREST devuelve los embeds como array (FK 1:1 vía user_id UNIQUE).
+  const driverProfile = Array.isArray(profile.drivers) ? profile.drivers[0] : profile.drivers
+  const restaurantProfile = Array.isArray(profile.restaurants)
+    ? profile.restaurants[0]
+    : profile.restaurants
+
+  // Regla multi-rol estricta: si tiene rol driver/restaurant pero su perfil
+  // vinculado está inactivo, bloquea aunque también tenga otros roles
+  // (incluido admin). El hook JWT ya emite is_active=false para este caso,
+  // pero verificamos también server-side para JWTs viejos en circulación.
+  if (roles.includes('driver') && driverProfile && !driverProfile.is_active) {
+    return {
+      ok: false,
+      response: problemCode('FORBIDDEN', 403, 'Perfil de motorizado desactivado'),
+    }
+  }
+  if (roles.includes('restaurant') && restaurantProfile && !restaurantProfile.is_active) {
+    return {
+      ok: false,
+      response: problemCode('FORBIDDEN', 403, 'Restaurante desactivado'),
+    }
+  }
+
   if (allowedRoles && !allowedRoles.some((r) => roles.includes(r))) {
     return {
       ok: false,
@@ -63,21 +88,8 @@ export async function requireAuth(req: NextRequest, allowedRoles?: Role[]): Prom
     }
   }
 
-  let restaurantId: string | null = null
-  let driverId: string | null = null
-
-  if (roles.includes('restaurant')) {
-    const { data } = await admin
-      .from('restaurants')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    restaurantId = data?.id ?? null
-  }
-  if (roles.includes('driver')) {
-    const { data } = await admin.from('drivers').select('id').eq('user_id', user.id).maybeSingle()
-    driverId = data?.id ?? null
-  }
+  const restaurantId = restaurantProfile?.id ?? null
+  const driverId = driverProfile?.id ?? null
 
   const supabase = createClientFromJwt(token)
 
