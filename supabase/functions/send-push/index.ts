@@ -657,20 +657,53 @@ async function sendToSubscriptions(
   requestId: string,
   eventType: string,
 ): Promise<number> {
+  // RFC 8030 §5.4: el header `Topic` del request VAPID debe ser <=32 chars
+  // URL-safe Base64. Tags como `cash-${uuid}` (41 chars) hacen que web-push
+  // lance con `statusCode === undefined` ANTES de tocar la red. El catch lo
+  // clasificaba como "transitorio" → consecutive_failures++. En producción
+  // se observó 100% de fallo en CashSettlementDelivered/Confirmed durante
+  // 48h, agotando subs válidas. Truncamos a 32; el slice sigue siendo único
+  // por aggregate_id porque el prefijo + parte del UUID difieren entre
+  // eventos. El `notification.tag` completo (en el payload JSON) NO se
+  // trunca — el Service Worker del cliente lo usa para dedup visual.
+  const safeTopic = tag.slice(0, 32)
+
   let pushed = 0
   for (const sub of subs) {
+    let sentOk = false
+    let webpushErr: { code?: number; msg: string } | null = null
+
     try {
       await webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         JSON.stringify(notification),
-        { TTL: 86400, urgency: 'high', topic: tag },
+        { TTL: 86400, urgency: 'high', topic: safeTopic },
       )
+      sentOk = true
       pushed++
-      console.log(`[send-push:${requestId}] pushed sub=${sub.id.slice(0, 8)} topic=${tag}`)
-      await sb
-        .from('push_subscriptions')
-        .update({ last_success_at: new Date().toISOString(), consecutive_failures: 0 })
-        .eq('id', sub.id)
+      console.log(`[send-push:${requestId}] pushed sub=${sub.id.slice(0, 8)} topic=${safeTopic}`)
+    } catch (err) {
+      const code = (err as { statusCode?: number } | null)?.statusCode
+      const msg = (err as Error | null)?.message ?? 'unknown'
+      webpushErr = { code, msg }
+      console.error(
+        `[send-push:${requestId}] failed sub=${sub.id.slice(0, 8)} code=${code ?? '?'} msg=${msg}`,
+      )
+    }
+
+    if (sentOk) {
+      // UPDATE en su PROPIO try: si falla (race con cron de prune, RLS edge
+      // case), NO afecta la clasificación del push. El push ya fue enviado.
+      try {
+        await sb
+          .from('push_subscriptions')
+          .update({ last_success_at: new Date().toISOString(), consecutive_failures: 0 })
+          .eq('id', sub.id)
+      } catch (updateErr) {
+        console.warn(
+          `[send-push:${requestId}] sub=${sub.id.slice(0, 8)} push enviado pero UPDATE last_success_at falló: ${(updateErr as Error | null)?.message ?? '?'}`,
+        )
+      }
       // Telemetría: log de entrega exitosa para auditar por usuario.
       // Si la tabla todavía no existe (deploy ordenado: Edge Function vs
       // migration), el insert falla silencioso — best-effort.
@@ -687,33 +720,31 @@ async function sendToSubscriptions(
           () => null,
           () => null,
         )
-    } catch (err) {
-      const code = (err as { statusCode?: number } | null)?.statusCode
-      const msg = (err as Error | null)?.message ?? 'unknown'
-      console.error(
-        `[send-push:${requestId}] failed sub=${sub.id.slice(0, 8)} code=${code ?? '?'} msg=${msg}`,
-      )
-      // Telemetría: log de fallo (mismo motivo que arriba — best-effort).
+    } else if (webpushErr) {
+      // Telemetría del fallo del webpush (best-effort).
       await sb
         .from('push_delivery_log')
         .insert({
           subscription_id: sub.id,
           user_id: sub.user_id,
           event_type: eventType,
-          status_code: code ?? null,
-          error_text: msg,
+          status_code: webpushErr.code ?? null,
+          error_text: webpushErr.msg,
         })
         .then(
           () => null,
           () => null,
         )
-      if (code === 410 || code === 404) {
-        // Endpoint muerto — limpiar
+      if (webpushErr.code === 410 || webpushErr.code === 404) {
+        // Endpoint muerto — limpiar.
         await sb.from('push_subscriptions').delete().eq('id', sub.id)
       } else {
-        // Error transitorio: incrementar contador. Purgar al 3er fallo.
+        // Error transitorio (5xx, timeout, validation lib): incrementar
+        // contador. Purgar al 5to fallo (subido desde 3 para tolerar mejor
+        // 5xx esporádicos de FCM/APNs y prevenir agotamiento de subs
+        // válidas por bugs latentes del lado servidor).
         const next = (sub.consecutive_failures ?? 0) + 1
-        if (next >= 3) {
+        if (next >= 5) {
           await sb.from('push_subscriptions').delete().eq('id', sub.id)
         } else {
           await sb
