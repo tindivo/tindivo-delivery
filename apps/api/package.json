@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3001 --turbopack",
-    "build": "next build",
-    "start": "next start -p 3001",
+    "dev": "dotenv -e ../../.env.local -- next dev -p 3001 --turbopack",
+    "build": "dotenv -e ../../.env.local -- next build",
+    "start": "dotenv -e ../../.env.local -- next start -p 3001",
     "lint": "biome lint ./app ./lib",
     "type-check": "tsc --noEmit"
   },

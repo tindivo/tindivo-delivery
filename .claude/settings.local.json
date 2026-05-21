@@ -45,7 +45,11 @@
       "Bash(git push)",
       "Bash(git push origin main)",
       "Bash(pnpm dev)",
-      "Bash(pnpm --filter * dev)"
+      "Bash(pnpm --filter * dev)",
+      "Bash(git cherry-pick *)",
+      "PowerShell(pnpm add *)",
+      "Bash(pnpm -v)",
+      "PowerShell(Get-Command *)"
     ]
   }
 }
