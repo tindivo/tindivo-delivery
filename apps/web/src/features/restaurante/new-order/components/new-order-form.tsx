@@ -4,7 +4,16 @@ import { usePlatformStatus } from '@/features/restaurante/shared/hooks/use-platf
 import { useIdempotencyKey } from '@/lib/idempotency/use-idempotency-key'
 import { useIsDesktop } from '@/shared/hooks/use-is-desktop'
 import type { Orders } from '@tindivo/contracts'
-import { BottomActionBar, Button, GlassTopBar, Icon, IconButton, MoneyInput, cn } from '@tindivo/ui'
+import {
+  BottomActionBar,
+  Button,
+  GlassTopBar,
+  Icon,
+  IconButton,
+  MoneyInput,
+  PhoneInputPe,
+  cn,
+} from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCreateOrder } from '../hooks/use-create-order'
@@ -81,6 +90,16 @@ export function NewOrderForm() {
   const [yapePart, setYapePart] = useState<string>('')
   const [cashPart, setCashPart] = useState<string>('')
   const [clientName, setClientName] = useState<string>('')
+  // Datos del cliente que el restaurante puede pre-llenar opcionalmente. Si
+  // los conoce al recibir el pedido por teléfono, los pasamos al motorizado
+  // para que llegue al local con la info ya cargada. Si no, el driver los
+  // llenará después como siempre.
+  const [clientPhone, setClientPhone] = useState<string>('')
+  const [deliveryReference, setDeliveryReference] = useState<string>('')
+  const PHONE_PE_REGEX = /^9\d{8}$/
+  const clientPhoneDigits = clientPhone.replace(/\D/g, '').slice(0, 9)
+  const clientPhoneValid = clientPhoneDigits === '' || PHONE_PE_REGEX.test(clientPhoneDigits)
+  const deliveryReferenceTrim = deliveryReference.trim()
 
   const carouselRef = useRef<HTMLDivElement>(null)
   const isDesktop = useIsDesktop()
@@ -112,7 +131,10 @@ export function NewOrderForm() {
     (!needsAmount || amountNum > 0) &&
     (payment !== 'pending_cash' || paysWithNum >= amountNum) &&
     (payment !== 'pending_mixed' ||
-      (splitBothPositive && splitSumsCorrect && paysWithNum >= cashPartNum))
+      (splitBothPositive && splitSumsCorrect && paysWithNum >= cashPartNum)) &&
+    // El teléfono es opcional, pero si el restaurante empezó a escribirlo
+    // debe ser válido — no queremos números a medias en BD.
+    clientPhoneValid
 
   useEffect(() => {
     const idx = PREP_MINUTES.indexOf(prepMinutes)
@@ -134,6 +156,8 @@ export function NewOrderForm() {
       clientPaysWith:
         payment === 'pending_cash' || payment === 'pending_mixed' ? paysWithNum : undefined,
       clientName: clientName.trim() || undefined,
+      clientPhone: clientPhoneDigits || undefined,
+      deliveryReference: deliveryReferenceTrim || undefined,
     }
     createOrder.mutate(
       { body, idempotencyKey: idem.key },
@@ -329,16 +353,12 @@ export function NewOrderForm() {
           </div>
         </section>
 
-        {/* Nombre del cliente (opcional) */}
+        {/* Nombre del cliente — sin badge "opcional". El backend lo acepta vacío,
+            pero la UI no insinúa opcionalidad para favorecer que el restaurant lo llene. */}
         <section className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <label htmlFor="clientName" className="text-sm font-semibold text-on-surface">
-              Nombre del cliente
-            </label>
-            <span className="text-[10px] font-bold tracking-wider uppercase text-on-surface-variant/60">
-              opcional
-            </span>
-          </div>
+          <label htmlFor="clientName" className="text-sm font-semibold text-on-surface block px-1">
+            Nombre del cliente
+          </label>
           <input
             id="clientName"
             type="text"
@@ -356,6 +376,59 @@ export function NewOrderForm() {
               boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
             }}
           />
+        </section>
+
+        {/* Teléfono del cliente — siempre visible, mismo estilo que Nombre.
+            En backend sigue siendo opcional; el motorizado puede modificarlo
+            durante waiting_at_restaurant si el restaurant lo dejó vacío o
+            necesita corregir. */}
+        <section className="space-y-3">
+          <label htmlFor="clientPhone" className="text-sm font-semibold text-on-surface block px-1">
+            Teléfono del cliente
+          </label>
+          <PhoneInputPe
+            id="clientPhone"
+            value={clientPhone}
+            onChange={(e) => setClientPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+            autoComplete="tel"
+            aria-invalid={!clientPhoneValid}
+          />
+          {!clientPhoneValid && (
+            <p className="text-[11px] font-semibold text-red-600 px-1">
+              Debe empezar en 9 y tener 9 dígitos.
+            </p>
+          )}
+        </section>
+
+        {/* Dirección o referencia — siempre visible. El contador X/500 guía al
+            restaurant cuando empieza a escribir sin sugerir opcionalidad. */}
+        <section className="space-y-3">
+          <label
+            htmlFor="deliveryReference"
+            className="text-sm font-semibold text-on-surface block px-1"
+          >
+            Dirección o referencia
+          </label>
+          <textarea
+            id="deliveryReference"
+            value={deliveryReference}
+            onChange={(e) => setDeliveryReference(e.target.value.slice(0, 500))}
+            placeholder="Ej: Av. Paseo de la República 3500, dpto 502, frente al parque"
+            rows={2}
+            maxLength={500}
+            className="w-full px-4 py-3 rounded-[20px] text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow resize-none"
+            style={{
+              background: 'rgba(255, 255, 255, 0.85)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(225, 191, 181, 0.35)',
+              boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
+            }}
+          />
+          {deliveryReferenceTrim.length > 0 && (
+            <p className="text-[10px] text-on-surface-variant px-1">
+              {deliveryReferenceTrim.length}/500
+            </p>
+          )}
         </section>
 
         {/* Payment method */}

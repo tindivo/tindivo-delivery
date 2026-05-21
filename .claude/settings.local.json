@@ -41,7 +41,11 @@
       "Bash(git add *)",
       "Bash(git commit -m 'fix\\(pwa\\): register Service Worker explicitly so Chrome detects PWA as installable *)",
       "PowerShell(Stop-Process *)",
-      "PowerShell(Get-NetTCPConnection *)"
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(git push)",
+      "Bash(git push origin main)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm --filter * dev)"
     ]
   }
 }

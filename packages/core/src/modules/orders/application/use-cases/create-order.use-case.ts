@@ -28,6 +28,14 @@ export type CreateOrderCommand = {
    * que el restaurante acepte y defina prep_time real. Default 'restaurant_pwa'.
    */
   source?: OrderSource
+  /**
+   * Datos del cliente que el restaurante puede pre-llenar al crear el pedido.
+   * El motorizado los ve pre-poblados en su form de waiting_at_restaurant y
+   * puede modificarlos. Opcionales: si el restaurante no los conoce, el
+   * driver los llenará después como siempre.
+   */
+  clientPhone?: string
+  deliveryReference?: string
 }
 
 export type CreateOrderResult = {
@@ -66,6 +74,8 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
         clientName: cmd.clientName,
         notes: cmd.notes,
         source: cmd.source,
+        clientPhone: cmd.clientPhone,
+        deliveryReference: cmd.deliveryReference,
         now: this.clock.now(),
       })
 

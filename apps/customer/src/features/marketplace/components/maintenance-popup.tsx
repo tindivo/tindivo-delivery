@@ -26,9 +26,7 @@ export function MaintenancePopup() {
             <Icon name="construction" size={24} filled />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black uppercase tracking-wider text-amber-700">
-              Aviso
-            </p>
+            <p className="text-[11px] font-black uppercase tracking-wider text-amber-700">Aviso</p>
             <h2
               id="maintenance-title"
               className="mt-1 font-black text-lg text-on-surface leading-tight"
@@ -36,9 +34,9 @@ export function MaintenancePopup() {
               Tindivo está en mantenimiento
             </h2>
             <p className="mt-2 text-sm font-semibold text-on-surface-variant">
-              Estamos ajustando la plataforma. Por ahora no es posible navegar el catálogo
-              ni hacer pedidos. Vuelve a intentarlo más tarde — te avisaremos cuando todo
-              esté disponible nuevamente.
+              Estamos ajustando la plataforma. Por ahora no es posible navegar el catálogo ni hacer
+              pedidos. Vuelve a intentarlo más tarde — te avisaremos cuando todo esté disponible
+              nuevamente.
             </p>
           </div>
         </div>

@@ -129,6 +129,7 @@ export class OrderPickedUp extends BaseDomainEvent {
     deliveryCoordinates: { lat: number; lng: number } | null
     deliveryReference: string | null
     occupancySlots: number
+    deliveryDistanceBand: 'near' | 'medium' | 'far'
   }
 
   constructor(payload: OrderPickedUp['payload'], metadata?: EventMetadata) {

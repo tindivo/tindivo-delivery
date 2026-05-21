@@ -29,6 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     orderId: id,
     driverId: auth.auth.driverId,
     occupancySlots: body.data.occupancySlots,
+    deliveryDistanceBand: body.data.deliveryDistanceBand,
   })
 
   if (result.isFailure) return problem(result.error)

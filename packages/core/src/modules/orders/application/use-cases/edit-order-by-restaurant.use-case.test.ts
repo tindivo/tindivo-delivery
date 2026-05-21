@@ -148,7 +148,10 @@ describe('EditOrderByRestaurantUseCase', () => {
     // saveCustomerData requiere phone + (coords or reference)
     order.saveCustomerData('999111222', null, null, 'Av. Test 123', NOW)
     const { OccupancySlots: Slots } = await import('../../domain/value-objects/occupancy-slots')
-    order.markPickedUp(Slots.default(), NOW)
+    const { DeliveryDistanceBand } = await import(
+      '../../domain/value-objects/delivery-distance-band'
+    )
+    order.markPickedUp(Slots.default(), DeliveryDistanceBand.of('near'), NOW)
     order.markDelivered(NOW)
     order.pullEvents()
 

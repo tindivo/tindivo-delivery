@@ -30,11 +30,10 @@ export function WhatsappCheckoutSheet({
   onQuantity,
   onSent,
 }: Props) {
-  const message = useMemo(() => buildMessage(restaurant.name, cart, subtotal), [
-    restaurant.name,
-    cart,
-    subtotal,
-  ])
+  const message = useMemo(
+    () => buildMessage(restaurant.name, cart, subtotal),
+    [restaurant.name, cart, subtotal],
+  )
   const waLink = `https://wa.me/51${restaurant.phone}?text=${encodeURIComponent(message)}`
 
   function handleSend() {
@@ -118,8 +117,7 @@ export function WhatsappCheckoutSheet({
               <span
                 className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-[0_10px_26px_-12px_rgba(16,185,129,0.65)]"
                 style={{
-                  background:
-                    'linear-gradient(135deg, #25D366 0%, #128C7E 60%, #075E54 100%)',
+                  background: 'linear-gradient(135deg, #25D366 0%, #128C7E 60%, #075E54 100%)',
                 }}
               >
                 <Icon name="chat" size={22} filled />
@@ -135,8 +133,12 @@ export function WhatsappCheckoutSheet({
           </section>
 
           <section className="customer-panel-soft rounded-[28px] p-4">
-            <p className="text-xs font-black uppercase text-on-surface-variant">Mensaje que envias</p>
-            <pre className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-on-surface">{message}</pre>
+            <p className="text-xs font-black uppercase text-on-surface-variant">
+              Mensaje que envias
+            </p>
+            <pre className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-on-surface">
+              {message}
+            </pre>
           </section>
         </div>
 
@@ -146,8 +148,7 @@ export function WhatsappCheckoutSheet({
             className="w-full"
             onClick={handleSend}
             style={{
-              background:
-                'linear-gradient(135deg, #25D366 0%, #128C7E 60%, #075E54 100%)',
+              background: 'linear-gradient(135deg, #25D366 0%, #128C7E 60%, #075E54 100%)',
               color: 'white',
             }}
           >
@@ -161,11 +162,7 @@ export function WhatsappCheckoutSheet({
   )
 }
 
-function buildMessage(
-  restaurantName: string,
-  cart: CartItem[],
-  subtotal: number,
-): string {
+function buildMessage(restaurantName: string, cart: CartItem[], subtotal: number): string {
   const lines: string[] = []
   lines.push(`Hola ${restaurantName}, quiero hacer este pedido por Tindivo:`)
   lines.push('')
@@ -180,7 +177,9 @@ function buildMessage(
           .filter(Boolean)
           .join(', ')})`
       : ''
-    lines.push(`- ${item.quantity}x ${item.menuItem.name}${mods} — S/ ${lineTotal(item).toFixed(2)}`)
+    lines.push(
+      `- ${item.quantity}x ${item.menuItem.name}${mods} — S/ ${lineTotal(item).toFixed(2)}`,
+    )
     if (item.notes.trim()) lines.push(`   Nota: ${item.notes.trim()}`)
   }
   lines.push('')

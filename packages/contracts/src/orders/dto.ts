@@ -12,6 +12,15 @@ import { CancellationReason, OrderStatus, PaymentStatus, VehicleType } from '../
 
 /* ─────────────── Request DTOs ─────────────── */
 
+/**
+ * Tres bandas de distancia que el motorizado declara al recoger el pedido.
+ * Tindivo cobra comisiones diferenciadas según la banda. Es declarativo:
+ * confiamos en el juicio del driver (considera tráfico, ruta real, etc.).
+ */
+export const DELIVERY_DISTANCE_BANDS = ['near', 'medium', 'far'] as const
+export const DeliveryDistanceBand = z.enum(DELIVERY_DISTANCE_BANDS)
+export type DeliveryDistanceBand = z.infer<typeof DeliveryDistanceBand>
+
 export const CreateOrderRequest = z
   .object({
     prepMinutes: z
@@ -27,6 +36,14 @@ export const CreateOrderRequest = z
     clientPaysWith: MoneyPenSchema.optional(),
     clientName: z.string().trim().min(1).max(80).optional(),
     notes: z.string().max(300).optional(),
+    /**
+     * Datos del cliente que el restaurante puede pre-llenar al crear el
+     * pedido. Si los manda, el motorizado los ve pre-poblados en el form de
+     * waiting_at_restaurant y puede aceptarlos o modificarlos. Ambos
+     * opcionales: el restaurante no siempre los conoce al momento.
+     */
+    clientPhone: PhonePeSchema.optional(),
+    deliveryReference: z.string().trim().min(1).max(500).optional(),
   })
   .refine(
     (v) =>
@@ -302,12 +319,15 @@ export const ListPeersResponse = z.object({
 export type ListPeersResponse = z.infer<typeof ListPeersResponse>
 
 /**
- * Body para POST /driver/orders/:id/picked-up. El driver declara la
- * ocupación del pedido en su mochila (1..N, default 1, max configurable
- * por admin via assignment_rules.maxOccupancySlotsPerOrder).
+ * Body para POST /driver/orders/:id/picked-up. El driver declara:
+ *   - occupancySlots: ocupación en su mochila (1..N, default 1, max
+ *     configurable por admin via assignment_rules.maxOccupancySlotsPerOrder).
+ *   - deliveryDistanceBand: qué tan lejos está el cliente (near/medium/far).
+ *     Obligatorio para diferenciar comisiones al restaurante.
  */
 export const MarkPickedUpRequest = z.object({
   occupancySlots: z.number().int().min(1).max(10),
+  deliveryDistanceBand: DeliveryDistanceBand,
 })
 export type MarkPickedUpRequest = z.infer<typeof MarkPickedUpRequest>
 

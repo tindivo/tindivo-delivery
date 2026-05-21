@@ -522,9 +522,7 @@ function MenuItemCard({
               </span>
             )}
           </div>
-          {upload.error && (
-            <p className="mt-2 text-xs font-bold text-red-700">{upload.error}</p>
-          )}
+          {upload.error && <p className="mt-2 text-xs font-bold text-red-700">{upload.error}</p>}
         </div>
       </div>
 
@@ -546,11 +544,7 @@ function MenuItemCard({
         <div className="space-y-3 border-t border-outline-variant/15 bg-white/30 p-4">
           {groups.length === 0 && !showAddGroup ? (
             <div className="rounded-[22px] border border-dashed border-outline-variant/40 bg-white/40 p-5 text-center">
-              <Icon
-                name="tune"
-                size={28}
-                className="mx-auto text-on-surface-variant/60"
-              />
+              <Icon name="tune" size={28} className="mx-auto text-on-surface-variant/60" />
               <p className="mt-2 text-sm font-black text-on-surface">
                 Aún no tiene grupos de opciones
               </p>
@@ -619,10 +613,7 @@ function AddGroupForm({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!name.trim()) return
-    const { minSelected, maxSelected } = limitsToMinMax(
-      mode,
-      Number.parseInt(max || '3', 10) || 3,
-    )
+    const { minSelected, maxSelected } = limitsToMinMax(mode, Number.parseInt(max || '3', 10) || 3)
     await createGroup.mutateAsync({
       menuItemId: itemId,
       name: name.trim(),
@@ -742,10 +733,7 @@ function ModifierGroupBlock({ group, options }: { group: MenuGroup; options: Men
   async function handleSave(event: React.FormEvent) {
     event.preventDefault()
     if (!name.trim()) return
-    const { minSelected, maxSelected } = limitsToMinMax(
-      mode,
-      Number.parseInt(max || '3', 10) || 3,
-    )
+    const { minSelected, maxSelected } = limitsToMinMax(mode, Number.parseInt(max || '3', 10) || 3)
     await updateGroup.mutateAsync({
       id: group.id,
       body: { name: name.trim(), minSelected, maxSelected },
@@ -901,9 +889,7 @@ function ModifierGroupBlock({ group, options }: { group: MenuGroup; options: Men
               ))}
             </ul>
           ) : (
-            <p className="text-xs font-semibold text-on-surface-variant/70">
-              Sin opciones todavía
-            </p>
+            <p className="text-xs font-semibold text-on-surface-variant/70">Sin opciones todavía</p>
           )}
 
           {showAddOption ? (
@@ -1012,9 +998,7 @@ function OptionRow({ option }: { option: MenuOption }) {
   if (confirmDelete) {
     return (
       <li className="flex items-center justify-between gap-2 rounded-[14px] bg-red-50 px-3 py-2">
-        <p className="truncate text-xs font-black text-red-900">
-          ¿Eliminar "{option.name}"?
-        </p>
+        <p className="truncate text-xs font-black text-red-900">¿Eliminar "{option.name}"?</p>
         <div className="flex shrink-0 gap-1">
           <button
             type="button"

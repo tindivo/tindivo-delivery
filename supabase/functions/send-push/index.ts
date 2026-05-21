@@ -472,10 +472,7 @@ async function resolveRecipients(
         // pero "No disponible" nunca recibían ofertas, dejándolos en un
         // limbo donde no podían volver a participar sin entrar primero a
         // la PWA por azar.
-        const { data: drivers } = await sb
-          .from('drivers')
-          .select('user_id')
-          .eq('is_active', true)
+        const { data: drivers } = await sb.from('drivers').select('user_id').eq('is_active', true)
         for (const d of drivers ?? []) {
           if (d.user_id) {
             out.push({ userId: d.user_id, role: 'driver' })

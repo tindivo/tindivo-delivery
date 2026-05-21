@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -853,6 +853,9 @@ export type Database = {
           delivered_at: string | null
           delivery_address: string | null
           delivery_coordinates: unknown
+          delivery_distance_band:
+            | Database["public"]["Enums"]["delivery_distance_band"]
+            | null
           delivery_fee: number
           delivery_lat: number | null
           delivery_lng: number | null
@@ -915,6 +918,9 @@ export type Database = {
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates?: unknown
+          delivery_distance_band?:
+            | Database["public"]["Enums"]["delivery_distance_band"]
+            | null
           delivery_fee: number
           delivery_lat?: number | null
           delivery_lng?: number | null
@@ -977,6 +983,9 @@ export type Database = {
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_coordinates?: unknown
+          delivery_distance_band?:
+            | Database["public"]["Enums"]["delivery_distance_band"]
+            | null
           delivery_fee?: number
           delivery_lat?: number | null
           delivery_lng?: number | null
@@ -1553,6 +1562,9 @@ export type Database = {
           delivered_at: string | null
           delivery_address: string | null
           delivery_coordinates: unknown
+          delivery_distance_band:
+            | Database["public"]["Enums"]["delivery_distance_band"]
+            | null
           delivery_fee: number
           delivery_lat: number | null
           delivery_lng: number | null
@@ -1624,6 +1636,9 @@ export type Database = {
           delivered_at: string | null
           delivery_address: string | null
           delivery_coordinates: unknown
+          delivery_distance_band:
+            | Database["public"]["Enums"]["delivery_distance_band"]
+            | null
           delivery_fee: number
           delivery_lat: number | null
           delivery_lng: number | null
@@ -1694,6 +1709,7 @@ export type Database = {
         | "confirmed"
         | "disputed"
         | "resolved"
+      delivery_distance_band: "near" | "medium" | "far"
       domain_event_status: "pending" | "published" | "failed"
       order_source: "restaurant_pwa" | "customer_pwa"
       order_status:
@@ -1847,6 +1863,7 @@ export const Constants = {
         "disputed",
         "resolved",
       ],
+      delivery_distance_band: ["near", "medium", "far"],
       domain_event_status: ["pending", "published", "failed"],
       order_source: ["restaurant_pwa", "customer_pwa"],
       order_status: [

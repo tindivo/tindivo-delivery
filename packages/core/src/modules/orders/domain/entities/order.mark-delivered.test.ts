@@ -54,6 +54,7 @@ function pickedUpOrder(payment: PaymentIntent): Order {
     prepExtensionMinutes: null,
     readyEarlyAt: null,
     occupancySlots: OccupancySlots.default(),
+    deliveryDistanceBand: null,
     cashOwedAtDelivery: null,
     urgentSince: null,
     createdAt: NOW,

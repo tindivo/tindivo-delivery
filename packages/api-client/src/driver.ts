@@ -43,6 +43,7 @@ export function driverApi(client: ApiClient) {
     getProfile: () => client.get<DriverProfile>('driver/profile'),
     toggleAvailability: (body: { isAvailable: boolean }) =>
       client.patch<void>('driver/availability', body),
+    getSupportPhone: () => client.get<{ phone: string }>('driver/support-phone'),
     getHistory: () => client.get<{ items: unknown[] }>('driver/history'),
     getCashSummary: () => client.get<{ items: CashSummaryItem[] }>('driver/cash-summary'),
     deliverCash: (restaurantId: string, body: { amount: number }) =>

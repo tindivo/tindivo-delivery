@@ -1,6 +1,7 @@
 import type { Tables } from '@tindivo/supabase'
 import { Order, type OrderProps } from '../domain/entities/order'
 import { Coordinates } from '../domain/value-objects/coordinates'
+import { DeliveryDistanceBand } from '../domain/value-objects/delivery-distance-band'
 import { DriverId } from '../domain/value-objects/driver-id'
 import { Money } from '../domain/value-objects/money'
 import { OccupancySlots } from '../domain/value-objects/occupancy-slots'
@@ -87,6 +88,9 @@ export const OrderMapper = {
           : null,
       readyEarlyAt: row.ready_early_at ? new Date(row.ready_early_at) : null,
       occupancySlots: OccupancySlots.of(row.occupancy_slots ?? 1),
+      deliveryDistanceBand: row.delivery_distance_band
+        ? DeliveryDistanceBand.of(row.delivery_distance_band)
+        : null,
       cashOwedAtDelivery:
         row.cash_owed_at_delivery != null ? Money.pen(Number(row.cash_owed_at_delivery)) : null,
       urgentSince: row.urgent_since ? new Date(row.urgent_since) : null,
@@ -120,6 +124,8 @@ export const OrderMapper = {
       client_paid_exact_at_delivery: p.payment.clientPaidExactAtDelivery,
       cash_owed_at_delivery: p.cashOwedAtDelivery?.amount ?? null,
       client_name: p.clientName,
+      client_phone: p.clientPhone,
+      delivery_reference: p.deliveryReference,
       notes: p.notes,
       extension_used: p.extensionUsed,
       ready_early_used: p.readyEarlyUsed,
@@ -162,6 +168,7 @@ export const OrderMapper = {
       prep_extension_minutes: p.prepExtensionMinutes,
       ready_early_at: p.readyEarlyAt?.toISOString() ?? null,
       occupancy_slots: p.occupancySlots.value,
+      delivery_distance_band: p.deliveryDistanceBand?.value ?? null,
       urgent_since: p.urgentSince?.toISOString() ?? null,
       payment_status: p.payment.status,
       order_amount: p.payment.orderAmount.amount,

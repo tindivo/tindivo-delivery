@@ -83,8 +83,7 @@ export function WelcomeToast() {
                 transition={{ type: 'spring', damping: 14, stiffness: 240, delay: 0.05 }}
                 className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] text-white shadow-[0_12px_30px_-14px_rgba(171,53,0,0.7)]"
                 style={{
-                  background:
-                    'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)',
+                  background: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)',
                 }}
               >
                 <Icon name={isBusiness ? 'storefront' : 'celebration'} size={22} filled />

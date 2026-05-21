@@ -4,24 +4,13 @@ import { useNow } from '@/shared/hooks/use-now'
 import { ApiError } from '@tindivo/api-client'
 import type { Orders } from '@tindivo/contracts'
 import { buildWaMeUrl, normalizeToE164Pe } from '@tindivo/core'
-import {
-  BottomActionBar,
-  Button,
-  ColorDot,
-  ElapsedTimer,
-  GlassTopBar,
-  Icon,
-  IconButton,
-  StatusChip,
-  Timeline,
-  type TimelineStep,
-  UrgencyBadge,
-} from '@tindivo/ui'
+import { BottomActionBar, Button, ColorDot, GlassTopBar, Icon, IconButton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { RejectAssignmentSheet } from '../../available-orders/components/reject-assignment-sheet'
 import { useAcceptOrder } from '../../available-orders/hooks/use-accept-order'
 import { useRejectOrder } from '../../available-orders/hooks/use-reject-order'
+import { useDriverSupportPhone } from '../hooks/use-driver-support-phone'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
 import { useMarkDelivered } from '../hooks/use-mark-delivered'
 import { useMarkPickedUp } from '../hooks/use-mark-picked-up'
@@ -56,8 +45,9 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const [confirmPickupOpen, setConfirmPickupOpen] = useState(false)
   const [markDeliveredOpen, setMarkDeliveredOpen] = useState(false)
   const [pickupError, setPickupError] = useState<string | null>(null)
-  const [timelineOpen, setTimelineOpen] = useState(false)
+  const [paymentDetailsOpen, setPaymentDetailsOpen] = useState(false)
   const receivedFiredRef = useRef(false)
+  const supportPhoneQuery = useDriverSupportPhone()
 
   // Estado del form mientras el driver edita; vive solo en memoria. La fuente
   // de verdad son los datos persistidos en BD (order.client_phone +
@@ -113,48 +103,6 @@ export function ActiveOrderDetail({ orderId }: Props) {
     return { lat, lng }
   }, [order])
 
-  const steps = useMemo<TimelineStep[]>(() => {
-    if (!order) return []
-    const s = order.status as string
-    return [
-      {
-        key: 'accepted',
-        label: 'Por aceptar',
-        icon: 'assignment_turned_in',
-        done: s !== 'waiting_driver',
-        current: s === 'waiting_driver',
-      },
-      {
-        key: 'heading',
-        label: 'En camino al local',
-        icon: 'two_wheeler',
-        done: ['waiting_at_restaurant', 'picked_up', 'delivered'].includes(s),
-        current: s === 'heading_to_restaurant',
-      },
-      {
-        key: 'at_restaurant',
-        label: 'Recogiendo pedido',
-        icon: 'restaurant',
-        done: ['picked_up', 'delivered'].includes(s),
-        current: s === 'waiting_at_restaurant',
-      },
-      {
-        key: 'picked_up',
-        label: 'En camino al cliente',
-        icon: 'delivery_dining',
-        done: s === 'delivered',
-        current: s === 'picked_up',
-      },
-      {
-        key: 'delivered',
-        label: 'Entregado',
-        icon: 'check_circle',
-        done: s === 'delivered',
-        current: s === 'delivered',
-      },
-    ]
-  }, [order])
-
   if (isLoading || !order) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -187,12 +135,6 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const remainingMinutes = Math.floor(remainingMs / 60_000)
   const remainingSeconds = Math.floor((remainingMs % 60_000) / 1_000)
   const remainingLabel = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`
-  const restaurantWaUrl: string | null = restaurant.phone
-    ? buildWaMeUrl(
-        normalizeToE164Pe(restaurant.phone) ?? `51${restaurant.phone}`,
-        `Hola, soy el motorizado del pedido #${raw.short_id}.`,
-      )
-    : null
   const clientWaUrl: string | null = clientPhone
     ? buildWaMeUrl(
         normalizeToE164Pe(clientPhone) ?? `51${clientPhone}`,
@@ -204,11 +146,12 @@ export function ActiveOrderDetail({ orderId }: Props) {
     isEditingCustomerData,
     prepReady,
   })
+  const supportPhone = supportPhoneQuery.data ? supportPhoneQuery.data.phone : '906550166'
 
   return (
     <div
       className="min-h-screen relative"
-      style={{ paddingBottom: 'calc(220px + env(safe-area-inset-bottom))' }}
+      style={{ paddingBottom: 'calc(190px + env(safe-area-inset-bottom))' }}
     >
       <div
         aria-hidden="true"
@@ -236,51 +179,51 @@ export function ActiveOrderDetail({ orderId }: Props) {
         }
       />
 
-      <main className="pt-24 px-4 max-w-md mx-auto space-y-5">
-        {/* Header del pedido */}
-        <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/20 shadow-[0_12px_36px_-24px_rgba(18,38,32,0.45)]">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <ColorDot color={restaurant.accent_color ?? 'ab3500'} />
-                <h1 className="font-black text-xl leading-tight text-on-surface">
-                  {restaurant.name}
-                </h1>
-              </div>
-              <p className="text-xs text-on-surface-variant font-mono">#{raw.short_id}</p>
+      <main className="pt-24 px-4 max-w-md mx-auto space-y-3">
+        {/* PhaseHero — SIEMPRE primera card en cada pantalla. El driver lee la
+            fase y la métrica accionable antes que nada más. Resto del layout
+            (identidad, cobro, ruta) se subordina visualmente. */}
+        <PhaseHero
+          status={status}
+          phase={currentPhase}
+          acceptedAt={raw.accepted_at ?? null}
+          now={now}
+          prepReady={prepReady}
+          remainingLabel={remainingLabel}
+          isEditingCustomerData={isEditingCustomerData}
+          paymentStatus={raw.payment_status}
+          orderAmount={Number(raw.order_amount)}
+          yapeAmount={raw.yape_amount != null ? Number(raw.yape_amount) : null}
+          cashAmount={raw.cash_amount != null ? Number(raw.cash_amount) : null}
+          clientPaysWith={raw.client_pays_with != null ? Number(raw.client_pays_with) : null}
+          changeToGive={raw.change_to_give != null ? Number(raw.change_to_give) : null}
+        />
+
+        {/* Header de identificación — 1 línea densa: restaurante + cliente + shortId.
+            Después del PhaseHero, sirve solo como anclaje contextual. */}
+        <section className="bg-surface-container-lowest rounded-2xl px-4 py-2.5 border border-outline-variant/20">
+          <div className="flex items-center gap-2 min-w-0">
+            <ColorDot color={restaurant.accent_color ?? 'ab3500'} />
+            <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
+              <h1 className="font-black text-sm leading-tight text-on-surface truncate">
+                {restaurant.name}
+              </h1>
               {raw.client_name && (
-                <p className="text-xs text-on-surface mt-0.5 font-semibold">
-                  Cliente: {raw.client_name}
-                </p>
+                <span className="text-xs text-on-surface-variant truncate">
+                  · {raw.client_name}
+                </span>
               )}
             </div>
-            <StatusChip status={status as never} />
-          </div>
-          <div className="mt-4 flex items-center gap-4 text-sm">
-            {Number(raw.order_amount) === 0 ? (
-              <div className="flex items-center gap-1.5 font-bold" style={{ color: '#059669' }}>
-                <Icon name="verified" size={16} filled />
-                <span>No cobrar · Solo entregar</span>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-1.5 text-on-surface-variant">
-                  <Icon name="payments" size={16} />
-                  <span className="font-semibold text-on-surface">
-                    S/ {Number(raw.order_amount).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-on-surface-variant">
-                  <Icon name="receipt" size={16} />
-                  <span>{paymentLabel(raw.payment_status)}</span>
-                </div>
-              </>
-            )}
+            <span className="shrink-0 text-[11px] font-black font-mono text-on-surface-variant">
+              #{raw.short_id}
+            </span>
           </div>
         </section>
 
-        {/* Breakdown de cobro — qué pagar, con qué paga el cliente y vuelto a dar */}
-        {Number(raw.order_amount) > 0 && (
+        {/* Resumen de cobro pre-picked_up — el driver lo necesita ANTES de salir
+            para preparar el vuelto en su bolsa. En picked_up se oculta porque la
+            info migra al PhaseHero como métrica principal. */}
+        {Number(raw.order_amount) > 0 && status !== 'picked_up' && (
           <PaymentBreakdown
             amount={Number(raw.order_amount)}
             paymentStatus={raw.payment_status}
@@ -288,6 +231,8 @@ export function ActiveOrderDetail({ orderId }: Props) {
             cashAmount={raw.cash_amount != null ? Number(raw.cash_amount) : null}
             clientPaysWith={raw.client_pays_with != null ? Number(raw.client_pays_with) : null}
             changeToGive={raw.change_to_give != null ? Number(raw.change_to_give) : null}
+            expanded={paymentDetailsOpen}
+            onToggle={() => setPaymentDetailsOpen((value) => !value)}
           />
         )}
 
@@ -305,43 +250,22 @@ export function ActiveOrderDetail({ orderId }: Props) {
           </button>
         )}
 
-        {/* Cronómetro: arranca en 0:00 al aceptar y crece hasta entrega.
-            Si aún hay countdown del prep_time vigente, se muestra al lado. */}
-        <section className="flex items-stretch gap-2">
-          {raw.accepted_at && (
-            <ElapsedTimer
-              createdAt={raw.accepted_at}
-              now={now}
-              withLabel
-              label="TIEMPO DE ENTREGA"
-              className="flex-1"
-            />
-          )}
-          {raw.estimated_ready_at &&
-            ['heading_to_restaurant', 'waiting_at_restaurant'].includes(status) && (
-              <UrgencyBadge
-                estimatedReadyAt={raw.estimated_ready_at}
-                now={now}
-                variant="hero"
-                className="flex-1"
-              />
-            )}
-        </section>
-
-        <CurrentPhaseCard
-          phase={currentPhase}
-          steps={steps}
-          open={timelineOpen}
-          onToggle={() => setTimelineOpen((value) => !value)}
-        />
-
         {/* Restaurante: dirección + navegar */}
         {['waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant'].includes(status) && (
-          <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
-            <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-              Recoger pedido en
-            </h3>
-            <p className="font-semibold">{restaurant.address}</p>
+          <section className="bg-surface-container-lowest rounded-[24px] p-4 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)]">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-fixed text-primary">
+                <Icon name="storefront" size={20} filled />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+                  Recoger en el local
+                </h3>
+                <p className="mt-0.5 text-sm font-semibold leading-snug text-on-surface">
+                  {restaurant.address}
+                </p>
+              </div>
+            </div>
           </section>
         )}
 
@@ -352,35 +276,6 @@ export function ActiveOrderDetail({ orderId }: Props) {
             - Si ya hay datos guardados: muestra resumen + countdown del
               tiempo de prep. El botón "Ya recogí el pedido" transiciona a
               picked_up (con confirmación si aún no llegó a cero). */}
-        {status === 'waiting_driver' && (
-          <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
-            <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-              Pedido asignado a ti
-            </h3>
-            <div
-              className="rounded-2xl p-5 text-center"
-              style={{
-                background: 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
-                color: '#ffffff',
-                boxShadow: '0 12px 28px -10px rgba(242, 98, 65, 0.38)',
-              }}
-            >
-              <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85 mb-1">
-                Listo en
-              </div>
-              <div
-                className="bleed-text text-5xl font-black font-mono tabular-nums leading-none"
-                style={{ letterSpacing: '-0.02em' }}
-              >
-                {remainingLabel}
-              </div>
-              <div className="text-[11px] opacity-90 mt-2">
-                Acepta para reservar el pedido y salir al local.
-              </div>
-            </div>
-          </section>
-        )}
-
         {status === 'waiting_at_restaurant' && isEditingCustomerData && (
           <CustomerDataForm
             phone={phoneDraft}
@@ -393,11 +288,13 @@ export function ActiveOrderDetail({ orderId }: Props) {
           />
         )}
 
+        {/* Resumen del cliente cuando ya hay datos guardados. El countdown grande
+            vive en PhaseHero — aquí solo memoria de los datos persistidos. */}
         {status === 'waiting_at_restaurant' && !isEditingCustomerData && hasCustomerData && (
-          <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
+          <section className="bg-surface-container-lowest rounded-[24px] p-4 border border-outline-variant/15 space-y-2">
             <header className="flex items-center justify-between">
-              <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-                {prepReady ? 'Pedido listo' : 'Tiempo de preparación'}
+              <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
+                Datos del cliente
               </h3>
               <button
                 type="button"
@@ -405,41 +302,13 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 className="inline-flex items-center gap-1 text-xs font-bold text-primary-container active:scale-95"
               >
                 <Icon name="edit" size={14} />
-                Editar datos
+                Editar
               </button>
             </header>
 
-            <div
-              className="rounded-2xl p-5 text-center"
-              style={{
-                background: prepReady
-                  ? 'linear-gradient(135deg, #065F46 0%, #10B981 100%)'
-                  : 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
-                color: '#ffffff',
-                boxShadow: prepReady
-                  ? '0 12px 28px -10px rgba(5, 150, 105, 0.45)'
-                  : '0 12px 28px -10px rgba(242, 98, 65, 0.38)',
-              }}
-            >
-              <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85 mb-1">
-                {prepReady ? 'Listo para recoger' : 'Falta para que esté listo'}
-              </div>
-              <div
-                className="bleed-text text-5xl font-black font-mono tabular-nums leading-none"
-                style={{ letterSpacing: '-0.02em' }}
-              >
-                {prepReady ? '¡YA!' : remainingLabel}
-              </div>
-              <div className="text-[11px] opacity-90 mt-2">
-                {prepReady
-                  ? 'Cuando tengas el pedido en mano, presiona "Ya recogí el pedido"'
-                  : 'Cuando el restaurante te entregue la comida, presiona "Ya recogí el pedido"'}
-              </div>
-            </div>
-
             <div className="space-y-1.5 text-sm">
-              <div className="flex items-center gap-2 text-on-surface-variant">
-                <Icon name="call" size={14} />
+              <div className="flex items-center gap-2 text-on-surface">
+                <Icon name="call" size={14} className="text-on-surface-variant" />
                 <span className="font-mono">+51 {clientPhone}</span>
               </div>
               {persistedCoords && (
@@ -452,7 +321,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
               )}
               {persistedReference && (
                 <div className="flex items-start gap-2 text-on-surface">
-                  <Icon name="pin_drop" size={14} className="mt-0.5 shrink-0" />
+                  <Icon name="pin_drop" size={14} className="mt-0.5 shrink-0 text-primary" />
                   <span className="text-xs leading-snug">{persistedReference}</span>
                 </div>
               )}
@@ -466,20 +335,11 @@ export function ActiveOrderDetail({ orderId }: Props) {
             el destino — por eso se destaca con su propia card e ícono
             pin_drop. La navegación GPS (botón "Abrir en Google Maps") vive
             en el BottomActionBar y solo aparece si hay coords. */}
-        {status === 'picked_up' && (raw.client_phone || persistedReference) && (
-          <section className="bg-surface-container-lowest rounded-[28px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
+        {status === 'picked_up' && persistedReference && (
+          <section className="bg-surface-container-lowest rounded-[28px] p-4 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-3">
             <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-              Entregar al cliente
+              Destino del cliente
             </h3>
-            {raw.client_phone && (
-              <a
-                href={`tel:+51${raw.client_phone}`}
-                className="inline-flex items-center gap-2 text-primary-container font-semibold"
-              >
-                <Icon name="call" size={18} />
-                Llamar: +51 {raw.client_phone}
-              </a>
-            )}
             {persistedReference && (
               <div className="rounded-2xl border border-outline-variant/30 bg-surface-container/40 p-3 flex items-start gap-2.5">
                 <Icon name="pin_drop" size={20} className="text-primary shrink-0 mt-0.5" filled />
@@ -516,7 +376,7 @@ export function ActiveOrderDetail({ orderId }: Props) {
         <OrderSupportContacts
           restaurantName={restaurant.name ?? 'Restaurante'}
           restaurantPhone={restaurant.phone ?? null}
-          restaurantWaUrl={restaurantWaUrl}
+          supportPhone={supportPhone}
         />
       </main>
 
@@ -539,17 +399,20 @@ export function ActiveOrderDetail({ orderId }: Props) {
             setConfirmPickupOpen(false)
             setPickupError(null)
           }}
-          onConfirm={(occupancySlots) => {
+          onConfirm={({ occupancySlots, deliveryDistanceBand }) => {
             setPickupError(null)
-            pickedUp.mutate(occupancySlots, {
-              onSuccess: () => setConfirmPickupOpen(false),
-              onError: (err) =>
-                setPickupError(
-                  err instanceof Error
-                    ? err.message
-                    : 'No se pudo confirmar el pickup. Intenta de nuevo.',
-                ),
-            })
+            pickedUp.mutate(
+              { occupancySlots, deliveryDistanceBand },
+              {
+                onSuccess: () => setConfirmPickupOpen(false),
+                onError: (err) =>
+                  setPickupError(
+                    err instanceof Error
+                      ? err.message
+                      : 'No se pudo confirmar el pickup. Intenta de nuevo.',
+                  ),
+              },
+            )
           }}
         />
       )}
@@ -849,161 +712,445 @@ function currentPhaseForStatus(
   }
 }
 
-function CurrentPhaseCard({
-  phase,
-  steps,
-  open,
-  onToggle,
-}: {
+type PhaseTone = 'brand' | 'warning' | 'success' | 'neutral'
+
+const PHASE_PALETTE: Record<
+  PhaseTone,
+  { bg: string; iconBg: string; border: string; color: string; metricBg: string }
+> = {
+  brand: {
+    bg: 'linear-gradient(135deg, rgba(242, 98, 65, 0.14) 0%, rgba(255,255,255,0.96) 60%)',
+    iconBg: 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
+    border: 'rgba(242, 98, 65, 0.24)',
+    color: '#9B2F18',
+    metricBg: 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
+  },
+  warning: {
+    bg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.16) 0%, rgba(255,255,255,0.96) 60%)',
+    iconBg: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
+    border: 'rgba(245, 158, 11, 0.26)',
+    color: '#92400E',
+    metricBg: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)',
+  },
+  success: {
+    bg: 'linear-gradient(135deg, rgba(5, 150, 105, 0.14) 0%, rgba(255,255,255,0.96) 60%)',
+    iconBg: 'linear-gradient(135deg, #059669 0%, #14B8A6 100%)',
+    border: 'rgba(5, 150, 105, 0.24)',
+    color: '#065F46',
+    metricBg: 'linear-gradient(135deg, #065F46 0%, #10B981 100%)',
+  },
+  neutral: {
+    bg: 'linear-gradient(135deg, rgba(83, 96, 92, 0.1) 0%, rgba(255,255,255,0.96) 60%)',
+    iconBg: 'linear-gradient(135deg, #53605C 0%, #7B8581 100%)',
+    border: 'rgba(83, 96, 92, 0.18)',
+    color: '#34403B',
+    metricBg: 'linear-gradient(135deg, #34403B 0%, #53605C 100%)',
+  },
+}
+
+type PhaseHeroProps = {
+  status: string
   phase: CurrentPhase
-  steps: TimelineStep[]
-  open: boolean
-  onToggle: () => void
-}) {
-  const palette = {
-    brand: {
-      bg: 'linear-gradient(135deg, rgba(242, 98, 65, 0.12) 0%, rgba(255,255,255,0.94) 58%)',
-      iconBg: 'linear-gradient(135deg, #F26241 0%, #FF9B63 100%)',
-      border: 'rgba(242, 98, 65, 0.22)',
-      color: '#9B2F18',
-    },
-    warning: {
-      bg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(255,255,255,0.94) 58%)',
-      iconBg: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
-      border: 'rgba(245, 158, 11, 0.24)',
-      color: '#92400E',
-    },
-    success: {
-      bg: 'linear-gradient(135deg, rgba(5, 150, 105, 0.13) 0%, rgba(255,255,255,0.94) 58%)',
-      iconBg: 'linear-gradient(135deg, #059669 0%, #14B8A6 100%)',
-      border: 'rgba(5, 150, 105, 0.22)',
-      color: '#065F46',
-    },
-    neutral: {
-      bg: 'linear-gradient(135deg, rgba(83, 96, 92, 0.1) 0%, rgba(255,255,255,0.94) 58%)',
-      iconBg: 'linear-gradient(135deg, #53605C 0%, #7B8581 100%)',
-      border: 'rgba(83, 96, 92, 0.18)',
-      color: '#34403B',
-    },
-  }[phase.tone]
+  acceptedAt: string | null
+  now: Date
+  prepReady: boolean
+  remainingLabel: string
+  isEditingCustomerData: boolean
+  paymentStatus: string
+  orderAmount: number
+  yapeAmount: number | null
+  cashAmount: number | null
+  clientPaysWith: number | null
+  changeToGive: number | null
+}
+
+/**
+ * PhaseHero — pieza central de la pantalla del motorizado. Combina la fase
+ * actual con la métrica que importa AHORA: countdown en pre-pickup, cobro
+ * desglosado en picked_up, "¡YA!" cuando la cocina termina. Reemplaza la
+ * antigua trio CurrentPhaseCard + OrderTimingStrip + countdown grande del
+ * waiting_at_restaurant para que el driver lea la pantalla en 1 segundo.
+ */
+function PhaseHero({
+  status,
+  phase,
+  acceptedAt,
+  now,
+  prepReady,
+  remainingLabel,
+  isEditingCustomerData,
+  paymentStatus,
+  orderAmount,
+  yapeAmount,
+  cashAmount,
+  clientPaysWith,
+  changeToGive,
+}: PhaseHeroProps) {
+  const palette = PHASE_PALETTE[phase.tone]
 
   return (
     <section
-      className="rounded-[28px] p-5 border shadow-[0_12px_36px_-24px_rgba(18,38,32,0.45)] overflow-hidden"
+      className="rounded-[28px] p-4 border shadow-[0_12px_36px_-24px_rgba(18,38,32,0.45)] overflow-hidden"
       style={{ background: palette.bg, borderColor: palette.border }}
     >
-      <div className="flex items-start gap-4">
+      <header className="flex items-center gap-3">
         <span
-          className="shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-[0_10px_24px_-12px_rgba(18,38,32,0.65)]"
+          className="shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-[0_10px_24px_-14px_rgba(18,38,32,0.65)]"
           style={{ background: palette.iconBg }}
         >
-          <Icon name={phase.icon} size={25} filled />
+          <Icon name={phase.icon} size={24} filled />
         </span>
         <div className="min-w-0 flex-1">
           <p
-            className="text-[10px] font-black tracking-[0.22em] uppercase"
+            className="text-[10px] font-black tracking-[0.2em] uppercase"
             style={{ color: palette.color }}
           >
             {phase.eyebrow}
           </p>
-          <h2 className="mt-1 text-xl font-black leading-tight text-on-surface">{phase.label}</h2>
-          <p className="mt-1 text-sm leading-snug text-on-surface-variant">{phase.description}</p>
+          <h2 className="mt-0.5 text-lg font-black leading-tight text-on-surface">{phase.label}</h2>
+        </div>
+      </header>
+
+      <PhaseMetric
+        status={status}
+        palette={palette}
+        acceptedAt={acceptedAt}
+        now={now}
+        prepReady={prepReady}
+        remainingLabel={remainingLabel}
+        isEditingCustomerData={isEditingCustomerData}
+        paymentStatus={paymentStatus}
+        orderAmount={orderAmount}
+        yapeAmount={yapeAmount}
+        cashAmount={cashAmount}
+        clientPaysWith={clientPaysWith}
+        changeToGive={changeToGive}
+      />
+    </section>
+  )
+}
+
+type PhaseMetricProps = {
+  status: string
+  palette: (typeof PHASE_PALETTE)[PhaseTone]
+  acceptedAt: string | null
+  now: Date
+  prepReady: boolean
+  remainingLabel: string
+  isEditingCustomerData: boolean
+  paymentStatus: string
+  orderAmount: number
+  yapeAmount: number | null
+  cashAmount: number | null
+  clientPaysWith: number | null
+  changeToGive: number | null
+}
+
+/**
+ * Selecciona qué métrica destacar según la fase. Cada caso resuelve la
+ * pregunta operativa que el driver tiene en ese momento.
+ */
+function PhaseMetric(props: PhaseMetricProps) {
+  const { status, isEditingCustomerData, prepReady } = props
+
+  // Editando datos del cliente — el form abajo es la métrica. No duplicamos timer aquí.
+  if (status === 'waiting_at_restaurant' && isEditingCustomerData) return null
+
+  // Entrega al cliente — cobro grande con vuelto y con cuánto paga.
+  if (status === 'picked_up') return <PickupCobroMetric {...props} />
+
+  // En el local, ya con datos: si llegó a 0 muestra "¡YA!" en verde; si no, countdown.
+  if (status === 'waiting_at_restaurant') {
+    return (
+      <CountdownMetric
+        label={prepReady ? 'Listo para recoger' : 'Falta para que esté listo'}
+        value={prepReady ? '¡YA!' : props.remainingLabel}
+        icon={prepReady ? 'check_circle' : 'schedule'}
+        gradient={prepReady ? PHASE_PALETTE.success.metricBg : PHASE_PALETTE.warning.metricBg}
+        helper={
+          prepReady
+            ? 'Cuando tengas la bolsa en mano, presiona "Ya recogí el pedido".'
+            : 'Cuando el restaurante te entregue la bolsa, presiona "Ya recogí el pedido".'
+        }
+      />
+    )
+  }
+
+  // Pre-acepted o en camino al local: countdown del prep + elapsed since accepted.
+  return <PreparingMetric {...props} />
+}
+
+function CountdownMetric({
+  label,
+  value,
+  icon,
+  gradient,
+  helper,
+}: {
+  label: string
+  value: string
+  icon: string
+  gradient: string
+  helper?: string
+}) {
+  return (
+    <div
+      className="mt-3 rounded-2xl p-4 text-center text-white shadow-[0_12px_28px_-12px_rgba(18,38,32,0.35)]"
+      style={{ background: gradient }}
+    >
+      <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85">{label}</div>
+      <div className="mt-1 inline-flex items-center justify-center gap-2">
+        <Icon name={icon} size={28} filled className="opacity-90" />
+        <span
+          className="bleed-text text-5xl font-black font-mono tabular-nums leading-none"
+          style={{ letterSpacing: '-0.02em' }}
+        >
+          {value}
+        </span>
+      </div>
+      {helper && <div className="mt-2 text-[11px] opacity-90 leading-snug">{helper}</div>}
+    </div>
+  )
+}
+
+function PreparingMetric({
+  acceptedAt,
+  now,
+  remainingLabel,
+  prepReady,
+}: Pick<PhaseMetricProps, 'acceptedAt' | 'now' | 'remainingLabel' | 'prepReady'>) {
+  const gradient = prepReady ? PHASE_PALETTE.success.metricBg : PHASE_PALETTE.brand.metricBg
+  return (
+    <div
+      className="mt-3 rounded-2xl p-4 text-white shadow-[0_12px_28px_-12px_rgba(18,38,32,0.35)]"
+      style={{ background: gradient }}
+    >
+      <div className="text-center">
+        <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85">
+          {prepReady ? 'Listo en cocina' : 'Listo en'}
+        </div>
+        <div className="mt-1 inline-flex items-center justify-center gap-2">
+          <Icon
+            name={prepReady ? 'check_circle' : 'schedule'}
+            size={28}
+            filled
+            className="opacity-90"
+          />
+          <span
+            className="bleed-text text-5xl font-black font-mono tabular-nums leading-none"
+            style={{ letterSpacing: '-0.02em' }}
+          >
+            {prepReady ? '¡YA!' : remainingLabel}
+          </span>
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="mt-4 flex min-h-12 w-full items-center justify-between rounded-2xl border border-outline-variant/25 bg-white/72 px-4 text-sm font-black text-on-surface transition-all duration-200 active:scale-[0.98]"
-      >
-        <span>{open ? 'Ocultar fases' : 'Ver todas las fases'}</span>
-        <span
-          className="inline-flex text-on-surface-variant transition-transform duration-200"
-          style={{ transform: open ? 'rotate(180deg)' : 'none' }}
-        >
-          <Icon name="expand_more" size={22} />
-        </span>
-      </button>
-
-      {open && (
-        <div className="tindivo-reveal mt-4 border-t border-outline-variant/15 pt-4">
-          <Timeline steps={steps} />
+      {acceptedAt && (
+        <div className="mt-3 pt-3 border-t border-white/25 flex items-center justify-center gap-1.5 text-[11px] font-bold text-white">
+          <Icon name="timer" size={13} filled className="opacity-85" />
+          <span className="opacity-85">Aceptado hace</span>
+          <span className="font-mono tabular-nums">{formatElapsedSince(acceptedAt, now)}</span>
         </div>
       )}
-    </section>
+    </div>
   )
+}
+
+/**
+ * Cobro en la entrega — la única decisión del driver aquí es "¿cómo cobro?".
+ * Mostramos los 3 valores que necesita en una grilla densa pero clara:
+ * cuánto cobrar, vuelto a dar, y con cuánto paga el cliente. Los rows se
+ * adaptan al paymentStatus para no mostrar campos vacíos.
+ */
+function PickupCobroMetric({
+  paymentStatus,
+  orderAmount,
+  yapeAmount,
+  cashAmount,
+  clientPaysWith,
+  changeToGive,
+}: Pick<
+  PhaseMetricProps,
+  'paymentStatus' | 'orderAmount' | 'yapeAmount' | 'cashAmount' | 'clientPaysWith' | 'changeToGive'
+>) {
+  if (paymentStatus === 'prepaid' || orderAmount === 0) {
+    return (
+      <div className="mt-3 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-center gap-3 text-emerald-900">
+        <Icon name="verified" size={22} filled />
+        <div>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-emerald-800">
+            Ya pagó
+          </div>
+          <div className="text-sm font-black">No cobres nada. Solo entrega.</div>
+        </div>
+      </div>
+    )
+  }
+
+  const rows: Array<{ label: string; value: string; helper?: string; icon: string }> = []
+
+  // Cobrar — siempre primero, la pregunta #1 del driver
+  rows.push({
+    label: 'Cobra',
+    value: `S/ ${orderAmount.toFixed(2)}`,
+    helper: paymentStatusShort(paymentStatus),
+    icon: paymentStatus === 'pending_yape' ? 'qr_code_2' : 'payments',
+  })
+
+  // Vuelto — solo si hay cambio a dar (cash o mixed con paga con)
+  if (changeToGive != null && changeToGive > 0) {
+    rows.push({
+      label: 'Vuelto',
+      value: `S/ ${changeToGive.toFixed(2)}`,
+      helper: 'que debes dar',
+      icon: 'currency_exchange',
+    })
+  }
+
+  // Paga con — solo si está registrado (cash y mixed)
+  if (clientPaysWith != null) {
+    rows.push({
+      label: 'Paga con',
+      value: `S/ ${clientPaysWith.toFixed(2)}`,
+      helper: 'billete cliente',
+      icon: 'account_balance_wallet',
+    })
+  }
+
+  // Si es mixed mostramos también el split Yape/Efectivo abajo como sub-data
+  const showSplit = paymentStatus === 'pending_mixed' && yapeAmount != null && cashAmount != null
+
+  return (
+    <div className="mt-3 space-y-2">
+      <div className={rows.length === 1 ? 'grid grid-cols-1 gap-2' : 'grid grid-cols-3 gap-2'}>
+        {rows.map((row, idx) => (
+          <div
+            key={row.label}
+            className={
+              idx === 0
+                ? 'rounded-2xl px-3 py-3 text-white shadow-[0_10px_24px_-14px_rgba(5,150,105,0.55)]'
+                : 'rounded-2xl border border-emerald-200 bg-emerald-50/70 px-3 py-3 text-emerald-950'
+            }
+            style={idx === 0 ? { background: PHASE_PALETTE.success.metricBg } : undefined}
+          >
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider opacity-90">
+              <Icon name={row.icon} size={13} filled />
+              {row.label}
+            </div>
+            <div className="mt-1 text-xl font-black font-mono tabular-nums leading-none">
+              {row.value}
+            </div>
+            {row.helper && (
+              <div className="mt-1 text-[10px] font-semibold opacity-80 truncate">{row.helper}</div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {showSplit && (
+        <div className="rounded-xl bg-white/60 border border-outline-variant/20 px-3 py-2 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-1.5 text-on-surface-variant">
+            <Icon name="splitscreen" size={14} filled />
+            <span className="font-bold uppercase tracking-wider text-[10px]">Mixto</span>
+          </div>
+          <div className="flex items-center gap-3 font-mono tabular-nums">
+            <span className="text-on-surface">
+              <span className="text-[10px] uppercase font-bold text-on-surface-variant mr-1">
+                Yape
+              </span>
+              S/ {yapeAmount.toFixed(2)}
+            </span>
+            <span className="text-on-surface">
+              <span className="text-[10px] uppercase font-bold text-on-surface-variant mr-1">
+                Cash
+              </span>
+              S/ {cashAmount.toFixed(2)}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function formatElapsedSince(iso: string, now: Date): string {
+  const start = new Date(iso).getTime()
+  const diffSec = Math.max(0, Math.floor((now.getTime() - start) / 1000))
+  const mm = Math.floor(diffSec / 60)
+  const ss = diffSec % 60
+  return `${mm.toString().padStart(2, '0')}:${ss.toString().padStart(2, '0')}`
+}
+
+function paymentStatusShort(status: string): string {
+  switch (status) {
+    case 'pending_yape':
+      return 'por Yape'
+    case 'pending_cash':
+      return 'efectivo'
+    case 'pending_mixed':
+      return 'Yape + cash'
+    default:
+      return paymentLabel(status)
+  }
 }
 
 function OrderSupportContacts({
   restaurantName,
   restaurantPhone,
-  restaurantWaUrl,
+  supportPhone,
 }: {
   restaurantName: string
   restaurantPhone: string | null
-  restaurantWaUrl: string | null
+  supportPhone: string
 }) {
+  const hasSupportPhone = supportPhone.trim().length > 0
+
   return (
-    <section className="space-y-3">
-      <div className="px-1">
+    <section className="rounded-[28px] border border-outline-variant/15 bg-surface-container-lowest p-4 shadow-[0_4px_20px_rgba(171,53,0,0.04)]">
+      <div>
         <h3 className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-          Contactos
+          Contactos rápidos
         </h3>
-        <p className="mt-1 text-sm font-semibold text-on-surface">
-          {restaurantName} y soporte Tindivo.
-        </p>
+        <p className="mt-0.5 text-sm font-semibold text-on-surface">{restaurantName} y Tindivo.</p>
       </div>
 
-      {restaurantPhone && (
-        <a
-          href={phoneHref(restaurantPhone)}
-          className="flex min-h-14 items-center gap-3 rounded-2xl border border-outline-variant/25 bg-surface-container-lowest px-4 text-on-surface transition-all duration-200 active:scale-[0.98]"
-        >
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-fixed text-primary">
-            <Icon name="call" size={21} filled />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-black">Llamar al restaurante</span>
-            <span className="block text-xs font-mono text-on-surface-variant">
+      <div
+        className={
+          restaurantPhone && hasSupportPhone
+            ? 'mt-3 grid grid-cols-2 gap-2'
+            : 'mt-3 grid grid-cols-1 gap-2'
+        }
+      >
+        {restaurantPhone && (
+          <a
+            href={phoneHref(restaurantPhone)}
+            className="flex min-h-16 flex-col justify-center rounded-2xl border border-outline-variant/25 bg-white/70 px-3 text-on-surface transition-all duration-200 active:scale-[0.98]"
+          >
+            <span className="inline-flex items-center gap-1.5 text-sm font-black">
+              <Icon name="call" size={18} filled />
+              Local
+            </span>
+            <span className="mt-1 text-xs font-mono text-on-surface-variant">
               {formatPePhone(restaurantPhone)}
             </span>
-          </span>
-        </a>
-      )}
+          </a>
+        )}
 
-      {restaurantWaUrl && (
-        <a
-          href={restaurantWaUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Abrir WhatsApp con el restaurante"
-          className="flex min-h-14 items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-emerald-900 transition-all duration-200 active:scale-[0.98]"
-        >
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white">
-            <Icon name="phone_in_talk" size={21} filled />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-black">WhatsApp al restaurante</span>
-            <span className="block text-xs font-semibold text-emerald-800/80">
-              Para coordinar con el local
+        {hasSupportPhone && (
+          <a
+            href={phoneHref(supportPhone)}
+            className="flex min-h-16 flex-col justify-center rounded-2xl border border-sky-200 bg-sky-50 px-3 text-sky-950 transition-all duration-200 active:scale-[0.98]"
+          >
+            <span className="inline-flex items-center gap-1.5 text-sm font-black">
+              <Icon name="support_agent" size={18} filled />
+              Tindivo
             </span>
-          </span>
-        </a>
-      )}
-
-      <a
-        href="tel:+51906550166"
-        className="flex min-h-14 items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 text-sky-950 transition-all duration-200 active:scale-[0.98]"
-      >
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white">
-          <Icon name="support_agent" size={21} filled />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-black">Necesitas ayuda</span>
-          <span className="block text-xs font-mono text-sky-900/75">+51 906 550 166</span>
-        </span>
-      </a>
+            <span className="mt-1 text-xs font-mono text-sky-900/75">
+              {formatPePhone(supportPhone)}
+            </span>
+          </a>
+        )}
+      </div>
     </section>
   )
 }
@@ -1071,13 +1218,23 @@ type PaymentBreakdownProps = {
   cashAmount: number | null
   clientPaysWith: number | null
   changeToGive: number | null
+  expanded: boolean
+  onToggle: () => void
 }
 
 /**
- * Desglose de cobro — HU-D-015: el driver necesita saber rápidamente
- * cuánto cobrar, con qué billete pagará el cliente, y cuánto vuelto debe
- * dar. El dato de "vuelto" se destaca porque es la información operativa
- * crítica (el driver debe llevar el cambio ya en la bolsa).
+ * Resumen de cobro compacto (1 línea). El driver ve la info crítica para
+ * preparar la bolsa antes de salir: cuánto cobrar y vuelto. El detalle
+ * granular (Yape/Efectivo split, paga con) se oculta tras toggle.
+ *
+ * En `picked_up` este componente NO se renderiza — la info clave migra al
+ * PhaseHero como métrica principal, evitando duplicación visual.
+ *
+ * NOTA: la rama `paymentStatus === 'prepaid'` aplica cuando un admin/driver
+ * cambia el método a 'prepaid' DESPUÉS de crear el pedido (orden con
+ * order_amount>0 que ya fue cobrada por adelantado). No se activa por el
+ * flujo normal de creación, donde 'Ya pagó' fuerza order_amount=0 y la
+ * guarda del parent corta el render.
  */
 function PaymentBreakdown({
   amount,
@@ -1086,241 +1243,179 @@ function PaymentBreakdown({
   cashAmount,
   clientPaysWith,
   changeToGive,
+  expanded,
+  onToggle,
 }: PaymentBreakdownProps) {
+  const hasChange = clientPaysWith != null && changeToGive != null && changeToGive > 0
+  const summary = paymentSummary({ amount, paymentStatus, changeToGive, hasChange })
+  const detailRows = paymentDetailRows({
+    amount,
+    paymentStatus,
+    yapeAmount,
+    cashAmount,
+    clientPaysWith,
+    changeToGive,
+  })
+
   if (paymentStatus === 'prepaid') {
     return (
-      <section
-        className="rounded-[24px] p-5 border border-emerald-200/60"
-        style={{ background: 'rgba(16, 185, 129, 0.08)' }}
-      >
-        <div className="flex items-center gap-3">
-          <span
-            className="inline-flex items-center justify-center w-11 h-11 rounded-xl"
-            style={{
-              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-              color: '#ffffff',
-            }}
-          >
-            <Icon name="verified" size={22} filled />
-          </span>
-          <div>
-            <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-emerald-800">
+      <section className="rounded-2xl border border-emerald-200/70 bg-emerald-50/60 px-4 py-2.5">
+        <div className="flex items-center gap-2.5 text-emerald-900">
+          <Icon name="verified" size={18} filled />
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-bold tracking-widest uppercase text-emerald-800">
               Ya pagó
             </div>
-            <div className="font-bold text-emerald-900">
-              No cobres nada al cliente — solo entregar.
-            </div>
+            <div className="text-sm font-black">No cobres nada. Solo entrega.</div>
           </div>
         </div>
       </section>
     )
   }
-
-  if (paymentStatus === 'pending_yape') {
-    return (
-      <section className="rounded-[24px] p-5 bg-surface-container-lowest border border-outline-variant/15">
-        <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-on-surface-variant mb-3">
-          Cobro al cliente
-        </div>
-        <div className="flex items-end justify-between">
-          <div>
-            <div className="bleed-text text-3xl font-black text-on-surface">
-              S/ {amount.toFixed(2)}
-            </div>
-            <div className="text-xs text-on-surface-variant mt-1">
-              Cobrar por Yape — el cliente escanea el QR abajo
-            </div>
-          </div>
-          <Icon name="qr_code_2" size={28} className="text-on-surface-variant/40" filled />
-        </div>
-      </section>
-    )
-  }
-
-  if (paymentStatus === 'pending_mixed') {
-    const hasChange = clientPaysWith != null && changeToGive != null && changeToGive > 0
-    const yapePart = yapeAmount ?? 0
-    const cashPart = cashAmount ?? 0
-    return (
-      <section className="rounded-[24px] p-5 bg-surface-container-lowest border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-on-surface-variant">
-            Cobro mixto
-          </div>
-          <span className="text-[11px] font-bold text-on-surface-variant font-mono tabular-nums">
-            Total S/ {amount.toFixed(2)}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl p-4" style={{ background: 'rgba(124, 58, 237, 0.08)' }}>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-purple-700">
-              <Icon name="qr_code_2" size={12} filled />
-              Yape
-            </div>
-            <div
-              className="bleed-text text-2xl font-black mt-1 font-mono tabular-nums"
-              style={{ color: '#5B21B6' }}
-            >
-              S/ {yapePart.toFixed(2)}
-            </div>
-            <div className="text-[10px] text-on-surface-variant mt-0.5">QR abajo</div>
-          </div>
-          <div className="rounded-2xl p-4" style={{ background: 'rgba(255, 107, 53, 0.08)' }}>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase text-orange-700">
-              <Icon name="payments" size={12} filled />
-              Efectivo
-            </div>
-            <div className="bleed-text text-2xl font-black mt-1 font-mono tabular-nums text-on-surface">
-              S/ {cashPart.toFixed(2)}
-            </div>
-            <div className="text-[10px] text-on-surface-variant mt-0.5">cobrar en mano</div>
-          </div>
-        </div>
-
-        {clientPaysWith != null && (
-          <div className="rounded-2xl p-3 flex items-center justify-between bg-surface-container">
-            <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-              Paga (efectivo) con
-            </div>
-            <div className="font-bold font-mono tabular-nums" style={{ color: '#1E40AF' }}>
-              S/ {clientPaysWith.toFixed(2)}
-            </div>
-          </div>
-        )}
-
-        {hasChange && (
-          <div
-            className="relative overflow-hidden rounded-2xl p-4"
-            style={{
-              background: 'linear-gradient(135deg, #065F46 0%, #10B981 100%)',
-              color: '#ffffff',
-              boxShadow: '0 12px 28px -10px rgba(5, 150, 105, 0.45)',
-            }}
-          >
-            <div className="relative flex items-center gap-3">
-              <span
-                className="inline-flex items-center justify-center w-10 h-10 rounded-xl"
-                style={{ background: 'rgba(255, 255, 255, 0.2)' }}
-              >
-                <Icon name="shopping_bag" size={20} filled />
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85">
-                  Vuelto a dar
-                </div>
-                <div
-                  className="bleed-text text-2xl font-black font-mono tabular-nums leading-tight"
-                  style={{ letterSpacing: '-0.02em' }}
-                >
-                  S/ {(changeToGive as number).toFixed(2)}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-    )
-  }
-
-  // pending_cash: desglose completo con vuelto
-  const hasChange = clientPaysWith != null && changeToGive != null && changeToGive > 0
 
   return (
-    <section className="rounded-[24px] p-5 bg-surface-container-lowest border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
-      <div className="text-[10px] font-bold tracking-[0.22em] uppercase text-on-surface-variant">
-        Cobro en efectivo
-      </div>
+    <section className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="flex w-full items-center gap-2.5 px-4 py-3 text-left transition-transform active:scale-[0.99]"
+      >
+        <Icon name={summary.icon} size={20} filled className="shrink-0 text-orange-600" />
+        <span className="min-w-0 flex-1 flex items-baseline flex-wrap gap-x-2 gap-y-0.5">
+          <span className="text-sm font-black text-on-surface">{summary.headline}</span>
+          {summary.aside && (
+            <span className="text-xs font-semibold text-on-surface-variant">{summary.aside}</span>
+          )}
+        </span>
+        <Icon
+          name={expanded ? 'expand_less' : 'expand_more'}
+          size={20}
+          className="shrink-0 text-on-surface-variant"
+        />
+      </button>
 
-      {/* Grid: monto pedido · paga con */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl p-4" style={{ background: 'rgba(255, 107, 53, 0.08)' }}>
-          <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-            Precio
-          </div>
-          <div className="bleed-text text-2xl font-black mt-1 text-on-surface font-mono tabular-nums">
-            S/ {amount.toFixed(2)}
-          </div>
-          <div className="text-[10px] text-on-surface-variant mt-0.5">lo que debe pagar</div>
-        </div>
-        {clientPaysWith != null ? (
-          <div className="rounded-2xl p-4" style={{ background: 'rgba(59, 130, 246, 0.08)' }}>
-            <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-              Paga con
-            </div>
-            <div
-              className="bleed-text text-2xl font-black mt-1 font-mono tabular-nums"
-              style={{ color: '#1E40AF' }}
-            >
-              S/ {clientPaysWith.toFixed(2)}
-            </div>
-            <div className="text-[10px] text-on-surface-variant mt-0.5">el billete del cliente</div>
-          </div>
-        ) : (
-          <div className="rounded-2xl p-4 bg-surface-container">
-            <div className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-              Paga con
-            </div>
-            <div className="font-bold text-sm mt-2 text-on-surface-variant">—</div>
-            <div className="text-[10px] text-on-surface-variant/70 mt-0.5">no se especificó</div>
-          </div>
-        )}
-      </div>
-
-      {/* Vuelto destacado */}
-      {hasChange ? (
-        <div
-          className="relative overflow-hidden rounded-2xl p-4"
-          style={{
-            background: 'linear-gradient(135deg, #065F46 0%, #10B981 100%)',
-            color: '#ffffff',
-            boxShadow: '0 12px 28px -10px rgba(5, 150, 105, 0.45)',
-          }}
-        >
-          <div
-            aria-hidden="true"
-            className="absolute -top-8 -right-8 w-28 h-28 rounded-full pointer-events-none"
-            style={{
-              background: 'radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 60%)',
-            }}
-          />
-          <div className="relative flex items-center gap-3">
-            <span
-              className="inline-flex items-center justify-center w-11 h-11 rounded-xl"
-              style={{ background: 'rgba(255, 255, 255, 0.2)' }}
-            >
-              <Icon name="shopping_bag" size={22} filled />
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className="text-[10px] font-bold tracking-[0.22em] uppercase opacity-85">
-                Vuelto a dar
-              </div>
+      {expanded && (
+        <div className="tindivo-reveal border-t border-outline-variant/20 px-4 py-3">
+          <div className="grid grid-cols-2 gap-2">
+            {detailRows.map((row) => (
               <div
-                className="bleed-text text-3xl font-black font-mono tabular-nums leading-tight"
-                style={{ letterSpacing: '-0.02em' }}
+                key={row.label}
+                className="rounded-2xl border border-outline-variant/20 bg-orange-50/40 px-3 py-2"
               >
-                S/ {changeToGive.toFixed(2)}
+                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-orange-800">
+                  <Icon name={row.icon} size={13} filled />
+                  {row.label}
+                </div>
+                <div className="mt-1 text-sm font-black tabular-nums text-on-surface">
+                  {row.value}
+                </div>
+                {row.helper && (
+                  <div className="mt-0.5 text-[10px] font-semibold text-on-surface-variant">
+                    {row.helper}
+                  </div>
+                )}
               </div>
-              <div className="text-[11px] opacity-90 mt-0.5">debe ir ya en la bolsa</div>
-            </div>
+            ))}
           </div>
-        </div>
-      ) : clientPaysWith != null && changeToGive != null ? (
-        <div
-          className="rounded-2xl p-3 text-center text-sm font-semibold"
-          style={{
-            background: 'rgba(16, 185, 129, 0.1)',
-            color: '#065F46',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
-          }}
-        >
-          Sin vuelto · paga justo S/ {amount.toFixed(2)}
-        </div>
-      ) : (
-        <div className="text-xs text-on-surface-variant text-center">
-          Confirma con el cliente cuánto pagará al recibir.
         </div>
       )}
     </section>
   )
+}
+
+type PaymentSummaryInput = {
+  amount: number
+  paymentStatus: string
+  changeToGive: number | null
+  hasChange: boolean
+}
+
+function paymentSummary({ amount, paymentStatus, changeToGive, hasChange }: PaymentSummaryInput) {
+  const total = `S/ ${amount.toFixed(2)}`
+  const vuelto = hasChange ? `· vuelto S/ ${changeToGive?.toFixed(2)}` : null
+  switch (paymentStatus) {
+    case 'pending_yape':
+      return { headline: `Cobra ${total} por Yape`, aside: null, icon: 'qr_code_2' }
+    case 'pending_mixed':
+      return {
+        headline: `Cobra ${total}`,
+        aside: vuelto ?? 'Yape + efectivo',
+        icon: 'payments',
+      }
+    case 'pending_cash':
+      return {
+        headline: `Cobra ${total} efectivo`,
+        aside: vuelto,
+        icon: 'payments',
+      }
+    default:
+      return { headline: total, aside: paymentLabel(paymentStatus), icon: 'receipt' }
+  }
+}
+
+type PaymentDetailRowsInput = {
+  amount: number
+  paymentStatus: string
+  yapeAmount: number | null
+  cashAmount: number | null
+  clientPaysWith: number | null
+  changeToGive: number | null
+}
+
+function paymentDetailRows({
+  amount,
+  paymentStatus,
+  yapeAmount,
+  cashAmount,
+  clientPaysWith,
+  changeToGive,
+}: PaymentDetailRowsInput) {
+  const rows = [
+    { label: 'Precio', value: `S/ ${amount.toFixed(2)}`, helper: 'pedido', icon: 'receipt' },
+  ]
+
+  if (paymentStatus === 'pending_mixed') {
+    rows.push({
+      label: 'Yape',
+      value: `S/ ${(yapeAmount ?? 0).toFixed(2)}`,
+      helper: 'por QR',
+      icon: 'qr_code_2',
+    })
+    rows.push({
+      label: 'Efectivo',
+      value: `S/ ${(cashAmount ?? 0).toFixed(2)}`,
+      helper: 'en mano',
+      icon: 'payments',
+    })
+  }
+
+  if (paymentStatus === 'pending_yape') {
+    rows.push({
+      label: 'Método',
+      value: 'Yape',
+      helper: 'mostrar QR',
+      icon: 'qr_code_2',
+    })
+  }
+
+  if (clientPaysWith != null) {
+    rows.push({
+      label: 'Paga con',
+      value: `S/ ${clientPaysWith.toFixed(2)}`,
+      helper: 'efectivo',
+      icon: 'account_balance_wallet',
+    })
+  }
+
+  if (changeToGive != null) {
+    rows.push({
+      label: 'Vuelto',
+      value: `S/ ${changeToGive.toFixed(2)}`,
+      helper: changeToGive > 0 ? 'preparar' : 'paga justo',
+      icon: 'currency_exchange',
+    })
+  }
+
+  return rows
 }

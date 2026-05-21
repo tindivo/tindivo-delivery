@@ -1,4 +1,8 @@
 export { Coordinates } from './coordinates'
+export {
+  DeliveryDistanceBand,
+  type DeliveryDistanceBandValue,
+} from './delivery-distance-band'
 export { DriverId } from './driver-id'
 export { Money } from './money'
 export { OccupancySlots } from './occupancy-slots'

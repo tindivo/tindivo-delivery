@@ -6,6 +6,10 @@ import {
   type AssignmentRules,
   DEFAULT_ASSIGNMENT_RULES,
 } from '../../domain/policies/assignment-rules'
+import {
+  DeliveryDistanceBand,
+  type DeliveryDistanceBandValue,
+} from '../../domain/value-objects/delivery-distance-band'
 import { OccupancySlots } from '../../domain/value-objects/occupancy-slots'
 import { OrderId } from '../../domain/value-objects/order-id'
 import type { AssignmentRulesRepository } from '../ports/assignment-rules.repository'
@@ -17,6 +21,7 @@ export type MarkPickedUpCommand = {
   orderId: string
   driverId: string
   occupancySlots: number
+  deliveryDistanceBand: DeliveryDistanceBandValue
 }
 
 export type MarkPickedUpResult = {
@@ -26,6 +31,7 @@ export type MarkPickedUpResult = {
   deliveryMapsUrl: string | null
   trackingUrl: string
   occupancySlots: number
+  deliveryDistanceBand: DeliveryDistanceBandValue
 }
 
 /**
@@ -55,9 +61,10 @@ export class MarkPickedUpUseCase
 
     const rules = await this.loadRules()
     const slots = OccupancySlots.of(cmd.occupancySlots, rules.maxOccupancySlotsPerOrder)
+    const distanceBand = DeliveryDistanceBand.of(cmd.deliveryDistanceBand)
 
     const previous = order.status
-    const res = order.markPickedUp(slots, this.clock.now())
+    const res = order.markPickedUp(slots, distanceBand, this.clock.now())
     if (res.isFailure) return Result.fail(res.error)
 
     await this.orders.save(order, previous)
@@ -77,6 +84,7 @@ export class MarkPickedUpUseCase
       deliveryMapsUrl: mapsUrl,
       trackingUrl,
       occupancySlots: order.occupancySlots.value,
+      deliveryDistanceBand: distanceBand.value,
     })
   }
 

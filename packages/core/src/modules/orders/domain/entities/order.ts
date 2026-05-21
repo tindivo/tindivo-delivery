@@ -39,6 +39,7 @@ import {
 import { CancellationPolicy, type Role } from '../policies/cancellation.policy'
 import { StateTransitionPolicy } from '../policies/state-transition.policy'
 import type { Coordinates } from '../value-objects/coordinates'
+import type { DeliveryDistanceBand } from '../value-objects/delivery-distance-band'
 import type { DriverId } from '../value-objects/driver-id'
 import { Money } from '../value-objects/money'
 import { OccupancySlots } from '../value-objects/occupancy-slots'
@@ -91,6 +92,12 @@ export type OrderProps = {
   readyEarlyAt: Date | null
   occupancySlots: OccupancySlots
   /**
+   * Banda de distancia que el driver declara al recoger el pedido
+   * (near/medium/far). Base para diferenciar comisiones al restaurante.
+   * NULL antes del pickup y en pedidos legacy sin esta info.
+   */
+  deliveryDistanceBand: DeliveryDistanceBand | null
+  /**
    * Deuda pre-calculada del driver con el restaurante al momento de entregar.
    * Se setea solo dentro de `markDelivered`. NULL antes de la entrega o para
    * pedidos legacy sin esta info (en cuyo caso los consumidores caen a la
@@ -124,6 +131,14 @@ export type CreateOrderInput = {
    * que el restaurante acepte y defina prep_time real.
    */
   source?: OrderSource
+  /**
+   * Datos del cliente pre-llenados por el restaurante (opcionales). El
+   * motorizado los ve en su form de waiting_at_restaurant y puede
+   * modificarlos. La validación final (phone + coords/reference) ocurre en
+   * `markPickedUp`, no aquí.
+   */
+  clientPhone?: string
+  deliveryReference?: string
   now?: Date
 }
 
@@ -173,12 +188,12 @@ export class Order extends AggregateRoot<OrderId> {
       deliveryFee: input.deliveryFee,
       appearsInQueueAt,
       estimatedReadyAt,
-      clientPhone: null,
+      clientPhone: input.clientPhone?.trim() || null,
       clientName: input.clientName?.trim() || null,
       deliveryCoordinates: null,
       deliveryMapsUrl: null,
       deliveryAddress: null,
-      deliveryReference: null,
+      deliveryReference: input.deliveryReference?.trim() || null,
       extensionUsed: false,
       readyEarlyUsed: false,
       notes: input.notes ?? null,
@@ -200,6 +215,7 @@ export class Order extends AggregateRoot<OrderId> {
       prepExtensionMinutes: null,
       readyEarlyAt: null,
       occupancySlots: OccupancySlots.default(),
+      deliveryDistanceBand: null,
       cashOwedAtDelivery: null,
       urgentSince: null,
       createdAt: now,
@@ -285,6 +301,9 @@ export class Order extends AggregateRoot<OrderId> {
   }
   get occupancySlots(): OccupancySlots {
     return this._state.occupancySlots
+  }
+  get deliveryDistanceBand(): DeliveryDistanceBand | null {
+    return this._state.deliveryDistanceBand
   }
   get urgentSince(): Date | null {
     return this._state.urgentSince
@@ -521,6 +540,7 @@ export class Order extends AggregateRoot<OrderId> {
    */
   markPickedUp(
     occupancySlots: OccupancySlots,
+    deliveryDistanceBand: DeliveryDistanceBand,
     now: Date,
   ): Result<void, InvalidStateTransition | CustomerDataMissing> {
     if (!StateTransitionPolicy.canTransition(this._state.status.value, 'picked_up'))
@@ -534,6 +554,7 @@ export class Order extends AggregateRoot<OrderId> {
     this._state.status = OrderStatus.pickedUp()
     this._state.pickedUpAt = now
     this._state.occupancySlots = occupancySlots
+    this._state.deliveryDistanceBand = deliveryDistanceBand
     this._state.updatedAt = now
 
     this.raise(
@@ -545,6 +566,7 @@ export class Order extends AggregateRoot<OrderId> {
         deliveryCoordinates: coords ? { lat: coords.lat, lng: coords.lng } : null,
         deliveryReference: reference,
         occupancySlots: occupancySlots.value,
+        deliveryDistanceBand: deliveryDistanceBand.value,
       }),
     )
     return Result.okVoid()

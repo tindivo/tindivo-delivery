@@ -5,25 +5,20 @@ import { useCallback, useState } from 'react'
 type Destination = Coordinates | { address: string }
 
 /**
- * Hook para abrir Google Maps Directions usando la ubicación actual del
- * usuario como `origin`. Solicita permiso de geolocalización al navegador
- * en la primera invocación; si el usuario rechaza o el GPS tarda más de
- * 4 s, abre Google Maps sin `origin` (Google detecta la ubicación por su
- * cuenta — fallback gracioso).
+ * Hook para abrir Google Maps Directions usando la ubicacion actual del
+ * usuario como `origin`. Solicita permiso de geolocalizacion al navegador
+ * en la primera invocacion; si el usuario rechaza o el GPS tarda mas de
+ * 4 s, abre Google Maps sin `origin`.
  *
- * Requisitos: HTTPS o localhost. En `http://192.168.x.x` desde móvil real
+ * Requisitos: HTTPS o localhost. En `http://192.168.x.x` desde movil real
  * el navegador bloquea geolocation.
- *
- * Uso:
- *   const { navigate, isLocating } = useGeolocatedNavigation()
- *   <button onClick={() => navigate({ lat, lng })} disabled={isLocating}>...
  */
 export function useGeolocatedNavigation() {
   const [isLocating, setIsLocating] = useState(false)
 
   const navigate = useCallback(
     async (destination: Destination) => {
-      if (isLocating) return // guard: previene doble apertura por doble-click
+      if (isLocating) return
       setIsLocating(true)
 
       let origin: Coordinates | undefined
@@ -32,7 +27,7 @@ export function useGeolocatedNavigation() {
           origin = await new Promise<Coordinates | undefined>((resolve) => {
             navigator.geolocation.getCurrentPosition(
               (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-              () => resolve(undefined), // permiso denegado / timeout / unavailable → fallback
+              () => resolve(undefined),
               { enableHighAccuracy: true, timeout: 4000, maximumAge: 30_000 },
             )
           })
@@ -44,9 +39,9 @@ export function useGeolocatedNavigation() {
       const url =
         'address' in destination
           ? buildAddressUrl(destination.address, origin)
-          : buildGoogleMapsDirectionsUrl(destination, { origin, travelMode: 'two-wheeler' })
+          : buildGoogleMapsDirectionsUrl(destination, { origin, travelMode: 'driving' })
 
-      openInNewTab(url)
+      openExternalMapsUrl(url)
     },
     [isLocating],
   )
@@ -55,14 +50,17 @@ export function useGeolocatedNavigation() {
 }
 
 /**
- * `window.open(_, '_blank')` falla silenciosamente en iOS Safari standalone
- * (PWA instalada) — el sistema bloquea la apertura sin error. El patrón que
- * sí respeta el gesto del usuario es disparar un click sintético sobre un
- * `<a target="_blank">` creado al vuelo: Safari lo trata como navegación
- * iniciada por el usuario y deep-linkea a Google Maps app si está instalada
- * (Universal Links). En Android y desktop también funciona.
+ * iOS Safari/PWA bloquea con frecuencia navegaciones `_blank` que ocurren
+ * despues de un `await` (por ejemplo, esperar geolocation). En iOS usamos
+ * navegacion same-window con Universal Links de Google Maps; en Android y
+ * desktop mantenemos `_blank`.
  */
-function openInNewTab(url: string): void {
+function openExternalMapsUrl(url: string): void {
+  if (isIOSLike()) {
+    window.location.assign(url)
+    return
+  }
+
   const a = document.createElement('a')
   a.href = url
   a.target = '_blank'
@@ -73,11 +71,12 @@ function openInNewTab(url: string): void {
   document.body.removeChild(a)
 }
 
-/**
- * Variante para destino por dirección de texto (cuando no tenemos
- * coordenadas precisas del destino). `buildGoogleMapsDirectionsUrl` solo
- * acepta Coordinates, así que construimos la URL aquí.
- */
+function isIOSLike(): boolean {
+  const platform = navigator.platform ?? ''
+  const ua = navigator.userAgent ?? ''
+  return /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
 function buildAddressUrl(address: string, origin?: Coordinates): string {
   const params = new URLSearchParams({
     api: '1',
