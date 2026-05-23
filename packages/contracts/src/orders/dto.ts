@@ -34,16 +34,22 @@ export const CreateOrderRequest = z
     yapeAmount: MoneyPenSchema.optional(),
     cashAmount: MoneyPenSchema.optional(),
     clientPaysWith: MoneyPenSchema.optional(),
-    clientName: z.string().trim().min(1).max(80).optional(),
     notes: z.string().max(300).optional(),
     /**
-     * Datos del cliente que el restaurante puede pre-llenar al crear el
-     * pedido. Si los manda, el motorizado los ve pre-poblados en el form de
-     * waiting_at_restaurant y puede aceptarlos o modificarlos. Ambos
-     * opcionales: el restaurante no siempre los conoce al momento.
+     * Datos del cliente que el restaurante registra al crear el pedido. Los
+     * tres son OBLIGATORIOS porque la card del motorizado los usa como
+     * identificación primaria (nombre prominente + dirección/referencia)
+     * en lugar del código del pedido. Si el restaurante intenta crear sin
+     * ellos, el endpoint rechaza con 400. El driver puede corregirlos en
+     * waiting_at_restaurant si hay errores.
      */
-    clientPhone: PhonePeSchema.optional(),
-    deliveryReference: z.string().trim().min(1).max(500).optional(),
+    clientName: z.string().trim().min(1, 'El nombre del cliente es obligatorio').max(80),
+    clientPhone: PhonePeSchema,
+    deliveryReference: z
+      .string()
+      .trim()
+      .min(1, 'La dirección o referencia es obligatoria')
+      .max(500),
   })
   .refine(
     (v) =>
@@ -397,6 +403,13 @@ export const OrderSummaryResponse = z.object({
   appearsInQueueAt: TimestampSchema,
   clientPhone: PhonePeSchema.nullable(),
   clientName: z.string().nullable(),
+  /**
+   * Dirección o referencia textual del destino, opcional para pedidos
+   * legacy (~28% son NULL en producción) pero obligatorio para pedidos
+   * nuevos creados desde el restaurante. La card del motorizado lo muestra
+   * como subtítulo bajo el nombre del cliente.
+   */
+  deliveryReference: z.string().nullable(),
   trackingLinkSentAt: TimestampSchema.nullable(),
   /**
    * Cola "Urgente": null = no urgente, timestamp = momento en que entró a la
@@ -486,6 +499,8 @@ export const TeamOrderItem = z.object({
   appearsInQueueAt: TimestampSchema,
   clientName: z.string().nullable(),
   clientPhone: PhonePeSchema.nullable(),
+  /** Dirección o referencia del cliente — usada por la card del motorizado. */
+  deliveryReference: z.string().nullable(),
   occupancySlots: z.number().int().min(1),
   createdAt: TimestampSchema,
   /** Si el driver autenticado ya tiene una solicitud pending para este order. */

@@ -73,6 +73,22 @@ type Props = {
    */
   clientName?: string | null
   /**
+   * Dirección o referencia del destino para mostrar como subtítulo bajo el
+   * nombre del cliente cuando `driverLayout` está activo. Si el campo legacy
+   * `delivery_reference` es null se puede pasar `delivery_address` como
+   * fallback — la card no distingue origen.
+   */
+  deliveryReference?: string | null
+  /**
+   * Activa el layout específico de la app del motorizado: nombre del cliente
+   * prominente + dirección/referencia debajo, restaurante como label pequeño
+   * arriba, y el código del pedido (#shortId) NO se muestra. Cuando es false
+   * (default), se mantiene el comportamiento previo (que usa `prominentCode`,
+   * `clientName` y el código según rol). Admin y restaurant-history quedan
+   * intactos al no pasar esta prop.
+   */
+  driverLayout?: boolean
+  /**
    * Si true, el pedido está en la cola "Urgente" (post-timeout o post-rechazo).
    * Fuerza styling rojo + glow + badge "URGENTE" prominente, sin importar el
    * tier calculado por estimated_ready_at. Solo aplica si status='waiting_driver'.
@@ -118,9 +134,12 @@ export function OrderCard({
   disabled = false,
   prominentCode = false,
   clientName,
+  deliveryReference,
+  driverLayout = false,
   isUrgent = false,
 }: Props) {
   const displayLabel = clientName?.trim() || null
+  const displayReference = deliveryReference?.trim() || null
   const noCharge = orderAmount === 0
   const money = noCharge
     ? 'No cobrar'
@@ -186,7 +205,24 @@ export function OrderCard({
 
       <div className="flex items-start justify-between gap-2 pl-2">
         <div className="flex-1 min-w-0">
-          {displayLabel ? (
+          {driverLayout ? (
+            <>
+              <div className="flex items-center gap-2 mb-1">
+                <ColorDot color={restaurantAccentColor} size={10} label={restaurantName} />
+                <span className="text-[10px] font-bold tracking-wider uppercase text-on-surface-variant truncate">
+                  {restaurantName}
+                </span>
+              </div>
+              <div className="font-black text-on-surface text-lg leading-tight truncate">
+                {displayLabel ?? restaurantName}
+              </div>
+              {displayReference && (
+                <div className="text-xs text-on-surface-variant leading-snug mt-0.5 line-clamp-2">
+                  {displayReference}
+                </div>
+              )}
+            </>
+          ) : displayLabel ? (
             <>
               <div className="flex items-center gap-2 mb-1">
                 <ColorDot color={restaurantAccentColor} size={10} label={restaurantName} />

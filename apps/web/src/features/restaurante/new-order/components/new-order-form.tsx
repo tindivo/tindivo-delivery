@@ -90,16 +90,26 @@ export function NewOrderForm() {
   const [yapePart, setYapePart] = useState<string>('')
   const [cashPart, setCashPart] = useState<string>('')
   const [clientName, setClientName] = useState<string>('')
-  // Datos del cliente que el restaurante puede pre-llenar opcionalmente. Si
-  // los conoce al recibir el pedido por teléfono, los pasamos al motorizado
-  // para que llegue al local con la info ya cargada. Si no, el driver los
-  // llenará después como siempre.
+  // Datos del cliente OBLIGATORIOS al crear el pedido. La card del motorizado
+  // los usa como identificación primaria (nombre prominente + dirección como
+  // subtítulo) en lugar del código del pedido. Si hubiera un error, el driver
+  // puede corregirlos en waiting_at_restaurant.
   const [clientPhone, setClientPhone] = useState<string>('')
   const [deliveryReference, setDeliveryReference] = useState<string>('')
+  // Mostrar el error solo después de que el usuario interactuó con el campo,
+  // para no asustar con rojos antes de empezar a escribir.
+  const [touched, setTouched] = useState<{
+    clientName: boolean
+    clientPhone: boolean
+    deliveryReference: boolean
+  }>({ clientName: false, clientPhone: false, deliveryReference: false })
   const PHONE_PE_REGEX = /^9\d{8}$/
   const clientPhoneDigits = clientPhone.replace(/\D/g, '').slice(0, 9)
-  const clientPhoneValid = clientPhoneDigits === '' || PHONE_PE_REGEX.test(clientPhoneDigits)
+  const clientNameTrim = clientName.trim()
   const deliveryReferenceTrim = deliveryReference.trim()
+  const clientNameValid = clientNameTrim.length > 0
+  const clientPhoneValid = PHONE_PE_REGEX.test(clientPhoneDigits)
+  const deliveryReferenceValid = deliveryReferenceTrim.length > 0
 
   const carouselRef = useRef<HTMLDivElement>(null)
   const isDesktop = useIsDesktop()
@@ -132,9 +142,11 @@ export function NewOrderForm() {
     (payment !== 'pending_cash' || paysWithNum >= amountNum) &&
     (payment !== 'pending_mixed' ||
       (splitBothPositive && splitSumsCorrect && paysWithNum >= cashPartNum)) &&
-    // El teléfono es opcional, pero si el restaurante empezó a escribirlo
-    // debe ser válido — no queremos números a medias en BD.
-    clientPhoneValid
+    // Datos del cliente obligatorios: nombre, teléfono válido y dirección/referencia.
+    // La card del motorizado los necesita para identificar a quién y a dónde.
+    clientNameValid &&
+    clientPhoneValid &&
+    deliveryReferenceValid
 
   useEffect(() => {
     const idx = PREP_MINUTES.indexOf(prepMinutes)
@@ -145,7 +157,12 @@ export function NewOrderForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (submittingRef.current) return
-    if (!canSubmit) return
+    if (!canSubmit) {
+      // Marca todos los campos del cliente como tocados para revelar los
+      // mensajes de error si el usuario presionó Crear sin completarlos.
+      setTouched({ clientName: true, clientPhone: true, deliveryReference: true })
+      return
+    }
     submittingRef.current = true
     const body: Orders.CreateOrderRequest = {
       prepMinutes,
@@ -155,9 +172,9 @@ export function NewOrderForm() {
       cashAmount: payment === 'pending_mixed' ? cashPartNum : undefined,
       clientPaysWith:
         payment === 'pending_cash' || payment === 'pending_mixed' ? paysWithNum : undefined,
-      clientName: clientName.trim() || undefined,
-      clientPhone: clientPhoneDigits || undefined,
-      deliveryReference: deliveryReferenceTrim || undefined,
+      clientName: clientNameTrim,
+      clientPhone: clientPhoneDigits,
+      deliveryReference: deliveryReferenceTrim,
     }
     createOrder.mutate(
       { body, idempotencyKey: idem.key },
@@ -353,81 +370,116 @@ export function NewOrderForm() {
           </div>
         </section>
 
-        {/* Nombre del cliente — sin badge "opcional". El backend lo acepta vacío,
-            pero la UI no insinúa opcionalidad para favorecer que el restaurant lo llene. */}
+        {/* Nombre del cliente — obligatorio. El motorizado lo ve prominente
+            en su card en lugar del código del pedido, así que el restaurante
+            debe registrarlo siempre. */}
         <section className="space-y-3">
-          <label htmlFor="clientName" className="text-sm font-semibold text-on-surface block px-1">
-            Nombre del cliente
-          </label>
+          <div className="flex items-center gap-2 px-1">
+            <label htmlFor="clientName" className="text-sm font-semibold text-on-surface">
+              Nombre del cliente
+            </label>
+            <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
+              obligatorio
+            </span>
+          </div>
           <input
             id="clientName"
             type="text"
             value={clientName}
             onChange={(e) => setClientName(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, clientName: true }))}
             placeholder="Ej: Juan, María Fernanda"
             maxLength={80}
             autoComplete="off"
             autoCapitalize="words"
+            aria-invalid={touched.clientName && !clientNameValid}
             className="w-full px-4 py-3.5 rounded-[20px] text-base font-semibold text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
             style={{
               background: 'rgba(255, 255, 255, 0.85)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(225, 191, 181, 0.35)',
+              border:
+                touched.clientName && !clientNameValid
+                  ? '1px solid rgba(186, 26, 26, 0.55)'
+                  : '1px solid rgba(225, 191, 181, 0.35)',
               boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
             }}
           />
-        </section>
-
-        {/* Teléfono del cliente — siempre visible, mismo estilo que Nombre.
-            En backend sigue siendo opcional; el motorizado puede modificarlo
-            durante waiting_at_restaurant si el restaurant lo dejó vacío o
-            necesita corregir. */}
-        <section className="space-y-3">
-          <label htmlFor="clientPhone" className="text-sm font-semibold text-on-surface block px-1">
-            Teléfono del cliente
-          </label>
-          <PhoneInputPe
-            id="clientPhone"
-            value={clientPhone}
-            onChange={(e) => setClientPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-            autoComplete="tel"
-            aria-invalid={!clientPhoneValid}
-          />
-          {!clientPhoneValid && (
+          {touched.clientName && !clientNameValid && (
             <p className="text-[11px] font-semibold text-red-600 px-1">
-              Debe empezar en 9 y tener 9 dígitos.
+              Escribe el nombre del cliente.
             </p>
           )}
         </section>
 
-        {/* Dirección o referencia — siempre visible. El contador X/500 guía al
-            restaurant cuando empieza a escribir sin sugerir opcionalidad. */}
+        {/* Teléfono del cliente — obligatorio. El motorizado lo usa para
+            llamar/WhatsApp al cliente desde su PWA. */}
         <section className="space-y-3">
-          <label
-            htmlFor="deliveryReference"
-            className="text-sm font-semibold text-on-surface block px-1"
-          >
-            Dirección o referencia
-          </label>
+          <div className="flex items-center gap-2 px-1">
+            <label htmlFor="clientPhone" className="text-sm font-semibold text-on-surface">
+              Teléfono del cliente
+            </label>
+            <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
+              obligatorio
+            </span>
+          </div>
+          <PhoneInputPe
+            id="clientPhone"
+            value={clientPhone}
+            onChange={(e) => setClientPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+            onBlur={() => setTouched((t) => ({ ...t, clientPhone: true }))}
+            autoComplete="tel"
+            aria-invalid={touched.clientPhone && !clientPhoneValid}
+          />
+          {touched.clientPhone && !clientPhoneValid && (
+            <p className="text-[11px] font-semibold text-red-600 px-1">
+              {clientPhoneDigits.length === 0
+                ? 'Ingresa el teléfono del cliente.'
+                : 'Debe empezar en 9 y tener 9 dígitos.'}
+            </p>
+          )}
+        </section>
+
+        {/* Dirección o referencia — obligatorio. Sustituye al código del pedido
+            en la card del motorizado como info de destino. */}
+        <section className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <label htmlFor="deliveryReference" className="text-sm font-semibold text-on-surface">
+              Dirección o referencia
+            </label>
+            <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
+              obligatorio
+            </span>
+          </div>
           <textarea
             id="deliveryReference"
             value={deliveryReference}
             onChange={(e) => setDeliveryReference(e.target.value.slice(0, 500))}
+            onBlur={() => setTouched((t) => ({ ...t, deliveryReference: true }))}
             placeholder="Ej: Av. Paseo de la República 3500, dpto 502, frente al parque"
             rows={2}
             maxLength={500}
+            aria-invalid={touched.deliveryReference && !deliveryReferenceValid}
             className="w-full px-4 py-3 rounded-[20px] text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow resize-none"
             style={{
               background: 'rgba(255, 255, 255, 0.85)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(225, 191, 181, 0.35)',
+              border:
+                touched.deliveryReference && !deliveryReferenceValid
+                  ? '1px solid rgba(186, 26, 26, 0.55)'
+                  : '1px solid rgba(225, 191, 181, 0.35)',
               boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
             }}
           />
-          {deliveryReferenceTrim.length > 0 && (
-            <p className="text-[10px] text-on-surface-variant px-1">
-              {deliveryReferenceTrim.length}/500
+          {touched.deliveryReference && !deliveryReferenceValid ? (
+            <p className="text-[11px] font-semibold text-red-600 px-1">
+              Escribe la dirección o una referencia del destino.
             </p>
+          ) : (
+            deliveryReferenceTrim.length > 0 && (
+              <p className="text-[10px] text-on-surface-variant px-1">
+                {deliveryReferenceTrim.length}/500
+              </p>
+            )
           )}
         </section>
 

@@ -199,8 +199,10 @@ export function ActiveOrderDetail({ orderId }: Props) {
           changeToGive={raw.change_to_give != null ? Number(raw.change_to_give) : null}
         />
 
-        {/* Header de identificación — 1 línea densa: restaurante + cliente + shortId.
-            Después del PhaseHero, sirve solo como anclaje contextual. */}
+        {/* Header de identificación — restaurante + cliente. El código del pedido
+            (#shortId) NO se muestra en la UI del driver; sigue presente en el
+            mensaje WhatsApp al cliente y en banners de transferencia (donde es
+            útil para comunicación). */}
         <section className="bg-surface-container-lowest rounded-2xl px-4 py-2.5 border border-outline-variant/20">
           <div className="flex items-center gap-2 min-w-0">
             <ColorDot color={restaurant.accent_color ?? 'ab3500'} />
@@ -214,9 +216,6 @@ export function ActiveOrderDetail({ orderId }: Props) {
                 </span>
               )}
             </div>
-            <span className="shrink-0 text-[11px] font-black font-mono text-on-surface-variant">
-              #{raw.short_id}
-            </span>
           </div>
         </section>
 

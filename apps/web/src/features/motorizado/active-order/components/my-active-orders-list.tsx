@@ -88,6 +88,8 @@ export function MyActiveOrdersList() {
               <OrderCard
                 shortId={order.short_id}
                 clientName={order.client_name ?? null}
+                deliveryReference={order.delivery_reference ?? order.delivery_address ?? null}
+                driverLayout
                 restaurantName={order.restaurants?.name ?? 'Restaurante'}
                 restaurantAccentColor={order.restaurants?.accent_color ?? 'ab3500'}
                 status={order.status}
