@@ -151,7 +151,8 @@ describe('EditOrderByRestaurantUseCase', () => {
     const { DeliveryDistanceBand } = await import(
       '../../domain/value-objects/delivery-distance-band'
     )
-    order.markPickedUp(Slots.default(), DeliveryDistanceBand.of('near'), NOW)
+    const { Money } = await import('../../domain/value-objects/money')
+    order.markPickedUp(Slots.default(), DeliveryDistanceBand.of('near'), Money.pen(3), NOW)
     order.markDelivered(NOW)
     order.pullEvents()
 

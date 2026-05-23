@@ -13,13 +13,30 @@ import { CancellationReason, OrderStatus, PaymentStatus, VehicleType } from '../
 /* ─────────────── Request DTOs ─────────────── */
 
 /**
- * Tres bandas de distancia que el motorizado declara al recoger el pedido.
- * Tindivo cobra comisiones diferenciadas según la banda. Es declarativo:
- * confiamos en el juicio del driver (considera tráfico, ruta real, etc.).
+ * Dos bandas de distancia que el motorizado declara al recoger el pedido.
+ * Tindivo cobra una comisión fija al restaurante según la banda. Es
+ * declarativo: confiamos en el juicio del driver (considera tráfico, ruta
+ * real, etc.). Los montos por banda están en
+ * `app_settings.delivery_distance_commissions` y se aplican al pickup
+ * sobre `orders.delivery_fee`.
  */
-export const DELIVERY_DISTANCE_BANDS = ['near', 'medium', 'far'] as const
+export const DELIVERY_DISTANCE_BANDS = ['near', 'far'] as const
 export const DeliveryDistanceBand = z.enum(DELIVERY_DISTANCE_BANDS)
 export type DeliveryDistanceBand = z.infer<typeof DeliveryDistanceBand>
+
+/**
+ * Comisiones que Tindivo cobra al restaurante por pedido entregado según
+ * la banda de distancia declarada por el motorizado al recoger. Mostrado
+ * en la UI del driver para que sepa cuánto cobrará Tindivo antes de
+ * elegir la banda. Fuente: `app_settings.delivery_distance_commissions`.
+ */
+export const DeliveryDistanceCommissionsResponse = z.object({
+  near: MoneyPenSchema,
+  far: MoneyPenSchema,
+})
+export type DeliveryDistanceCommissionsResponse = z.infer<
+  typeof DeliveryDistanceCommissionsResponse
+>
 
 export const CreateOrderRequest = z
   .object({

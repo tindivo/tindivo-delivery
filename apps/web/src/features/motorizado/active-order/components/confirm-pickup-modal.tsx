@@ -2,6 +2,7 @@
 import type { Orders } from '@tindivo/contracts'
 import { Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
+import { useDistanceCommissions } from '../hooks/use-distance-commissions'
 
 type DistanceBand = Orders.DeliveryDistanceBand
 
@@ -22,8 +23,9 @@ type Props = {
  *   1) `occupancySlots`: cuántos slots ocupa el pedido en la mochila del driver
  *      (1..N, default 1, max configurable). Alimenta R3 (cap por suma de slots).
  *   2) `deliveryDistanceBand`: qué tan lejos está la entrega del local
- *      (near/medium/far). Tindivo cobra comisiones diferenciadas — el driver
- *      lo declara honestamente.
+ *      (near/far). Tindivo cobra una comisión fija al restaurante según la
+ *      banda (`app_settings.delivery_distance_commissions`); el driver la
+ *      ve junto a cada botón para declarar honestamente.
  *
  * El botón "Confirmar" queda disabled hasta que el driver elige ambos.
  */
@@ -36,6 +38,11 @@ export function ConfirmPickupModal({
   onConfirm,
   onCancel,
 }: Props) {
+  const commissions = useDistanceCommissions()
+  const nearFee = commissions.data?.near
+  const farFee = commissions.data?.far
+  const formatFee = (amount: number | undefined) =>
+    amount === undefined ? '' : `S/ ${amount.toFixed(2)}`
   const [slots, setSlots] = useState(1)
   const [distance, setDistance] = useState<DistanceBand | null>(null)
   const safeMax = Math.max(1, Math.min(10, maxSlots))
@@ -135,10 +142,11 @@ export function ConfirmPickupModal({
           <p className="text-xs text-on-surface-variant mb-3">
             Sirve para calcular la comisión del restaurante. Sé honesto.
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <DistanceButton
               value="near"
               label="Cerca"
+              feeLabel={formatFee(nearFee)}
               icon="near_me"
               ariaLabel="Entrega cerca"
               selected={distance === 'near'}
@@ -146,17 +154,9 @@ export function ConfirmPickupModal({
               onSelect={setDistance}
             />
             <DistanceButton
-              value="medium"
-              label="Medio"
-              icon="social_distance"
-              ariaLabel="Entrega medio lejos"
-              selected={distance === 'medium'}
-              disabled={isPending}
-              onSelect={setDistance}
-            />
-            <DistanceButton
               value="far"
               label="Lejos"
+              feeLabel={formatFee(farFee)}
               icon="route"
               ariaLabel="Entrega lejos"
               selected={distance === 'far'}
@@ -216,6 +216,7 @@ export function ConfirmPickupModal({
 type DistanceButtonProps = {
   value: DistanceBand
   label: string
+  feeLabel: string
   icon: string
   ariaLabel: string
   selected: boolean
@@ -226,6 +227,7 @@ type DistanceButtonProps = {
 function DistanceButton({
   value,
   label,
+  feeLabel,
   icon,
   ariaLabel,
   selected,
@@ -239,7 +241,7 @@ function DistanceButton({
       disabled={disabled}
       aria-pressed={selected}
       aria-label={ariaLabel}
-      className="relative h-20 rounded-2xl border flex flex-col items-center justify-center gap-1 transition-all active:scale-[0.97] disabled:opacity-60"
+      className="relative h-24 rounded-2xl border flex flex-col items-center justify-center gap-1 transition-all active:scale-[0.97] disabled:opacity-60"
       style={{
         background: selected
           ? 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)'
@@ -251,13 +253,24 @@ function DistanceButton({
     >
       <Icon name={icon} size={24} filled />
       <span
-        className="text-[10px] font-black tracking-[0.18em] uppercase"
+        className="text-[11px] font-black tracking-[0.18em] uppercase"
         style={{
           color: selected ? '#ffffff' : 'var(--mat-sys-on-surface-variant, #5c554f)',
         }}
       >
         {label}
       </span>
+      {feeLabel && (
+        <span
+          className="font-mono font-black text-sm tabular-nums"
+          style={{
+            color: selected ? '#ffffff' : 'var(--mat-sys-on-surface, #1f1b16)',
+            opacity: selected ? 0.95 : 0.8,
+          }}
+        >
+          {feeLabel}
+        </span>
+      )}
     </button>
   )
 }

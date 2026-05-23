@@ -541,6 +541,7 @@ export class Order extends AggregateRoot<OrderId> {
   markPickedUp(
     occupancySlots: OccupancySlots,
     deliveryDistanceBand: DeliveryDistanceBand,
+    deliveryFee: Money,
     now: Date,
   ): Result<void, InvalidStateTransition | CustomerDataMissing> {
     if (!StateTransitionPolicy.canTransition(this._state.status.value, 'picked_up'))
@@ -555,6 +556,12 @@ export class Order extends AggregateRoot<OrderId> {
     this._state.pickedUpAt = now
     this._state.occupancySlots = occupancySlots
     this._state.deliveryDistanceBand = deliveryDistanceBand
+    // Snapshot final de la comisión que Tindivo cobrará al restaurante por
+    // este pedido. Calculado al pickup según la banda (no al crear, porque
+    // la distancia se conoce solo cuando el driver recoge). Pedidos
+    // cancelados antes del pickup mantienen el delivery_fee placeholder
+    // (típicamente 0) — no se cobra por entregas no realizadas.
+    this._state.deliveryFee = deliveryFee
     this._state.updatedAt = now
 
     this.raise(

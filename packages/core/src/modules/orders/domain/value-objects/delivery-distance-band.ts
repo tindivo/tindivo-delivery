@@ -1,7 +1,7 @@
 import { ValueObject } from '../../../../shared/kernel/value-object'
 
-export type DeliveryDistanceBandValue = 'near' | 'medium' | 'far'
-const BANDS: readonly DeliveryDistanceBandValue[] = ['near', 'medium', 'far'] as const
+export type DeliveryDistanceBandValue = 'near' | 'far'
+const BANDS: readonly DeliveryDistanceBandValue[] = ['near', 'far'] as const
 
 type Props = { band: DeliveryDistanceBandValue }
 

@@ -1,4 +1,4 @@
-import type { DomainError } from '../../../../shared/errors/domain-error'
+import { DomainError } from '../../../../shared/errors/domain-error'
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
 import { OrderNotFound } from '../../domain/errors/order-errors'
@@ -14,8 +14,23 @@ import { OccupancySlots } from '../../domain/value-objects/occupancy-slots'
 import { OrderId } from '../../domain/value-objects/order-id'
 import type { AssignmentRulesRepository } from '../ports/assignment-rules.repository'
 import type { Clock } from '../ports/clock'
+import {
+  type DistanceCommissionsRepository,
+  feeForBand,
+} from '../ports/distance-commissions.repository'
 import type { EventPublisher } from '../ports/event-publisher'
 import type { OrderRepository } from '../ports/order.repository'
+
+/**
+ * Falla cuando la config `app_settings.delivery_distance_commissions` está
+ * ausente o malformada. Bloquea el pickup explícitamente porque la
+ * comisión no se puede inferir — admin debe arreglar la config.
+ */
+class DistanceCommissionsMissing extends DomainError {
+  readonly code = 'DISTANCE_COMMISSIONS_MISSING'
+  readonly message =
+    'No se pudo leer la configuración de comisiones por distancia. Avisa a soporte.'
+}
 
 export type MarkPickedUpCommand = {
   orderId: string
@@ -52,6 +67,7 @@ export class MarkPickedUpUseCase
     private readonly events: EventPublisher,
     private readonly clock: Clock,
     private readonly publicAppUrl: string,
+    private readonly distanceCommissions: DistanceCommissionsRepository,
     private readonly assignmentRules?: AssignmentRulesRepository,
   ) {}
 
@@ -63,8 +79,15 @@ export class MarkPickedUpUseCase
     const slots = OccupancySlots.of(cmd.occupancySlots, rules.maxOccupancySlotsPerOrder)
     const distanceBand = DeliveryDistanceBand.of(cmd.deliveryDistanceBand)
 
+    // Snapshot de la comisión final al pickup. Si la config en app_settings
+    // está ausente o malformada, el pickup falla explícitamente — la
+    // comisión es central al modelo de negocio y no debe asumirse 0.
+    const commissions = await this.distanceCommissions.read()
+    if (!commissions) return Result.fail(new DistanceCommissionsMissing())
+    const deliveryFee = feeForBand(commissions, distanceBand.value)
+
     const previous = order.status
-    const res = order.markPickedUp(slots, distanceBand, this.clock.now())
+    const res = order.markPickedUp(slots, distanceBand, deliveryFee, this.clock.now())
     if (res.isFailure) return Result.fail(res.error)
 
     await this.orders.save(order, previous)

@@ -1709,7 +1709,7 @@ export type Database = {
         | "confirmed"
         | "disputed"
         | "resolved"
-      delivery_distance_band: "near" | "medium" | "far"
+      delivery_distance_band: "near" | "far"
       domain_event_status: "pending" | "published" | "failed"
       order_source: "restaurant_pwa" | "customer_pwa"
       order_status:
@@ -1863,7 +1863,7 @@ export const Constants = {
         "disputed",
         "resolved",
       ],
-      delivery_distance_band: ["near", "medium", "far"],
+      delivery_distance_band: ["near", "far"],
       domain_event_status: ["pending", "published", "failed"],
       order_source: ["restaurant_pwa", "customer_pwa"],
       order_status: [

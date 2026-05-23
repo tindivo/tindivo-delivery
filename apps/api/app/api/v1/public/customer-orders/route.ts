@@ -54,7 +54,7 @@ async function createCustomerOrder(
 
   const { data: restaurant, error: restaurantError } = await sb
     .from('restaurants')
-    .select('id, name, is_active, is_delivery_enabled, commission_per_order')
+    .select('id, name, is_active, is_delivery_enabled')
     .eq('id', data.restaurantId)
     .maybeSingle()
 
@@ -89,7 +89,9 @@ async function createCustomerOrder(
     clientPaysWith: data.paymentStatus === 'pending_cash' ? data.clientPaysWith : undefined,
     clientName: data.customerName,
     notes,
-    commissionPerOrder: Number(restaurant.commission_per_order),
+    // delivery_fee inicia en 0 como placeholder y se ajusta al pickup
+    // según la banda de distancia (ver MarkPickedUpUseCase).
+    commissionPerOrder: 0,
     // 'customer_pwa' marca el pedido para que nazca en pending_acceptance,
     // espere aceptación del restaurante, y NO dispare auto-assign hasta
     // que el restaurante confirme prep_time real.
