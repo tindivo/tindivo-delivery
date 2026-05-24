@@ -25,6 +25,8 @@ function pickedUpOrder(payment: PaymentIntent): Order {
     prepTime: PrepTime.of(15),
     payment,
     deliveryFee: Money.pen(5),
+    baseCommission: Money.pen(3),
+    farSurchargeAmount: Money.pen(0.5),
     appearsInQueueAt: NOW,
     estimatedReadyAt: NOW,
     clientPhone: null,

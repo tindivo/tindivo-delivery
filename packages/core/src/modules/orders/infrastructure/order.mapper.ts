@@ -52,6 +52,14 @@ export const OrderMapper = {
         row.client_paid_exact_at_delivery ?? false,
       ),
       deliveryFee: Money.pen(Number(row.delivery_fee)),
+      // Pedidos legacy pre-migración pueden tener NULL en estos snapshots.
+      // Caemos a 0 para no romper hidratación; markPickedUp sumará 0 en
+      // pedidos legacy que aún no hicieron pickup (no debería pasar — el
+      // backfill cubre los abiertos).
+      baseCommission: Money.pen(row.base_commission != null ? Number(row.base_commission) : 0),
+      farSurchargeAmount: Money.pen(
+        row.far_surcharge_amount != null ? Number(row.far_surcharge_amount) : 0,
+      ),
       appearsInQueueAt: new Date(row.appears_in_queue_at),
       estimatedReadyAt: new Date(row.estimated_ready_at),
       clientPhone: row.client_phone,
@@ -115,6 +123,8 @@ export const OrderMapper = {
       pending_acceptance_at: p.pendingAcceptanceAt?.toISOString() ?? null,
       order_amount: p.payment.orderAmount.amount,
       delivery_fee: p.deliveryFee.amount,
+      base_commission: p.baseCommission.amount,
+      far_surcharge_amount: p.farSurchargeAmount.amount,
       payment_status: p.payment.status,
       payment_status_at_creation: p.payment.paymentStatusAtCreation,
       yape_amount: p.payment.yapeAmount?.amount ?? null,
@@ -180,6 +190,9 @@ export const OrderMapper = {
       cash_owed_at_delivery: p.cashOwedAtDelivery?.amount ?? null,
       client_name: p.clientName,
       notes: p.notes,
+      // delivery_fee se actualiza en markPickedUp según la banda; persistir
+      // aquí asegura que el trigger DB de balance_due reciba el valor final.
+      delivery_fee: p.deliveryFee.amount,
     }
   },
 }

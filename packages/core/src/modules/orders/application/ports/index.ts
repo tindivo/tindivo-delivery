@@ -3,11 +3,6 @@ export { SystemClock } from './clock'
 export type { EventPublisher } from './event-publisher'
 export type { OrderRepository, AssignmentCandidateQuery } from './order.repository'
 export type { AssignmentRulesRepository } from './assignment-rules.repository'
-export type {
-  DistanceCommissions,
-  DistanceCommissionsRepository,
-} from './distance-commissions.repository'
-export { feeForBand } from './distance-commissions.repository'
 export type { RejectionsRepository } from './rejections.repository'
 export type {
   DriverRepository,

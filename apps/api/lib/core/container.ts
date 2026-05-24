@@ -27,7 +27,6 @@ import {
   RequestOrderTransferUseCase,
   SaveCustomerDataUseCase,
   SupabaseAssignmentRulesRepository,
-  SupabaseDistanceCommissionsRepository,
   SupabaseDriverRepository,
   SupabaseEventPublisher,
   SupabaseOrderRepository,
@@ -191,15 +190,7 @@ export function buildMarkArrivedUseCase(sb: ServerClient) {
 
 export function buildMarkPickedUpUseCase(sb: ServerClient) {
   const { orders, assignmentRules, events } = deps(sb)
-  const distanceCommissions = new SupabaseDistanceCommissionsRepository(sb)
-  return new MarkPickedUpUseCase(
-    orders,
-    events,
-    clock,
-    publicAppUrl,
-    distanceCommissions,
-    assignmentRules,
-  )
+  return new MarkPickedUpUseCase(orders, events, clock, publicAppUrl, assignmentRules)
 }
 
 export function buildMarkReceivedUseCase(sb: ServerClient) {

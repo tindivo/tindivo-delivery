@@ -2,7 +2,6 @@
 import type { Orders } from '@tindivo/contracts'
 import { Button, Icon } from '@tindivo/ui'
 import { useState } from 'react'
-import { useDistanceCommissions } from '../hooks/use-distance-commissions'
 
 type DistanceBand = Orders.DeliveryDistanceBand
 
@@ -14,6 +13,15 @@ type Props = {
   maxSlots?: number
   /** Si true, advertimos que aún no terminó el prep (warning de pickup prematuro). */
   prepNotReady?: boolean
+  /**
+   * Snapshots de la comisión del restaurante del pedido. El modal los
+   * recibe para mostrar al driver cuánto cobrará Tindivo según la banda:
+   *   - near = baseCommission
+   *   - far  = baseCommission + farSurchargeAmount
+   * Si el pedido es legacy y no los tiene, pasar 0 (modal mostrará S/ 0.00).
+   */
+  baseCommission: number
+  farSurchargeAmount: number
   onConfirm: (input: { occupancySlots: number; deliveryDistanceBand: DistanceBand }) => void
   onCancel: () => void
 }
@@ -23,9 +31,9 @@ type Props = {
  *   1) `occupancySlots`: cuántos slots ocupa el pedido en la mochila del driver
  *      (1..N, default 1, max configurable). Alimenta R3 (cap por suma de slots).
  *   2) `deliveryDistanceBand`: qué tan lejos está la entrega del local
- *      (near/far). Tindivo cobra una comisión fija al restaurante según la
- *      banda (`app_settings.delivery_distance_commissions`); el driver la
- *      ve junto a cada botón para declarar honestamente.
+ *      (near/far). Tindivo cobra al restaurante `baseCommission` si la
+ *      banda es near, o `baseCommission + farSurchargeAmount` si es far.
+ *      Ambos snapshots viajan con el pedido desde su creación.
  *
  * El botón "Confirmar" queda disabled hasta que el driver elige ambos.
  */
@@ -35,14 +43,14 @@ export function ConfirmPickupModal({
   errorMessage,
   maxSlots = 3,
   prepNotReady = false,
+  baseCommission,
+  farSurchargeAmount,
   onConfirm,
   onCancel,
 }: Props) {
-  const commissions = useDistanceCommissions()
-  const nearFee = commissions.data?.near
-  const farFee = commissions.data?.far
-  const formatFee = (amount: number | undefined) =>
-    amount === undefined ? '' : `S/ ${amount.toFixed(2)}`
+  const nearFee = baseCommission
+  const farFee = baseCommission + farSurchargeAmount
+  const formatFee = (amount: number) => `S/ ${amount.toFixed(2)}`
   const [slots, setSlots] = useState(1)
   const [distance, setDistance] = useState<DistanceBand | null>(null)
   const safeMax = Math.max(1, Math.min(10, maxSlots))

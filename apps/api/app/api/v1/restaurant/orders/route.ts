@@ -51,16 +51,27 @@ export async function POST(req: NextRequest) {
       return problemCode('PLATFORM_CLOSED', 403, detail)
     }
 
-    // delivery_fee inicia en 0 como placeholder y se actualiza al pickup
-    // según la banda de distancia declarada por el motorizado, leyendo
-    // `app_settings.delivery_distance_commissions`. La columna legacy
-    // restaurants.commission_per_order quedó deprecada (ver migration
-    // delivery_distance_two_bands).
+    // Snapshot de comisión y surcharge del restaurante al momento de crear.
+    // Estos valores viajan con el pedido (orders.base_commission +
+    // orders.far_surcharge_amount). El delivery_fee final se calcula al
+    // pickup según la banda declarada por el motorizado:
+    //   delivery_fee = base_commission + (banda='far' ? far_surcharge_amount : 0)
+    const { data: restaurant, error: rErr } = await auth.auth.supabase
+      .from('restaurants')
+      .select('commission_per_order, far_distance_surcharge')
+      .eq('id', restaurantId)
+      .single()
+
+    if (rErr || !restaurant) {
+      return problemCode('INTERNAL_ERROR', 500, 'No se pudo leer la comisión del restaurante')
+    }
+
     const useCase = buildCreateOrderUseCase(auth.auth.supabase)
     const result = await useCase.execute({
       ...body.data,
       restaurantId,
-      commissionPerOrder: 0,
+      baseCommission: Number(restaurant.commission_per_order),
+      farSurchargeAmount: Number(restaurant.far_distance_surcharge),
     })
 
     if (result.isFailure) return problem(result.error)

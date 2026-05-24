@@ -394,6 +394,10 @@ export function ActiveOrderDetail({ orderId }: Props) {
           prepNotReady={!prepReady}
           isPending={pickedUp.isPending}
           errorMessage={pickupError}
+          baseCommission={raw.base_commission != null ? Number(raw.base_commission) : 0}
+          farSurchargeAmount={
+            raw.far_surcharge_amount != null ? Number(raw.far_surcharge_amount) : 0
+          }
           onCancel={() => {
             setConfirmPickupOpen(false)
             setPickupError(null)

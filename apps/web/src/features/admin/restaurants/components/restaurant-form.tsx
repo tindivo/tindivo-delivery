@@ -41,6 +41,7 @@ type Props = {
     coordinates_lat: number | null
     coordinates_lng: number | null
     commission_per_order: number
+    far_distance_surcharge?: number
     is_active: boolean
   }
 }
@@ -68,7 +69,12 @@ export function RestaurantForm({ mode, initial }: Props) {
   const [commissionPerOrder, setCommissionPerOrder] = useState<string>(
     initial?.commission_per_order != null
       ? Number(initial.commission_per_order).toFixed(2)
-      : '1.00',
+      : '3.00',
+  )
+  const [farDistanceSurcharge, setFarDistanceSurcharge] = useState<string>(
+    initial?.far_distance_surcharge != null
+      ? Number(initial.far_distance_surcharge).toFixed(2)
+      : '0.50',
   )
   const [ownerEmail, setOwnerEmail] = useState('')
   const [ownerPassword, setOwnerPassword] = useState('')
@@ -92,6 +98,13 @@ export function RestaurantForm({ mode, initial }: Props) {
     }
     const commissionRounded = Math.round(commission * 100) / 100
 
+    const surcharge = Number(farDistanceSurcharge)
+    if (!Number.isFinite(surcharge) || surcharge < 0 || surcharge > 100) {
+      setErrorMsg('El adicional por entrega lejos debe ser un número entre 0 y 100.')
+      return
+    }
+    const surchargeRounded = Math.round(surcharge * 100) / 100
+
     if (mode === 'create') {
       const body: Restaurants.CreateRestaurantRequest = {
         name,
@@ -103,6 +116,7 @@ export function RestaurantForm({ mode, initial }: Props) {
         accentColor,
         coordinates: coords,
         commissionPerOrder: commissionRounded,
+        farDistanceSurcharge: surchargeRounded,
         ownerEmail,
         ownerPassword,
       }
@@ -123,6 +137,7 @@ export function RestaurantForm({ mode, initial }: Props) {
         accentColor,
         coordinates: coords,
         commissionPerOrder: commissionRounded,
+        farDistanceSurcharge: surchargeRounded,
       }
       try {
         await update.mutateAsync(body)
@@ -243,31 +258,60 @@ export function RestaurantForm({ mode, initial }: Props) {
               />
             </div>
           </div>
-          <div>
-            <Label htmlFor="commission">Comisión Tindivo por pedido</Label>
-            <div className="flex items-stretch gap-2">
-              <span className="inline-flex items-center px-3 rounded-xl bg-surface-container border border-outline-variant/30 text-sm font-semibold text-on-surface-variant">
-                S/
-              </span>
-              <Input
-                id="commission"
-                type="number"
-                step="0.01"
-                min="0"
-                max="100"
-                value={commissionPerOrder}
-                onChange={(e) => setCommissionPerOrder(e.target.value)}
-                required
-                inputMode="decimal"
-                placeholder="1.00"
-                className="font-mono"
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="commission">Comisión base por pedido</Label>
+              <div className="flex items-stretch gap-2">
+                <span className="inline-flex items-center px-3 rounded-xl bg-surface-container border border-outline-variant/30 text-sm font-semibold text-on-surface-variant">
+                  S/
+                </span>
+                <Input
+                  id="commission"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={commissionPerOrder}
+                  onChange={(e) => setCommissionPerOrder(e.target.value)}
+                  required
+                  inputMode="decimal"
+                  placeholder="3.00"
+                  className="font-mono"
+                />
+              </div>
+              <p className="text-xs text-on-surface-variant mt-1">
+                Lo que Tindivo cobra al restaurante por pedido entregado, banda "cerca".
+              </p>
             </div>
-            <p className="text-xs text-on-surface-variant mt-1">
-              Monto que se cobra al restaurante por cada pedido entregado. Solo aplica a pedidos
-              nuevos — los pedidos ya creados mantienen su comisión original.
-            </p>
+            <div>
+              <Label htmlFor="far-surcharge">Adicional por entrega lejos</Label>
+              <div className="flex items-stretch gap-2">
+                <span className="inline-flex items-center px-3 rounded-xl bg-surface-container border border-outline-variant/30 text-sm font-semibold text-on-surface-variant">
+                  S/
+                </span>
+                <Input
+                  id="far-surcharge"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={farDistanceSurcharge}
+                  onChange={(e) => setFarDistanceSurcharge(e.target.value)}
+                  required
+                  inputMode="decimal"
+                  placeholder="0.50"
+                  className="font-mono"
+                />
+              </div>
+              <p className="text-xs text-on-surface-variant mt-1">
+                Se suma a la base cuando el motorizado declara la entrega como lejana.
+              </p>
+            </div>
           </div>
+          <p className="text-xs text-on-surface-variant">
+            Estos cambios solo aplican a pedidos NUEVOS. Los pedidos ya creados mantienen los
+            valores que tenían al crearse.
+          </p>
         </section>
 
         <section className="space-y-4 rounded-2xl bg-surface-container-lowest p-6 border border-outline-variant/15">

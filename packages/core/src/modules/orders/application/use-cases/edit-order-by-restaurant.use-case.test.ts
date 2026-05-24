@@ -31,7 +31,8 @@ function buildOrder(opts?: { paymentStatus?: 'prepaid' | 'pending_yape' | 'pendi
       opts?.paymentStatus === 'pending_cash'
         ? PaymentIntent.create('pending_cash', Money.pen(20), Money.pen(50))
         : PaymentIntent.create(opts?.paymentStatus ?? 'pending_yape', Money.pen(20)),
-    deliveryFee: Money.pen(5),
+    baseCommission: Money.pen(5),
+    farSurchargeAmount: Money.pen(0.5),
     clientName: 'Original',
     now: NOW,
   })
@@ -151,8 +152,7 @@ describe('EditOrderByRestaurantUseCase', () => {
     const { DeliveryDistanceBand } = await import(
       '../../domain/value-objects/delivery-distance-band'
     )
-    const { Money } = await import('../../domain/value-objects/money')
-    order.markPickedUp(Slots.default(), DeliveryDistanceBand.of('near'), Money.pen(3), NOW)
+    order.markPickedUp(Slots.default(), DeliveryDistanceBand.of('near'), NOW)
     order.markDelivered(NOW)
     order.pullEvents()
 
