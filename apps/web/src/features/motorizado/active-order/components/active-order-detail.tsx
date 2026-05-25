@@ -20,6 +20,7 @@ import { useSaveCustomerData } from '../hooks/use-save-customer-data'
 import { ChangePaymentMethodModal } from './change-payment-method-modal'
 import { ConfirmPickupModal } from './confirm-pickup-modal'
 import { CustomerDataForm } from './customer-data-form'
+import { CustomerIdentityHeader, CustomerInfoCard } from './customer-info-card'
 import { MarkDeliveredSheet } from './mark-delivered-sheet'
 import { YapeQrCard } from './yape-qr-card'
 
@@ -199,25 +200,30 @@ export function ActiveOrderDetail({ orderId }: Props) {
           changeToGive={raw.change_to_give != null ? Number(raw.change_to_give) : null}
         />
 
-        {/* Header de identificación — restaurante + cliente. El código del pedido
+        {/* Header de identificación compacto — restaurante + cliente en línea.
+            Fallback para fases que no muestran la CustomerInfoCard rica
+            (waiting_driver, heading_to_restaurant, picked_up, delivered). En
+            waiting_at_restaurant la identidad se renderiza dentro de la card
+            del cliente para evitar duplicación. El código del pedido
             (#shortId) NO se muestra en la UI del driver; sigue presente en el
-            mensaje WhatsApp al cliente y en banners de transferencia (donde es
-            útil para comunicación). */}
-        <section className="bg-surface-container-lowest rounded-2xl px-4 py-2.5 border border-outline-variant/20">
-          <div className="flex items-center gap-2 min-w-0">
-            <ColorDot color={restaurant.accent_color ?? 'ab3500'} />
-            <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
-              <h1 className="font-black text-sm leading-tight text-on-surface truncate">
-                {restaurant.name}
-              </h1>
-              {raw.client_name && (
-                <span className="text-xs text-on-surface-variant truncate">
-                  · {raw.client_name}
-                </span>
-              )}
+            mensaje WhatsApp al cliente y en banners de transferencia. */}
+        {!(status === 'waiting_at_restaurant' && (hasCustomerData || isEditingCustomerData)) && (
+          <section className="bg-surface-container-lowest rounded-2xl px-4 py-2.5 border border-outline-variant/20">
+            <div className="flex items-center gap-2 min-w-0">
+              <ColorDot color={restaurant.accent_color ?? 'ab3500'} />
+              <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
+                <h1 className="font-black text-sm leading-tight text-on-surface truncate">
+                  {restaurant.name}
+                </h1>
+                {raw.client_name && (
+                  <span className="text-xs text-on-surface-variant truncate">
+                    · {raw.client_name}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Resumen de cobro pre-picked_up — el driver lo necesita ANTES de salir
             para preparar el vuelto en su bolsa. En picked_up se oculta porque la
@@ -276,56 +282,45 @@ export function ActiveOrderDetail({ orderId }: Props) {
               tiempo de prep. El botón "Ya recogí el pedido" transiciona a
               picked_up (con confirmación si aún no llegó a cero). */}
         {status === 'waiting_at_restaurant' && isEditingCustomerData && (
-          <CustomerDataForm
-            phone={phoneDraft}
-            onPhoneChange={(value) => setPhoneDraft(value.replace(/\D/g, '').slice(0, 9))}
-            coords={coordsDraft}
-            onCoordsChange={setCoordsDraft}
-            reference={referenceDraft}
-            onReferenceChange={setReferenceDraft}
-            restaurantCoords={restaurantCoords}
-          />
+          <>
+            {/* Identidad fija arriba del form: el motorizado siempre ve a qué
+                pedido pertenece lo que está editando. Solo teléfono y dirección
+                son editables — restaurante y cliente quedan fijados por el
+                creador. */}
+            <section className="rounded-[28px] p-4 bg-surface-container-lowest border border-outline-variant/20 shadow-[0_12px_32px_-18px_rgba(171,53,0,0.18),_0_2px_8px_-4px_rgba(0,0,0,0.04)]">
+              <CustomerIdentityHeader
+                restaurantName={restaurant.name ?? 'Restaurante'}
+                restaurantAccentColor={restaurant.accent_color ?? 'ab3500'}
+                clientName={raw.client_name ?? null}
+              />
+            </section>
+            <CustomerDataForm
+              phone={phoneDraft}
+              onPhoneChange={(value) => setPhoneDraft(value.replace(/\D/g, '').slice(0, 9))}
+              coords={coordsDraft}
+              onCoordsChange={setCoordsDraft}
+              reference={referenceDraft}
+              onReferenceChange={setReferenceDraft}
+              restaurantCoords={restaurantCoords}
+            />
+          </>
         )}
 
-        {/* Resumen del cliente cuando ya hay datos guardados. El countdown grande
-            vive en PhaseHero — aquí solo memoria de los datos persistidos. */}
+        {/* Card unificada del cliente — identidad (restaurante eyebrow +
+            cliente hero) + sub-cards de teléfono y dirección. Solo aparece en
+            waiting_at_restaurant cuando ya hay datos persistidos. El countdown
+            grande sigue en PhaseHero; esta card es identidad + memoria de
+            datos editables. */}
         {status === 'waiting_at_restaurant' && !isEditingCustomerData && hasCustomerData && (
-          <section className="bg-surface-container-lowest rounded-[24px] p-4 border border-outline-variant/15 space-y-2">
-            <header className="flex items-center justify-between">
-              <h3 className="text-[10px] font-bold tracking-widest uppercase text-on-surface-variant">
-                Datos del cliente
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsEditingCustomerData(true)}
-                className="inline-flex items-center gap-1 text-xs font-bold text-primary-container active:scale-95"
-              >
-                <Icon name="edit" size={14} />
-                Editar
-              </button>
-            </header>
-
-            <div className="space-y-1.5 text-sm">
-              <div className="flex items-center gap-2 text-on-surface">
-                <Icon name="call" size={14} className="text-on-surface-variant" />
-                <span className="font-mono">+51 {clientPhone}</span>
-              </div>
-              {persistedCoords && (
-                <div className="flex items-center gap-2 text-on-surface-variant">
-                  <Icon name="location_on" size={14} />
-                  <span className="font-mono text-xs">
-                    {Number(raw.delivery_lat).toFixed(6)}, {Number(raw.delivery_lng).toFixed(6)}
-                  </span>
-                </div>
-              )}
-              {persistedReference && (
-                <div className="flex items-start gap-2 text-on-surface">
-                  <Icon name="pin_drop" size={14} className="mt-0.5 shrink-0 text-primary" />
-                  <span className="text-xs leading-snug">{persistedReference}</span>
-                </div>
-              )}
-            </div>
-          </section>
+          <CustomerInfoCard
+            restaurantName={restaurant.name ?? 'Restaurante'}
+            restaurantAccentColor={restaurant.accent_color ?? 'ab3500'}
+            clientName={raw.client_name ?? null}
+            clientPhone={clientPhone ?? ''}
+            deliveryReference={persistedReference}
+            hasMapCoords={persistedCoords}
+            onEdit={() => setIsEditingCustomerData(true)}
+          />
         )}
 
         {/* Cliente: contacto + referencia textual.
