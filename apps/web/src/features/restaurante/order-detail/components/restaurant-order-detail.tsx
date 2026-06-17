@@ -275,41 +275,56 @@ export function RestaurantOrderDetail({ orderId }: Props) {
             restaurante (restaurant_pwa) no se renderiza. */}
         <CustomerOrderItemsSection orderId={orderId} order={{ source: order.source }} />
 
-        {/* Datos de entrega del cliente (solo customer_pwa) */}
-        {order.source === 'customer_pwa' &&
-          (order.customer_phone || order.delivery_address || order.delivery_reference) && (
-            <section className="bg-surface-container-lowest rounded-[24px] p-5 border border-outline-variant/15 space-y-3">
-              <h3 className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant">
-                Entrega
-              </h3>
-              {order.customer_phone && (
-                <a
-                  href={`tel:+51${order.customer_phone}`}
-                  className="flex items-center gap-2 text-sm font-bold text-on-surface"
-                >
-                  <Icon name="call" size={16} />
-                  +51 {order.customer_phone}
-                </a>
-              )}
-              {order.delivery_address && (
-                <div className="flex items-start gap-2 text-sm text-on-surface">
-                  <Icon
-                    name="location_on"
-                    size={16}
-                    className="mt-0.5 flex-shrink-0 text-on-surface-variant"
-                  />
-                  <div>
-                    <p className="font-semibold">{order.delivery_address}</p>
-                    {order.delivery_reference && (
-                      <p className="text-xs text-on-surface-variant mt-0.5">
-                        {order.delivery_reference}
-                      </p>
-                    )}
-                  </div>
+        {/* Entrega: dirección de destino para TODOS los pedidos. En pedidos
+            del restaurante (restaurant_pwa) la dirección vive en
+            delivery_reference (delivery_address es null); en los del cliente
+            (customer_pwa) en delivery_address + delivery_reference. */}
+        {(order.delivery_address || order.delivery_reference || order.customer_phone) && (
+          <section className="bg-surface-container-lowest rounded-[24px] p-5 border border-outline-variant/15 space-y-3">
+            <h3 className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant">
+              Entrega
+            </h3>
+            {order.customer_phone && (
+              <a
+                href={`tel:+51${order.customer_phone}`}
+                className="flex items-center gap-2 text-sm font-bold text-on-surface"
+              >
+                <Icon name="call" size={16} />
+                +51 {order.customer_phone}
+              </a>
+            )}
+            {(order.delivery_address || order.delivery_reference) && (
+              <div className="flex items-start gap-2 text-sm text-on-surface">
+                <Icon
+                  name="location_on"
+                  size={16}
+                  className="mt-0.5 flex-shrink-0 text-on-surface-variant"
+                />
+                <div>
+                  <p className="font-semibold">
+                    {order.delivery_address ?? order.delivery_reference}
+                  </p>
+                  {order.delivery_address && order.delivery_reference && (
+                    <p className="text-xs text-on-surface-variant mt-0.5">
+                      {order.delivery_reference}
+                    </p>
+                  )}
                 </div>
-              )}
-            </section>
-          )}
+              </div>
+            )}
+            {order.delivery_maps_url && (
+              <a
+                href={order.delivery_maps_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-primary"
+              >
+                <Icon name="map" size={16} />
+                Ver en mapa
+              </a>
+            )}
+          </section>
+        )}
 
         {/* Countdown del prep_time — único timer que ve el restaurante.
             Va del prep_time → 0 → negativo si el driver tarda en aceptar. */}
