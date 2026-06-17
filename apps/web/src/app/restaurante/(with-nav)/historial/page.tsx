@@ -14,7 +14,7 @@ export default function RestauranteHistorialPage() {
             aria-hidden="true"
           />
           <h2 className="text-[11px] font-bold tracking-[0.2em] uppercase text-on-surface-variant">
-            Historial de hoy
+            Historial
           </h2>
         </div>
         <RestaurantHistory />
