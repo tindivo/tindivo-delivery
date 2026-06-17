@@ -122,6 +122,17 @@ export function RestaurantOrderDetail({ orderId }: Props) {
   const showCountdown =
     !['picked_up', 'delivered', 'cancelled'].includes(status) && order.estimated_ready_at
 
+  // Deuda con Tindivo por este pedido. `delivery_fee` es el snapshot final tras
+  // el pickup (base + recargo si la banda es "lejos"); antes del pickup es
+  // provisional. En pedidos cancelados no se cobra comisión.
+  const commissionFee = Number(order.delivery_fee ?? 0)
+  const commissionBand = (order.delivery_distance_band ?? null) as 'near' | 'far' | null
+  const commissionBandLabel =
+    commissionBand === 'near' ? 'Cerca' : commissionBand === 'far' ? 'Lejos' : null
+  const baseCommission = Number(order.base_commission ?? 0)
+  const farSurcharge = Number(order.far_surcharge_amount ?? 0)
+  const commissionIsFinal = status === 'delivered'
+
   return (
     <div
       className="min-h-screen"
@@ -209,6 +220,53 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                 {formatChangeAt(order.payment_changes[0].occurred_at)}
               </span>
             </div>
+          )}
+        </section>
+
+        {/* Deuda con Tindivo por este pedido (la comisión) */}
+        <section className="bg-surface-container-lowest rounded-[24px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)]">
+          <h3 className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant">
+            Deuda con Tindivo
+          </h3>
+          {status === 'cancelled' ? (
+            <p className="mt-2 text-sm text-on-surface-variant italic">
+              Sin comisión (pedido cancelado)
+            </p>
+          ) : (
+            <>
+              <div className="mt-2 flex items-baseline justify-between gap-3">
+                <div>
+                  <div className="font-black text-2xl text-primary tabular-nums">
+                    S/ {commissionFee.toFixed(2)}
+                  </div>
+                  <div className="text-[11px] text-on-surface-variant font-semibold mt-0.5">
+                    {commissionIsFinal
+                      ? 'Comisión cobrada por este pedido'
+                      : 'Comisión estimada (se confirma al entregar)'}
+                  </div>
+                </div>
+                {commissionBandLabel && (
+                  <span
+                    className="px-2.5 py-1 rounded-full text-[11px] font-bold"
+                    style={{ background: 'rgba(255,107,53,0.1)', color: '#9A3412' }}
+                  >
+                    {commissionBandLabel}
+                  </span>
+                )}
+              </div>
+              {commissionBand === 'far' && farSurcharge > 0 && (
+                <div className="mt-3 pt-3 border-t border-outline-variant/15 text-xs text-on-surface-variant space-y-1">
+                  <div className="flex justify-between">
+                    <span>Base</span>
+                    <span className="font-mono tabular-nums">S/ {baseCommission.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Recargo (lejos)</span>
+                    <span className="font-mono tabular-nums">S/ {farSurcharge.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </section>
 

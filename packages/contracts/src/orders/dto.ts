@@ -399,6 +399,30 @@ export const AdminOrderFiltersRequest = z.object({
 })
 export type AdminOrderFiltersRequest = z.infer<typeof AdminOrderFiltersRequest>
 
+/**
+ * Query del historial del restaurante (pestaña Historial). Solo pedidos
+ * finalizados (delivered + cancelled). Las fechas son días-Perú (YYYY-MM-DD,
+ * UTC-5) y el endpoint las traduce a límites UTC. `status` ausente = ambos.
+ * Paginación keyset: `cursor` opaco `<createdAtISO>|<id>`; `limit` por página
+ * (default 20, máx 50). Se usa con `parseQuery` en
+ * `apps/api/app/api/v1/restaurant/history/route.ts`.
+ */
+export const RestaurantHistoryStatus = z.enum(['delivered', 'cancelled'])
+export type RestaurantHistoryStatus = z.infer<typeof RestaurantHistoryStatus>
+
+const PeruDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe tener formato YYYY-MM-DD')
+
+export const RestaurantHistoryQuery = z.object({
+  from: PeruDateSchema.optional(),
+  to: PeruDateSchema.optional(),
+  status: RestaurantHistoryStatus.optional(),
+  cursor: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+})
+export type RestaurantHistoryQuery = z.infer<typeof RestaurantHistoryQuery>
+
 /* ─────────────── Response DTOs ─────────────── */
 
 export const OrderSummaryResponse = z.object({
