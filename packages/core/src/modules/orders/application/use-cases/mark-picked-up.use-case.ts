@@ -40,6 +40,12 @@ export type MarkPickedUpResult = {
  * (no hay phone, o no hay ni coords ni referencia textual), el dominio
  * retorna CustomerDataMissing y la UI debe redirigir al form.
  *
+ * El `delivery_fee` final lo calcula `Order.markPickedUp` internamente
+ * usando los snapshots `baseCommission` y `farSurchargeAmount` que el
+ * pedido tiene desde su creación. Si la banda es 'far', suma el surcharge;
+ * si es 'near', queda igual al baseCommission. No hay lookup externo —
+ * el cobro es inmutable contra cambios futuros del restaurante.
+ *
  * `deliveryMapsUrl` puede ser null cuando el driver guardó solo referencia
  * textual sin marcar coords — en ese caso la UI muestra la referencia
  * destacada en lugar del botón "Abrir en Google Maps".

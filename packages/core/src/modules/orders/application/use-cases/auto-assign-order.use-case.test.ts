@@ -30,7 +30,8 @@ function buildOrder(prepMinutes: number, createdAt: Date): Order {
     restaurantId: RestaurantId.of(RESTAURANT_ID),
     prepTime: PrepTime.of(prepMinutes),
     payment: PaymentIntent.create('prepaid', Money.pen(20)),
-    deliveryFee: Money.pen(5),
+    baseCommission: Money.pen(5),
+    farSurchargeAmount: Money.pen(0.5),
     now: createdAt,
   })
   if (result.isFailure) throw new Error('Failed to create order in test fixture')

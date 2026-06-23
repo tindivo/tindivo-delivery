@@ -3,6 +3,7 @@ import { MyActiveOrdersList } from '@/features/motorizado/active-order/component
 import { useDriverActiveOrdersRealtime } from '@/features/motorizado/active-order/hooks/use-driver-active-orders'
 import { useDriverCapacity } from '@/features/motorizado/active-order/hooks/use-driver-capacity'
 import { AvailableOrdersList } from '@/features/motorizado/available-orders/components/available-orders-list'
+import { useAvailableOrders } from '@/features/motorizado/available-orders/hooks/use-available-orders'
 import { TeamTab } from '@/features/motorizado/team/components/team-tab'
 import { useReceivedTransferRequests } from '@/features/motorizado/team/hooks/use-received-transfer-requests'
 import { cn } from '@tindivo/ui'
@@ -26,6 +27,11 @@ export function HomeTabs() {
   // componentes leen los datos vía useDriverActiveOrders (TanStack cache).
   useDriverActiveOrdersRealtime()
   const { activeCount } = useDriverCapacity()
+  // Pedidos disponibles ("en espera") — alimenta el badge del tab. La query
+  // se comparte con AvailableOrdersList vía TanStack Query (mismo queryKey),
+  // por lo que no hay fetch extra. Cuenta total: actionable + upcoming.
+  const availableOrdersQuery = useAvailableOrders()
+  const availableCount = availableOrdersQuery.data?.items?.length ?? 0
   // Solicitudes pendientes RECIBIDAS — alimenta el badge del tab Equipo y
   // el default-priority si hay alguna esperando respuesta.
   const receivedRequestsQuery = useReceivedTransferRequests()
@@ -71,6 +77,7 @@ export function HomeTabs() {
           active={tab === 'available'}
           onClick={() => setTab('available')}
           label="En espera"
+          badge={availableCount > 0 ? availableCount : undefined}
         />
         <TabButton
           active={tab === 'team'}
@@ -133,7 +140,7 @@ function TabButton({
       <span>{label}</span>
       {badge !== undefined && (
         <span
-          aria-label={`${badge} ${urgentBadge ? 'solicitudes' : 'activos'}`}
+          aria-label={`${badge} ${urgentBadge ? 'solicitudes' : 'pedidos'}`}
           className={cn(
             'inline-flex items-center justify-center font-black text-[10px] font-mono tabular-nums',
             urgentBadge && !active && 'animate-pulse',

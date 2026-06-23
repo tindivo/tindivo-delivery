@@ -92,6 +92,8 @@ export async function POST(req: NextRequest) {
       coordinates_lat: input.coordinates.lat,
       coordinates_lng: input.coordinates.lng,
       commission_per_order: input.commissionPerOrder,
+      // Si no viene en el body, la BD aplica el default (0.50).
+      far_distance_surcharge: input.farDistanceSurcharge,
       is_active: true,
     })
     .select('*')

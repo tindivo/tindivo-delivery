@@ -154,12 +154,16 @@ export function OrderPreview({ orderId }: Props) {
               <Icon name="location_on" size={14} filled />
               <span className="truncate">{restaurant.address ?? 'Dirección no disponible'}</span>
             </div>
-            <div className="mt-1 text-xs opacity-85 font-mono">#{order.short_id}</div>
             {order.client_name && (
-              <div className="mt-0.5 text-xs opacity-90 font-semibold">
-                Cliente: {order.client_name}
-              </div>
+              <div className="mt-2 text-sm font-bold opacity-95">Cliente: {order.client_name}</div>
             )}
+            {typeof order.delivery_reference === 'string' &&
+              order.delivery_reference.trim().length > 0 && (
+                <div className="mt-1 flex items-start gap-2 text-xs opacity-90 leading-snug">
+                  <Icon name="pin_drop" size={14} filled className="mt-0.5 shrink-0" />
+                  <span className="line-clamp-2">{order.delivery_reference}</span>
+                </div>
+              )}
           </div>
         </section>
 

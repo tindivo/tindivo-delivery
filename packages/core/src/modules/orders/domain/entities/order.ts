@@ -61,7 +61,25 @@ export type OrderProps = {
   source: OrderSource
   prepTime: PrepTime
   payment: PaymentIntent
+  /**
+   * Comisión final que Tindivo cobrará al restaurante por este pedido.
+   * Calculada al pickup como `baseCommission + (band='far' ? farSurchargeAmount : 0)`.
+   * Antes del pickup, vale `baseCommission` (placeholder optimista — el
+   * cobro real solo cuenta cuando el trigger DB suma este valor a
+   * `restaurants.balance_due` al pasar a `delivered`).
+   */
   deliveryFee: Money
+  /**
+   * Snapshot de `restaurants.commission_per_order` al crear el pedido.
+   * Inmutable durante la vida del pedido: cambios futuros en el restaurante
+   * no afectan el cobro de pedidos ya creados.
+   */
+  baseCommission: Money
+  /**
+   * Snapshot de `restaurants.far_distance_surcharge` al crear el pedido.
+   * Solo se suma al delivery_fee si la banda al pickup es `far`.
+   */
+  farSurchargeAmount: Money
   appearsInQueueAt: Date
   estimatedReadyAt: Date
   clientPhone: string | null
@@ -121,7 +139,17 @@ export type CreateOrderInput = {
   restaurantId: RestaurantId
   prepTime: PrepTime
   payment: PaymentIntent
-  deliveryFee: Money
+  /**
+   * Comisión base del restaurante (`restaurants.commission_per_order`) al
+   * momento de crear. Se snapshotea en el Order como `baseCommission` y se
+   * usa al pickup para calcular el `deliveryFee` final.
+   */
+  baseCommission: Money
+  /**
+   * Adicional configurable por restaurante para banda `far`
+   * (`restaurants.far_distance_surcharge`). Snapshoteado al crear.
+   */
+  farSurchargeAmount: Money
   clientName?: string
   notes?: string
   /**
@@ -185,7 +213,12 @@ export class Order extends AggregateRoot<OrderId> {
       source,
       prepTime: input.prepTime,
       payment: input.payment,
-      deliveryFee: input.deliveryFee,
+      // Placeholder: el pickup ajustará el deliveryFee según la banda.
+      // Iniciar en baseCommission es coherente: si banda='near' al pickup,
+      // el valor final será igual; si banda='far', se suma el surcharge.
+      deliveryFee: input.baseCommission,
+      baseCommission: input.baseCommission,
+      farSurchargeAmount: input.farSurchargeAmount,
       appearsInQueueAt,
       estimatedReadyAt,
       clientPhone: input.clientPhone?.trim() || null,
@@ -551,10 +584,25 @@ export class Order extends AggregateRoot<OrderId> {
     const reference = this._state.deliveryReference
     if (!phone || (!coords && !reference)) return Result.fail(new CustomerDataMissing())
 
+    // Fee final = base + (banda='far' ? surcharge : 0). Ambos vienen
+    // snapshoteados desde la creación; cambios en el restaurante después
+    // no afectan este pedido. El trigger DB sumará delivery_fee a
+    // restaurants.balance_due cuando el pedido pase a 'delivered'.
+    const deliveryFee =
+      deliveryDistanceBand.value === 'far'
+        ? this._state.baseCommission.add(this._state.farSurchargeAmount)
+        : this._state.baseCommission
+
     this._state.status = OrderStatus.pickedUp()
     this._state.pickedUpAt = now
     this._state.occupancySlots = occupancySlots
     this._state.deliveryDistanceBand = deliveryDistanceBand
+    // Snapshot final de la comisión que Tindivo cobrará al restaurante por
+    // este pedido. Calculado al pickup según la banda (no al crear, porque
+    // la distancia se conoce solo cuando el driver recoge). Pedidos
+    // cancelados antes del pickup mantienen el delivery_fee placeholder
+    // (típicamente 0) — no se cobra por entregas no realizadas.
+    this._state.deliveryFee = deliveryFee
     this._state.updatedAt = now
 
     this.raise(

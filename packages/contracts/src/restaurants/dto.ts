@@ -8,14 +8,24 @@ import {
   UuidSchema,
 } from '../common'
 
-// Comisión Tindivo por pedido entregado. Configurable por restaurante.
-// Se snapshotea en orders.delivery_fee al crear el pedido.
+// Comisión base Tindivo por pedido entregado. Configurable por restaurante.
+// Se snapshotea en orders.base_commission al crear el pedido.
 export const CommissionPerOrderSchema = z
   .number()
   .min(0, 'La comisión no puede ser negativa')
   .max(100, 'La comisión máxima es S/ 100')
   .multipleOf(0.01, 'Máximo 2 decimales')
 export type CommissionPerOrder = z.infer<typeof CommissionPerOrderSchema>
+
+// Adicional que se suma a la comisión base cuando el motorizado declara
+// banda "far" al recoger. Configurable por restaurante; default 0.50.
+// Snapshoteado en orders.far_surcharge_amount al crear.
+export const FarDistanceSurchargeSchema = z
+  .number()
+  .min(0, 'El adicional no puede ser negativo')
+  .max(100, 'El adicional máximo es S/ 100')
+  .multipleOf(0.01, 'Máximo 2 decimales')
+export type FarDistanceSurcharge = z.infer<typeof FarDistanceSurchargeSchema>
 
 export const CreateRestaurantRequest = z.object({
   name: z.string().min(2).max(80),
@@ -27,6 +37,7 @@ export const CreateRestaurantRequest = z.object({
   accentColor: AccentColorSchema,
   coordinates: CoordinatesSchema,
   commissionPerOrder: CommissionPerOrderSchema,
+  farDistanceSurcharge: FarDistanceSurchargeSchema.optional(),
   ownerEmail: z.string().email(),
   ownerPassword: z.string().min(8).max(80),
 })
@@ -42,6 +53,7 @@ export const UpdateRestaurantRequest = z.object({
   accentColor: AccentColorSchema.optional(),
   coordinates: CoordinatesSchema.optional(),
   commissionPerOrder: CommissionPerOrderSchema.optional(),
+  farDistanceSurcharge: FarDistanceSurchargeSchema.optional(),
 })
 export type UpdateRestaurantRequest = z.infer<typeof UpdateRestaurantRequest>
 
@@ -64,6 +76,7 @@ export const RestaurantResponse = z.object({
   isActive: z.boolean(),
   balanceDue: MoneyPenSchema,
   commissionPerOrder: MoneyPenSchema,
+  farDistanceSurcharge: MoneyPenSchema,
   createdAt: TimestampSchema,
   updatedAt: TimestampSchema,
 })

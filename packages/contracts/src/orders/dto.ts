@@ -13,13 +13,30 @@ import { CancellationReason, OrderStatus, PaymentStatus, VehicleType } from '../
 /* ─────────────── Request DTOs ─────────────── */
 
 /**
- * Tres bandas de distancia que el motorizado declara al recoger el pedido.
- * Tindivo cobra comisiones diferenciadas según la banda. Es declarativo:
- * confiamos en el juicio del driver (considera tráfico, ruta real, etc.).
+ * Dos bandas de distancia que el motorizado declara al recoger el pedido.
+ * Tindivo cobra una comisión fija al restaurante según la banda. Es
+ * declarativo: confiamos en el juicio del driver (considera tráfico, ruta
+ * real, etc.). Los montos por banda están en
+ * `app_settings.delivery_distance_commissions` y se aplican al pickup
+ * sobre `orders.delivery_fee`.
  */
-export const DELIVERY_DISTANCE_BANDS = ['near', 'medium', 'far'] as const
+export const DELIVERY_DISTANCE_BANDS = ['near', 'far'] as const
 export const DeliveryDistanceBand = z.enum(DELIVERY_DISTANCE_BANDS)
 export type DeliveryDistanceBand = z.infer<typeof DeliveryDistanceBand>
+
+/**
+ * Comisiones que Tindivo cobra al restaurante por pedido entregado según
+ * la banda de distancia declarada por el motorizado al recoger. Mostrado
+ * en la UI del driver para que sepa cuánto cobrará Tindivo antes de
+ * elegir la banda. Fuente: `app_settings.delivery_distance_commissions`.
+ */
+export const DeliveryDistanceCommissionsResponse = z.object({
+  near: MoneyPenSchema,
+  far: MoneyPenSchema,
+})
+export type DeliveryDistanceCommissionsResponse = z.infer<
+  typeof DeliveryDistanceCommissionsResponse
+>
 
 export const CreateOrderRequest = z
   .object({
@@ -34,16 +51,22 @@ export const CreateOrderRequest = z
     yapeAmount: MoneyPenSchema.optional(),
     cashAmount: MoneyPenSchema.optional(),
     clientPaysWith: MoneyPenSchema.optional(),
-    clientName: z.string().trim().min(1).max(80).optional(),
     notes: z.string().max(300).optional(),
     /**
-     * Datos del cliente que el restaurante puede pre-llenar al crear el
-     * pedido. Si los manda, el motorizado los ve pre-poblados en el form de
-     * waiting_at_restaurant y puede aceptarlos o modificarlos. Ambos
-     * opcionales: el restaurante no siempre los conoce al momento.
+     * Datos del cliente que el restaurante registra al crear el pedido. Los
+     * tres son OBLIGATORIOS porque la card del motorizado los usa como
+     * identificación primaria (nombre prominente + dirección/referencia)
+     * en lugar del código del pedido. Si el restaurante intenta crear sin
+     * ellos, el endpoint rechaza con 400. El driver puede corregirlos en
+     * waiting_at_restaurant si hay errores.
      */
-    clientPhone: PhonePeSchema.optional(),
-    deliveryReference: z.string().trim().min(1).max(500).optional(),
+    clientName: z.string().trim().min(1, 'El nombre del cliente es obligatorio').max(80),
+    clientPhone: PhonePeSchema,
+    deliveryReference: z
+      .string()
+      .trim()
+      .min(1, 'La dirección o referencia es obligatoria')
+      .max(500),
   })
   .refine(
     (v) =>
@@ -376,6 +399,30 @@ export const AdminOrderFiltersRequest = z.object({
 })
 export type AdminOrderFiltersRequest = z.infer<typeof AdminOrderFiltersRequest>
 
+/**
+ * Query del historial del restaurante (pestaña Historial). Solo pedidos
+ * finalizados (delivered + cancelled). Las fechas son días-Perú (YYYY-MM-DD,
+ * UTC-5) y el endpoint las traduce a límites UTC. `status` ausente = ambos.
+ * Paginación keyset: `cursor` opaco `<createdAtISO>|<id>`; `limit` por página
+ * (default 20, máx 50). Se usa con `parseQuery` en
+ * `apps/api/app/api/v1/restaurant/history/route.ts`.
+ */
+export const RestaurantHistoryStatus = z.enum(['delivered', 'cancelled'])
+export type RestaurantHistoryStatus = z.infer<typeof RestaurantHistoryStatus>
+
+const PeruDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe tener formato YYYY-MM-DD')
+
+export const RestaurantHistoryQuery = z.object({
+  from: PeruDateSchema.optional(),
+  to: PeruDateSchema.optional(),
+  status: RestaurantHistoryStatus.optional(),
+  cursor: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+})
+export type RestaurantHistoryQuery = z.infer<typeof RestaurantHistoryQuery>
+
 /* ─────────────── Response DTOs ─────────────── */
 
 export const OrderSummaryResponse = z.object({
@@ -397,6 +444,13 @@ export const OrderSummaryResponse = z.object({
   appearsInQueueAt: TimestampSchema,
   clientPhone: PhonePeSchema.nullable(),
   clientName: z.string().nullable(),
+  /**
+   * Dirección o referencia textual del destino, opcional para pedidos
+   * legacy (~28% son NULL en producción) pero obligatorio para pedidos
+   * nuevos creados desde el restaurante. La card del motorizado lo muestra
+   * como subtítulo bajo el nombre del cliente.
+   */
+  deliveryReference: z.string().nullable(),
   trackingLinkSentAt: TimestampSchema.nullable(),
   /**
    * Cola "Urgente": null = no urgente, timestamp = momento en que entró a la
@@ -486,6 +540,8 @@ export const TeamOrderItem = z.object({
   appearsInQueueAt: TimestampSchema,
   clientName: z.string().nullable(),
   clientPhone: PhonePeSchema.nullable(),
+  /** Dirección o referencia del cliente — usada por la card del motorizado. */
+  deliveryReference: z.string().nullable(),
   occupancySlots: z.number().int().min(1),
   createdAt: TimestampSchema,
   /** Si el driver autenticado ya tiene una solicitud pending para este order. */

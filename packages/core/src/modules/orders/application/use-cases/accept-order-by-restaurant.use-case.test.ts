@@ -25,7 +25,8 @@ function buildCustomerPwaOrder(prepMinutes: number, createdAt: Date): Order {
     restaurantId: RestaurantId.of(RESTAURANT_ID),
     prepTime: PrepTime.of(prepMinutes),
     payment: PaymentIntent.create('pending_yape', Money.pen(50)),
-    deliveryFee: Money.pen(3),
+    baseCommission: Money.pen(3),
+    farSurchargeAmount: Money.pen(0.5),
     source: 'customer_pwa',
     now: createdAt,
   })
@@ -39,7 +40,8 @@ function buildRestaurantPwaOrder(prepMinutes: number, createdAt: Date): Order {
     restaurantId: RestaurantId.of(RESTAURANT_ID),
     prepTime: PrepTime.of(prepMinutes),
     payment: PaymentIntent.create('prepaid', Money.pen(30)),
-    deliveryFee: Money.pen(3),
+    baseCommission: Money.pen(3),
+    farSurchargeAmount: Money.pen(0.5),
     source: 'restaurant_pwa',
     now: createdAt,
   })
@@ -147,7 +149,8 @@ describe('AcceptOrderByRestaurantUseCase', () => {
       restaurantId: RestaurantId.of(RESTAURANT_ID),
       prepTime: PrepTime.of(20),
       payment: PaymentIntent.create('pending_yape', Money.pen(50)),
-      deliveryFee: Money.pen(3),
+      baseCommission: Money.pen(3),
+    farSurchargeAmount: Money.pen(0.5),
       source: 'customer_pwa',
       now: NOW,
     })
@@ -165,7 +168,8 @@ describe('AcceptOrderByRestaurantUseCase', () => {
       restaurantId: RestaurantId.of(RESTAURANT_ID),
       prepTime: PrepTime.of(20),
       payment: PaymentIntent.create('prepaid', Money.pen(50)),
-      deliveryFee: Money.pen(3),
+      baseCommission: Money.pen(3),
+    farSurchargeAmount: Money.pen(0.5),
       source: 'restaurant_pwa',
       now: NOW,
     })

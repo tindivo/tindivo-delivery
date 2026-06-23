@@ -209,8 +209,18 @@ export type RestaurantMenuTree = {
 export function restaurantApi(client: ApiClient) {
   return {
     getProfile: () => client.get<RestaurantProfile>('restaurant/profile'),
-    getHistory: (query?: { status?: string }) =>
-      client.get<{ items: unknown[] }>('restaurant/history', { query }),
+    getHistory: (query?: {
+      from?: string
+      to?: string
+      status?: 'delivered' | 'cancelled'
+      cursor?: string
+      limit?: number
+    }) =>
+      client.get<{
+        items: unknown[]
+        nextCursor: string | null
+        summary: { deliveredCount: number; totalCommission: number }
+      }>('restaurant/history', { query }),
     getSettlements: () => client.get<RestaurantSettlementsResponse>('restaurant/settlements'),
     listMyPayments: () => client.get<RestaurantPaymentsResponse>('restaurant/payments'),
     listCashSettlements: () =>

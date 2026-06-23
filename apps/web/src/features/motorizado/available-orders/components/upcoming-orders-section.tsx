@@ -74,6 +74,11 @@ export function UpcomingOrdersSection({ items, now }: Props) {
             const mins = minutesFromNow(order.estimated_ready_at, now)
             const amount = Number(order.order_amount)
             const noCharge = amount === 0
+            const restaurantName = order.restaurants?.name ?? 'Restaurante'
+            const reference =
+              (typeof order.delivery_reference === 'string' && order.delivery_reference.trim()) ||
+              (typeof order.delivery_address === 'string' && order.delivery_address.trim()) ||
+              ''
             return (
               <li key={order.id} className="px-4 py-3 flex items-start gap-3">
                 {/* Accent gris (no el del restaurante — señal de "no accionable aún") */}
@@ -85,15 +90,18 @@ export function UpcomingOrdersSection({ items, now }: Props) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <ColorDot color={order.restaurants?.accent_color ?? 'ab3500'} size={8} />
-                    <span className="font-semibold text-sm text-on-surface truncate">
-                      {order.client_name ?? order.restaurants?.name ?? 'Restaurante'}
+                    <span className="text-[10px] font-bold tracking-wider uppercase text-on-surface-variant truncate">
+                      {restaurantName}
                     </span>
                   </div>
-                  <div className="text-[11px] text-on-surface-variant font-mono mt-0.5 truncate">
-                    {order.client_name
-                      ? `#${order.short_id} · ${order.restaurants?.name ?? ''}`
-                      : `#${order.short_id}`}
+                  <div className="font-semibold text-sm text-on-surface mt-0.5 truncate">
+                    {order.client_name ?? restaurantName}
                   </div>
+                  {reference && (
+                    <div className="text-[11px] text-on-surface-variant mt-0.5 line-clamp-1">
+                      {reference}
+                    </div>
+                  )}
                   <div className="text-[11px] text-on-surface-variant mt-1">
                     {noCharge ? 'Solo entregar' : paymentLabel(order.payment_status)}
                   </div>

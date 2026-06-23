@@ -833,6 +833,7 @@ export type Database = {
           accepted_at: string | null
           appears_in_queue_at: string
           assigned_at: string | null
+          base_commission: number | null
           cancel_reason: string | null
           cancel_reason_code: string | null
           cancelled_at: string | null
@@ -864,6 +865,7 @@ export type Database = {
           driver_id: string | null
           estimated_ready_at: string
           extension_used: boolean
+          far_surcharge_amount: number | null
           heading_at: string | null
           id: string
           notes: string | null
@@ -898,6 +900,7 @@ export type Database = {
           accepted_at?: string | null
           appears_in_queue_at: string
           assigned_at?: string | null
+          base_commission?: number | null
           cancel_reason?: string | null
           cancel_reason_code?: string | null
           cancelled_at?: string | null
@@ -929,6 +932,7 @@ export type Database = {
           driver_id?: string | null
           estimated_ready_at: string
           extension_used?: boolean
+          far_surcharge_amount?: number | null
           heading_at?: string | null
           id?: string
           notes?: string | null
@@ -963,6 +967,7 @@ export type Database = {
           accepted_at?: string | null
           appears_in_queue_at?: string
           assigned_at?: string | null
+          base_commission?: number | null
           cancel_reason?: string | null
           cancel_reason_code?: string | null
           cancelled_at?: string | null
@@ -994,6 +999,7 @@ export type Database = {
           driver_id?: string | null
           estimated_ready_at?: string
           extension_used?: boolean
+          far_surcharge_amount?: number | null
           heading_at?: string | null
           id?: string
           notes?: string | null
@@ -1208,6 +1214,7 @@ export type Database = {
           coordinates_lng: number | null
           created_at: string
           description: string | null
+          far_distance_surcharge: number
           id: string
           is_active: boolean
           is_delivery_enabled: boolean
@@ -1232,6 +1239,7 @@ export type Database = {
           coordinates_lng?: number | null
           created_at?: string
           description?: string | null
+          far_distance_surcharge?: number
           id?: string
           is_active?: boolean
           is_delivery_enabled?: boolean
@@ -1256,6 +1264,7 @@ export type Database = {
           coordinates_lng?: number | null
           created_at?: string
           description?: string | null
+          far_distance_surcharge?: number
           id?: string
           is_active?: boolean
           is_delivery_enabled?: boolean
@@ -1542,6 +1551,7 @@ export type Database = {
           accepted_at: string | null
           appears_in_queue_at: string
           assigned_at: string | null
+          base_commission: number | null
           cancel_reason: string | null
           cancel_reason_code: string | null
           cancelled_at: string | null
@@ -1573,6 +1583,7 @@ export type Database = {
           driver_id: string | null
           estimated_ready_at: string
           extension_used: boolean
+          far_surcharge_amount: number | null
           heading_at: string | null
           id: string
           notes: string | null
@@ -1616,6 +1627,7 @@ export type Database = {
           accepted_at: string | null
           appears_in_queue_at: string
           assigned_at: string | null
+          base_commission: number | null
           cancel_reason: string | null
           cancel_reason_code: string | null
           cancelled_at: string | null
@@ -1647,6 +1659,7 @@ export type Database = {
           driver_id: string | null
           estimated_ready_at: string
           extension_used: boolean
+          far_surcharge_amount: number | null
           heading_at: string | null
           id: string
           notes: string | null
@@ -1709,7 +1722,7 @@ export type Database = {
         | "confirmed"
         | "disputed"
         | "resolved"
-      delivery_distance_band: "near" | "medium" | "far"
+      delivery_distance_band: "near" | "far"
       domain_event_status: "pending" | "published" | "failed"
       order_source: "restaurant_pwa" | "customer_pwa"
       order_status:
@@ -1863,7 +1876,7 @@ export const Constants = {
         "disputed",
         "resolved",
       ],
-      delivery_distance_band: ["near", "medium", "far"],
+      delivery_distance_band: ["near", "far"],
       domain_event_status: ["pending", "published", "failed"],
       order_source: ["restaurant_pwa", "customer_pwa"],
       order_status: [

@@ -34,7 +34,8 @@ function buildOrder(opts?: { driverId?: string | null }): Order {
     restaurantId: RestaurantId.of(RESTAURANT_ID),
     prepTime: PrepTime.of(20),
     payment: PaymentIntent.create('prepaid', Money.pen(20)),
-    deliveryFee: Money.pen(5),
+    baseCommission: Money.pen(5),
+    farSurchargeAmount: Money.pen(0.5),
     now: NOW,
   })
   if (result.isFailure) throw new Error('order create failed')

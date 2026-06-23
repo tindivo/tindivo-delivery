@@ -19,10 +19,19 @@ export type CreateOrderCommand = {
   clientPaysWith?: number
   clientName?: string
   notes?: string
-  // Comisión Tindivo en S/ que se cobrará al restaurante por este pedido.
-  // El endpoint REST la lee de restaurants.commission_per_order y la pasa
-  // aquí. Se snapshotea en orders.delivery_fee al insertar.
-  commissionPerOrder: number
+  /**
+   * Comisión base (`restaurants.commission_per_order`) snapshoteada al crear.
+   * El endpoint la lee del restaurante y la pasa aquí. Se persiste en
+   * `orders.base_commission`. delivery_fee inicial = baseCommission; el
+   * pickup ajusta si la banda es 'far' sumando farSurchargeAmount.
+   */
+  baseCommission: number
+  /**
+   * Adicional configurable por restaurante (`restaurants.far_distance_surcharge`)
+   * que solo se aplica cuando la banda declarada al pickup es 'far'.
+   * Snapshoteado al crear en `orders.far_surcharge_amount`.
+   */
+  farSurchargeAmount: number
   /**
    * Origen del pedido. 'customer_pwa' nace en pending_acceptance esperando
    * que el restaurante acepte y defina prep_time real. Default 'restaurant_pwa'.
@@ -70,7 +79,8 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
         restaurantId,
         prepTime,
         payment,
-        deliveryFee: Money.pen(cmd.commissionPerOrder),
+        baseCommission: Money.pen(cmd.baseCommission),
+        farSurchargeAmount: Money.pen(cmd.farSurchargeAmount),
         clientName: cmd.clientName,
         notes: cmd.notes,
         source: cmd.source,
