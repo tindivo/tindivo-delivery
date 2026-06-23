@@ -1,8 +1,8 @@
 import type { ServerClient } from '@tindivo/supabase'
 import { PersistenceError } from '../../../shared/errors/domain-error'
 import type {
-  CustomerAddress,
   AddressCaptureEvent,
+  CustomerAddress,
   CustomerAddressRepository,
 } from '../application/ports/customer-address.repository'
 
@@ -21,6 +21,7 @@ export class SupabaseCustomerAddressRepository implements CustomerAddressReposit
       isDefault: row.is_default,
       lastUsedAt: row.last_used_at ? new Date(row.last_used_at) : null,
       timesUsed: row.times_used,
+      customerName: row.customer_name,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     }
@@ -81,6 +82,7 @@ export class SupabaseCustomerAddressRepository implements CustomerAddressReposit
         is_default: address.isDefault,
         last_used_at: address.lastUsedAt?.toISOString() ?? null,
         times_used: address.timesUsed,
+        customer_name: address.customerName ?? null,
       })
       .select()
       .single()
@@ -103,6 +105,7 @@ export class SupabaseCustomerAddressRepository implements CustomerAddressReposit
         is_default: address.isDefault,
         last_used_at: address.lastUsedAt?.toISOString() ?? null,
         times_used: address.timesUsed,
+        customer_name: address.customerName ?? null,
       })
       .eq('address_id', address.addressId)
 

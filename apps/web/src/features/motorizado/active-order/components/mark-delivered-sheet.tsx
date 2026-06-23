@@ -126,7 +126,7 @@ export function MarkDeliveredSheet({
 
     return {
       payment,
-      addressCapture,
+      ...(addressCapture != null ? { addressCapture } : {}),
     }
   }
 

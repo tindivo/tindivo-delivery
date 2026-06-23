@@ -2,7 +2,9 @@
 import { PlatformClosedBanner } from '@/features/restaurante/shared/components/platform-closed-banner'
 import { usePlatformStatus } from '@/features/restaurante/shared/hooks/use-platform-status'
 import { useIdempotencyKey } from '@/lib/idempotency/use-idempotency-key'
+import { supabase } from '@/lib/supabase/client'
 import { useIsDesktop } from '@/shared/hooks/use-is-desktop'
+import { useQueryClient } from '@tanstack/react-query'
 import type { Orders } from '@tindivo/contracts'
 import {
   BottomActionBar,
@@ -17,6 +19,33 @@ import {
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCreateOrder } from '../hooks/use-create-order'
+import { useCustomerAddresses } from '../hooks/use-customer-addresses'
+
+type CustomerAddress = {
+  phone: string
+  address_id: string
+  lat: number | null
+  lng: number | null
+  reference: string | null
+  accuracy_m: number | null
+  source: string
+  is_default: boolean
+  last_used_at: string | null
+  times_used: number
+  created_at: string
+  updated_at: string
+  customer_name: string | null
+}
+
+const BLACKLISTED_PHONES = [
+  '999999999',
+  '987654321',
+  '912345678',
+  '955555555',
+  '900000000',
+  '911111111',
+  '123456789',
+]
 
 type Payment = 'prepaid' | 'pending_yape' | 'pending_cash' | 'pending_mixed'
 
@@ -96,6 +125,12 @@ export function NewOrderForm() {
   // puede corregirlos en waiting_at_restaurant.
   const [clientPhone, setClientPhone] = useState<string>('')
   const [deliveryReference, setDeliveryReference] = useState<string>('')
+
+  const queryClient = useQueryClient()
+  const [selectedAddress, setSelectedAddress] = useState<CustomerAddress | null>(null)
+  const [isAnotherAddress, setIsAnotherAddress] = useState<boolean>(false)
+  const [updatingDefault, setUpdatingDefault] = useState(false)
+
   // Mostrar el error solo después de que el usuario interactuó con el campo,
   // para no asustar con rojos antes de empezar a escribir.
   const [touched, setTouched] = useState<{
@@ -105,10 +140,104 @@ export function NewOrderForm() {
   }>({ clientName: false, clientPhone: false, deliveryReference: false })
   const PHONE_PE_REGEX = /^9\d{8}$/
   const clientPhoneDigits = clientPhone.replace(/\D/g, '').slice(0, 9)
+  const isPhoneBlacklisted = BLACKLISTED_PHONES.includes(clientPhoneDigits)
   const clientNameTrim = clientName.trim()
   const deliveryReferenceTrim = deliveryReference.trim()
   const clientNameValid = clientNameTrim.length > 0
-  const clientPhoneValid = PHONE_PE_REGEX.test(clientPhoneDigits)
+  const clientPhoneValid = PHONE_PE_REGEX.test(clientPhoneDigits) && !isPhoneBlacklisted
+
+  const { data: addresses = [], isFetching: addressesLoading } = useCustomerAddresses(clientPhoneDigits, clientPhoneValid)
+
+  const lastLoggedPhoneRef = useRef<string>('')
+
+  const handlePhoneChange = (newVal: string) => {
+    const cleanVal = newVal.replace(/\D/g, '').slice(0, 9)
+    if (cleanVal !== clientPhoneDigits) {
+      setClientName('')
+      setDeliveryReference('')
+      setSelectedAddress(null)
+      setIsAnotherAddress(false)
+      setTouched((t) => ({
+        ...t,
+        clientName: false,
+        deliveryReference: false,
+      }))
+    }
+    setClientPhone(cleanVal)
+  }
+
+  useEffect(() => {
+    if (!clientPhoneValid) {
+      setSelectedAddress(null)
+      setIsAnotherAddress(false)
+      lastLoggedPhoneRef.current = ''
+      return
+    }
+
+    if (addresses.length === 0) {
+      setSelectedAddress(null)
+      setIsAnotherAddress(false)
+      return
+    }
+
+    if (clientPhoneDigits !== lastLoggedPhoneRef.current) {
+      lastLoggedPhoneRef.current = clientPhoneDigits
+
+      supabase
+        .from('address_capture_events')
+        .insert({
+          phone: clientPhoneDigits,
+          action: 'shown',
+          metadata: {
+            results_count: addresses.length,
+            context: 'cashier_form',
+          },
+        })
+        .then(({ error }) => {
+          if (error) console.error('Error logging shown telemetry:', error)
+        })
+
+      const defaultAddr = addresses.find((a) => a.is_default) || addresses[0]
+      if (defaultAddr) {
+        setSelectedAddress(defaultAddr)
+        setIsAnotherAddress(false)
+        setDeliveryReference(defaultAddr.reference ?? '')
+        setClientName(defaultAddr.customer_name ?? '')
+      }
+    } else {
+      if (selectedAddress) {
+        const updated = addresses.find((a) => a.address_id === selectedAddress.address_id)
+        if (updated) {
+          setSelectedAddress(updated)
+        }
+      }
+    }
+  }, [addresses, clientPhoneDigits, clientPhoneValid])
+
+  async function handleMarkAsDefault(addr: CustomerAddress) {
+    if (updatingDefault) return
+    setUpdatingDefault(true)
+    try {
+      const { error } = await supabase.rpc('set_customer_address_default', {
+        p_address_id: addr.address_id,
+      })
+      if (error) throw error
+      await queryClient.invalidateQueries({
+        queryKey: ['customer-addresses', clientPhoneDigits],
+      })
+    } catch (err) {
+      console.error('Error setting default address:', err)
+    } finally {
+      setUpdatingDefault(false)
+    }
+  }
+
+  const showSkeletons = clientPhoneDigits.length === 9 && clientPhoneValid && addressesLoading
+  const showPhoneError = (touched.clientPhone && !clientPhoneValid) || (clientPhoneDigits.length === 9 && !clientPhoneValid)
+  const namePlaceholder = !clientPhoneValid ? 'Primero ingresa el teléfono' : 'Ej: Juan, María Fernanda'
+  const nameDisabled = !clientPhoneValid
+  const referencePlaceholder = !clientPhoneValid ? 'Primero ingresa el teléfono' : 'Ej: Av. Paseo de la República 3500, dpto 502, frente al parque'
+  const referenceDisabled = !clientPhoneValid
   const deliveryReferenceValid = deliveryReferenceTrim.length > 0
 
   const carouselRef = useRef<HTMLDivElement>(null)
@@ -175,6 +304,7 @@ export function NewOrderForm() {
       clientName: clientNameTrim,
       clientPhone: clientPhoneDigits,
       deliveryReference: deliveryReferenceTrim,
+      customerAddressId: isAnotherAddress ? null : (selectedAddress?.address_id ?? null),
     }
     createOrder.mutate(
       { body, idempotencyKey: idem.key },
@@ -244,6 +374,265 @@ export function NewOrderForm() {
             Crea el pedido
           </h2>
         </div>
+
+        {/* Teléfono del cliente — obligatorio */}
+        <section className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <label htmlFor="clientPhone" className="text-sm font-semibold text-on-surface">
+              Teléfono del cliente
+            </label>
+            <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
+              obligatorio
+            </span>
+          </div>
+          <PhoneInputPe
+            id="clientPhone"
+            value={clientPhone}
+            onChange={(e) => handlePhoneChange(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, clientPhone: true }))}
+            autoComplete="tel"
+            aria-invalid={showPhoneError}
+          />
+          {showPhoneError && (
+            <p className="text-[11px] font-semibold text-red-600 px-1">
+              {clientPhoneDigits.length === 0
+                ? 'Ingresa el teléfono del cliente.'
+                : isPhoneBlacklisted
+                  ? 'Teléfono inválido, ingrese el real'
+                  : 'Debe empezar en 9 y tener 9 dígitos.'}
+            </p>
+          )}
+        </section>
+
+        {/* Nombre del cliente — obligatorio */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <label htmlFor="clientName" className="text-sm font-semibold text-on-surface">
+                Nombre del cliente
+              </label>
+              <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
+                obligatorio
+              </span>
+            </div>
+            {addresses.length >= 1 && selectedAddress?.customer_name && clientNameTrim === selectedAddress.customer_name.trim() && !isAnotherAddress && (
+              <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
+                <Icon name="check_circle" size={14} className="text-emerald-600" />
+                Pedido anterior
+              </span>
+            )}
+          </div>
+          {showSkeletons ? (
+            <div 
+              className="w-full h-[52px] bg-on-surface-variant/10 rounded-[20px] animate-pulse flex items-center px-4"
+              style={{ border: '1px solid rgba(225, 191, 181, 0.2)' }}
+            >
+              <span className="text-xs text-on-surface-variant/40 font-semibold">Buscando nombre...</span>
+            </div>
+          ) : (
+            <input
+              id="clientName"
+              type="text"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, clientName: true }))}
+              placeholder={namePlaceholder}
+              disabled={nameDisabled}
+              maxLength={80}
+              autoComplete="off"
+              autoCapitalize="words"
+              aria-invalid={touched.clientName && !clientNameValid && !nameDisabled}
+              className={cn(
+                "w-full px-4 py-3.5 rounded-[20px] text-base font-semibold transition-shadow",
+                nameDisabled
+                  ? "bg-on-surface-variant/5 text-on-surface-variant/40 placeholder:text-on-surface-variant/30 cursor-not-allowed border-dashed"
+                  : "bg-white/85 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40",
+              )}
+              style={{
+                backdropFilter: 'blur(12px)',
+                border:
+                  touched.clientName && !clientNameValid && !nameDisabled
+                    ? '1px solid rgba(186, 26, 26, 0.55)'
+                    : '1px solid rgba(225, 191, 181, 0.35)',
+                boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
+              }}
+            />
+          )}
+          {touched.clientName && !clientNameValid && !nameDisabled && (
+            <p className="text-[11px] font-semibold text-red-600 px-1">
+              Escribe el nombre del cliente.
+            </p>
+          )}
+        </section>
+
+        {/* Dirección o referencia — obligatorio */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <label htmlFor="deliveryReference" className="text-sm font-semibold text-on-surface">
+                Dirección o referencia
+              </label>
+              <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
+                obligatorio
+              </span>
+            </div>
+            {addresses.length === 1 && !isAnotherAddress && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
+                  <Icon name="check_circle" size={14} className="text-emerald-600" />
+                  Pedido anterior
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAnotherAddress(true)
+                    setSelectedAddress(null)
+                    setDeliveryReference('')
+                  }}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  Otra dirección
+                </button>
+              </div>
+            )}
+            {addresses.length === 1 && isAnotherAddress && (
+              <button
+                type="button"
+                onClick={() => {
+                  const firstAddr = addresses[0]
+                  if (firstAddr) {
+                    setIsAnotherAddress(false)
+                    setSelectedAddress(firstAddr)
+                    setDeliveryReference(firstAddr.reference ?? '')
+                  }
+                }}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                Usar guardada
+              </button>
+            )}
+            {addresses.length >= 2 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (isAnotherAddress) {
+                    const def = addresses.find((a) => a.is_default) || addresses[0]
+                    if (def) {
+                      setIsAnotherAddress(false)
+                      setSelectedAddress(def)
+                      setDeliveryReference(def.reference ?? '')
+                    }
+                  } else {
+                    setIsAnotherAddress(true)
+                    setSelectedAddress(null)
+                    setDeliveryReference('')
+                  }
+                }}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                {isAnotherAddress ? 'Usar guardada' : 'Otra dirección'}
+              </button>
+            )}
+          </div>
+          {showSkeletons ? (
+            <div 
+              className="w-full h-[80px] bg-on-surface-variant/10 rounded-[20px] animate-pulse flex items-start p-4"
+              style={{ border: '1px solid rgba(225, 191, 181, 0.2)' }}
+            >
+              <span className="text-xs text-on-surface-variant/40 font-semibold">Buscando dirección...</span>
+            </div>
+          ) : (
+            <textarea
+              id="deliveryReference"
+              value={deliveryReference}
+              onChange={(e) => setDeliveryReference(e.target.value.slice(0, 500))}
+              onBlur={() => setTouched((t) => ({ ...t, deliveryReference: true }))}
+              placeholder={referencePlaceholder}
+              disabled={referenceDisabled}
+              rows={2}
+              maxLength={500}
+              aria-invalid={touched.deliveryReference && !deliveryReferenceValid && !referenceDisabled}
+              className={cn(
+                "w-full px-4 py-3 rounded-[20px] text-sm transition-shadow resize-none",
+                referenceDisabled
+                  ? "bg-on-surface-variant/5 text-on-surface-variant/40 placeholder:text-on-surface-variant/30 cursor-not-allowed border-dashed"
+                  : "bg-white/85 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40",
+              )}
+              style={{
+                backdropFilter: 'blur(12px)',
+                border:
+                  touched.deliveryReference && !deliveryReferenceValid && !referenceDisabled
+                    ? '1px solid rgba(186, 26, 26, 0.55)'
+                    : '1px solid rgba(225, 191, 181, 0.35)',
+                boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
+              }}
+            />
+          )}
+          {touched.deliveryReference && !deliveryReferenceValid && !referenceDisabled ? (
+            <p className="text-[11px] font-semibold text-red-600 px-1">
+              Escribe la dirección o una referencia del destino.
+            </p>
+          ) : (
+            deliveryReferenceTrim.length > 0 && !referenceDisabled && (
+              <p className="text-[10px] text-on-surface-variant px-1">
+                {deliveryReferenceTrim.length}/500
+              </p>
+            )
+          )}
+
+          {addresses.length >= 2 && !isAnotherAddress && !showSkeletons && (
+            <div className="space-y-1.5 mt-2">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none px-1">
+                {addresses.map((addr) => {
+                  const isActive =
+                    selectedAddress?.address_id === addr.address_id && !isAnotherAddress
+                  const isDefault = addr.is_default
+                  const truncatedRef =
+                    addr.reference && addr.reference.length > 30
+                      ? addr.reference.slice(0, 30) + '...'
+                      : addr.reference || ''
+
+                  return (
+                    <div
+                      key={addr.address_id}
+                      className={cn(
+                        'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 border transition-all cursor-pointer select-none',
+                        isActive
+                          ? 'bg-primary/10 border-primary text-primary shadow-xs'
+                          : 'bg-white/70 border-outline-variant/30 text-on-surface-variant hover:bg-white hover:border-outline-variant/60',
+                      )}
+                      onClick={() => {
+                        setIsAnotherAddress(false)
+                        setSelectedAddress(addr)
+                        setDeliveryReference(addr.reference ?? '')
+                      }}
+                    >
+                      {isDefault && (
+                        <Icon name="star" size={14} filled className="text-amber-500" />
+                      )}
+                      <span>{truncatedRef}</span>
+
+                      {/* Botón marcar como principal si no es default */}
+                      {!isDefault && (
+                        <button
+                          type="button"
+                          title="Marcar como principal"
+                          onClick={async (e) => {
+                            e.stopPropagation() // Evitar seleccionar al tocar estrella
+                            await handleMarkAsDefault(addr)
+                          }}
+                          className="p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-amber-500 transition-colors"
+                        >
+                          <Icon name="star_border" size={14} />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* Prep time carousel */}
         <section className="space-y-3">
@@ -368,119 +757,6 @@ export function NewOrderForm() {
               })}
             </div>
           </div>
-        </section>
-
-        {/* Nombre del cliente — obligatorio. El motorizado lo ve prominente
-            en su card en lugar del código del pedido, así que el restaurante
-            debe registrarlo siempre. */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <label htmlFor="clientName" className="text-sm font-semibold text-on-surface">
-              Nombre del cliente
-            </label>
-            <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
-              obligatorio
-            </span>
-          </div>
-          <input
-            id="clientName"
-            type="text"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            onBlur={() => setTouched((t) => ({ ...t, clientName: true }))}
-            placeholder="Ej: Juan, María Fernanda"
-            maxLength={80}
-            autoComplete="off"
-            autoCapitalize="words"
-            aria-invalid={touched.clientName && !clientNameValid}
-            className="w-full px-4 py-3.5 rounded-[20px] text-base font-semibold text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
-            style={{
-              background: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(12px)',
-              border:
-                touched.clientName && !clientNameValid
-                  ? '1px solid rgba(186, 26, 26, 0.55)'
-                  : '1px solid rgba(225, 191, 181, 0.35)',
-              boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
-            }}
-          />
-          {touched.clientName && !clientNameValid && (
-            <p className="text-[11px] font-semibold text-red-600 px-1">
-              Escribe el nombre del cliente.
-            </p>
-          )}
-        </section>
-
-        {/* Teléfono del cliente — obligatorio. El motorizado lo usa para
-            llamar/WhatsApp al cliente desde su PWA. */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <label htmlFor="clientPhone" className="text-sm font-semibold text-on-surface">
-              Teléfono del cliente
-            </label>
-            <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
-              obligatorio
-            </span>
-          </div>
-          <PhoneInputPe
-            id="clientPhone"
-            value={clientPhone}
-            onChange={(e) => setClientPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-            onBlur={() => setTouched((t) => ({ ...t, clientPhone: true }))}
-            autoComplete="tel"
-            aria-invalid={touched.clientPhone && !clientPhoneValid}
-          />
-          {touched.clientPhone && !clientPhoneValid && (
-            <p className="text-[11px] font-semibold text-red-600 px-1">
-              {clientPhoneDigits.length === 0
-                ? 'Ingresa el teléfono del cliente.'
-                : 'Debe empezar en 9 y tener 9 dígitos.'}
-            </p>
-          )}
-        </section>
-
-        {/* Dirección o referencia — obligatorio. Sustituye al código del pedido
-            en la card del motorizado como info de destino. */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <label htmlFor="deliveryReference" className="text-sm font-semibold text-on-surface">
-              Dirección o referencia
-            </label>
-            <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
-              obligatorio
-            </span>
-          </div>
-          <textarea
-            id="deliveryReference"
-            value={deliveryReference}
-            onChange={(e) => setDeliveryReference(e.target.value.slice(0, 500))}
-            onBlur={() => setTouched((t) => ({ ...t, deliveryReference: true }))}
-            placeholder="Ej: Av. Paseo de la República 3500, dpto 502, frente al parque"
-            rows={2}
-            maxLength={500}
-            aria-invalid={touched.deliveryReference && !deliveryReferenceValid}
-            className="w-full px-4 py-3 rounded-[20px] text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow resize-none"
-            style={{
-              background: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(12px)',
-              border:
-                touched.deliveryReference && !deliveryReferenceValid
-                  ? '1px solid rgba(186, 26, 26, 0.55)'
-                  : '1px solid rgba(225, 191, 181, 0.35)',
-              boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
-            }}
-          />
-          {touched.deliveryReference && !deliveryReferenceValid ? (
-            <p className="text-[11px] font-semibold text-red-600 px-1">
-              Escribe la dirección o una referencia del destino.
-            </p>
-          ) : (
-            deliveryReferenceTrim.length > 0 && (
-              <p className="text-[10px] text-on-surface-variant px-1">
-                {deliveryReferenceTrim.length}/500
-              </p>
-            )
-          )}
         </section>
 
         {/* Payment method */}

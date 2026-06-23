@@ -1,15 +1,15 @@
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
 import { Order, type OrderSource } from '../../domain/entities/order'
+import { Coordinates } from '../../domain/value-objects/coordinates'
 import { Money } from '../../domain/value-objects/money'
 import { PaymentIntent, type PaymentStatusValue } from '../../domain/value-objects/payment-intent'
 import { PrepTime } from '../../domain/value-objects/prep-time'
 import { RestaurantId } from '../../domain/value-objects/restaurant-id'
-import { Coordinates } from '../../domain/value-objects/coordinates'
 import type { Clock } from '../ports/clock'
+import type { CustomerAddressRepository } from '../ports/customer-address.repository'
 import type { EventPublisher } from '../ports/event-publisher'
 import type { OrderRepository } from '../ports/order.repository'
-import type { CustomerAddressRepository } from '../ports/customer-address.repository'
 
 export type CreateOrderCommand = {
   restaurantId: string
@@ -86,6 +86,43 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
       if (cmd.customerAddressId) {
         const address = await this.customerAddresses.findById(cmd.customerAddressId)
         if (address) {
+          let addressUpdated = false
+          const fieldsFilled: string[] = []
+
+          // 2. Si customer_name es NULL o vacío, y el nombre tipeado tiene >= 3 caracteres
+          const trimmedName = cmd.clientName?.trim() ?? ''
+          const isNameEmpty = !address.customerName || address.customerName.trim() === ''
+          if (isNameEmpty && trimmedName.length >= 3) {
+            address.customerName = trimmedName
+            addressUpdated = true
+            fieldsFilled.push('customer_name')
+          }
+
+          // 3. Si reference es NULL o vacío, y la referencia tipeada tiene >= 5 caracteres
+          const trimmedRef = cmd.deliveryReference?.trim() ?? ''
+          const isRefEmpty = !address.reference || address.reference.trim() === ''
+          if (isRefEmpty && trimmedRef.length >= 5) {
+            address.reference = trimmedRef
+            addressUpdated = true
+            fieldsFilled.push('reference')
+          }
+
+          if (addressUpdated) {
+            await this.customerAddresses.update(address)
+            await this.customerAddresses.logEvent({
+              orderId: null,
+              driverId: null,
+              phone: address.phone,
+              action: 'admin_edited',
+              accuracyReported: null,
+              distanceDraggedM: null,
+              metadata: {
+                source: 'cashier_first_fill',
+                fields_filled: fieldsFilled,
+              },
+            })
+          }
+
           if (!finalReference && address.reference) {
             finalReference = address.reference
           }
@@ -134,4 +171,3 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
     }
   }
 }
-

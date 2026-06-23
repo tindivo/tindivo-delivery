@@ -54,7 +54,9 @@ async function createCustomerOrder(
 
   const { data: restaurant, error: restaurantError } = await sb
     .from('restaurants')
-    .select('id, name, is_active, is_delivery_enabled, commission_per_order, far_distance_surcharge')
+    .select(
+      'id, name, is_active, is_delivery_enabled, commission_per_order, far_distance_surcharge',
+    )
     .eq('id', data.restaurantId)
     .maybeSingle()
 

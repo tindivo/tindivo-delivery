@@ -68,7 +68,6 @@ export function ordersApi(client: ApiClient) {
     logAddressCaptureEvent: (id: string, body: Orders.LogAddressCaptureEventRequest) =>
       client.post<void>(`driver/orders/${id}/capture-events`, body),
 
-
     // Driver — Equipo (request-based transfer)
     listTeamOrders: () => client.get<{ items: Orders.TeamOrderItem[] }>('driver/team/orders'),
     listReceivedTransferRequests: () =>

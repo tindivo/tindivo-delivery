@@ -136,6 +136,9 @@ export const OrderMapper = {
       cash_owed_at_delivery: p.cashOwedAtDelivery?.amount ?? null,
       client_name: p.clientName,
       client_phone: p.clientPhone,
+      delivery_coordinates: p.deliveryCoordinates
+        ? `POINT(${p.deliveryCoordinates.lng} ${p.deliveryCoordinates.lat})`
+        : null,
       delivery_reference: p.deliveryReference,
       notes: p.notes,
       extension_used: p.extensionUsed,

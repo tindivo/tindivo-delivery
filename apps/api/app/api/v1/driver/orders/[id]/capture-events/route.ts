@@ -1,4 +1,4 @@
-import { problem, problemCode } from '@/lib/http/problem'
+import { problemCode } from '@/lib/http/problem'
 import { requireAuth } from '@/lib/http/require-auth'
 import { Orders } from '@tindivo/contracts'
 import {

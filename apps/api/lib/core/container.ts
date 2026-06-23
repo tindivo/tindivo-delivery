@@ -27,12 +27,12 @@ import {
   RequestOrderTransferUseCase,
   SaveCustomerDataUseCase,
   SupabaseAssignmentRulesRepository,
+  SupabaseCustomerAddressRepository,
   SupabaseDriverRepository,
   SupabaseEventPublisher,
   SupabaseOrderRepository,
   SupabaseRejectionsRepository,
   SupabaseTransferRequestsRepository,
-  SupabaseCustomerAddressRepository,
   SystemClock,
   TransferOrderToDriverUseCase,
 } from '@tindivo/core/modules/orders'

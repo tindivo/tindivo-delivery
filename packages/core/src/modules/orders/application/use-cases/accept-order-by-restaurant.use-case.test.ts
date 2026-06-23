@@ -150,7 +150,7 @@ describe('AcceptOrderByRestaurantUseCase', () => {
       prepTime: PrepTime.of(20),
       payment: PaymentIntent.create('pending_yape', Money.pen(50)),
       baseCommission: Money.pen(3),
-    farSurchargeAmount: Money.pen(0.5),
+      farSurchargeAmount: Money.pen(0.5),
       source: 'customer_pwa',
       now: NOW,
     })
@@ -169,7 +169,7 @@ describe('AcceptOrderByRestaurantUseCase', () => {
       prepTime: PrepTime.of(20),
       payment: PaymentIntent.create('prepaid', Money.pen(50)),
       baseCommission: Money.pen(3),
-    farSurchargeAmount: Money.pen(0.5),
+      farSurchargeAmount: Money.pen(0.5),
       source: 'restaurant_pwa',
       now: NOW,
     })

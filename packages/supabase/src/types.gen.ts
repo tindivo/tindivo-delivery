@@ -257,6 +257,7 @@ export type Database = {
           accuracy_m: number | null
           address_id: string
           created_at: string
+          customer_name: string | null
           is_default: boolean
           last_used_at: string | null
           lat: number | null
@@ -271,6 +272,7 @@ export type Database = {
           accuracy_m?: number | null
           address_id?: string
           created_at?: string
+          customer_name?: string | null
           is_default?: boolean
           last_used_at?: string | null
           lat?: number | null
@@ -285,6 +287,7 @@ export type Database = {
           accuracy_m?: number | null
           address_id?: string
           created_at?: string
+          customer_name?: string | null
           is_default?: boolean
           last_used_at?: string | null
           lat?: number | null
@@ -1845,6 +1848,10 @@ export type Database = {
         Returns: undefined
       }
       revoke_user_sessions: { Args: { p_user_id: string }; Returns: number }
+      set_customer_address_default: {
+        Args: { p_address_id: string }
+        Returns: undefined
+      }
       timeout_unaccepted_assignments: { Args: never; Returns: undefined }
       user_is_driver_of_restaurant: {
         Args: { p_restaurant_id: string }

@@ -1,15 +1,18 @@
 import type { DomainError } from '../../../../shared/errors/domain-error'
 import { Result } from '../../../../shared/kernel/result'
 import type { UseCase } from '../../../../shared/kernel/use-case'
-import { Coordinates } from '../../domain/value-objects/coordinates'
 import type { DeliveryPaymentInput } from '../../domain/entities/order'
+import type { Order } from '../../domain/entities/order'
 import { OrderNotFound } from '../../domain/errors/order-errors'
+import { Coordinates } from '../../domain/value-objects/coordinates'
 import { OrderId } from '../../domain/value-objects/order-id'
 import type { Clock } from '../ports/clock'
+import type {
+  AddressCaptureEvent,
+  CustomerAddressRepository,
+} from '../ports/customer-address.repository'
 import type { EventPublisher } from '../ports/event-publisher'
 import type { OrderRepository } from '../ports/order.repository'
-import type { CustomerAddressRepository, AddressCaptureEvent } from '../ports/customer-address.repository'
-import type { Order } from '../../domain/entities/order'
 
 export type MarkDeliveredCommand = {
   orderId: string
@@ -62,6 +65,9 @@ export class MarkDeliveredUseCase
         if (address) {
           address.lastUsedAt = now
           address.timesUsed += 1
+          if (order.props.clientName) {
+            address.customerName = order.props.clientName
+          }
           await this.customerAddresses.update(address)
         }
       } catch (err) {
@@ -122,6 +128,9 @@ export class MarkDeliveredUseCase
           // Jerarquía: admin_curated no se sobreescribe. Solo actualiza stats.
           address.lastUsedAt = now
           address.timesUsed += 1
+          if (order.props.clientName) {
+            address.customerName = order.props.clientName
+          }
         } else {
           // Actualizar dirección
           address.lat = capture.lat
@@ -130,6 +139,9 @@ export class MarkDeliveredUseCase
           address.source = 'driver_verified'
           address.lastUsedAt = now
           address.timesUsed += 1
+          if (order.props.clientName) {
+            address.customerName = order.props.clientName
+          }
 
           // Guardar referencia si fue editada y la precisión es aceptable (<= 500m)
           if (capture.reference !== undefined && capture.accuracy <= 500) {
@@ -152,7 +164,7 @@ export class MarkDeliveredUseCase
       // Solo guardar la referencia si la precisión es aceptable (<= 500m)
       const finalReference =
         capture.accuracy <= 500
-          ? capture.reference ?? order.props.deliveryReference
+          ? (capture.reference ?? order.props.deliveryReference)
           : order.props.deliveryReference
 
       if (
@@ -174,6 +186,7 @@ export class MarkDeliveredUseCase
         isDefault,
         lastUsedAt: now,
         timesUsed: 1,
+        customerName: order.props.clientName,
       })
 
       // Enlazar orden con la nueva dirección creada
@@ -195,4 +208,3 @@ export class MarkDeliveredUseCase
     await this.customerAddresses.logEvent(event)
   }
 }
-

@@ -38,6 +38,16 @@ export type DeliveryDistanceCommissionsResponse = z.infer<
   typeof DeliveryDistanceCommissionsResponse
 >
 
+export const BLACKLISTED_PHONES = [
+  '999999999',
+  '987654321',
+  '912345678',
+  '955555555',
+  '900000000',
+  '911111111',
+  '123456789',
+]
+
 export const CreateOrderRequest = z
   .object({
     prepMinutes: z
@@ -61,7 +71,13 @@ export const CreateOrderRequest = z
      * waiting_at_restaurant si hay errores.
      */
     clientName: z.string().trim().min(1, 'El nombre del cliente es obligatorio').max(80),
-    clientPhone: PhonePeSchema,
+    clientPhone: PhonePeSchema.refine(
+      (phone) => {
+        const clean = phone.replace(/\D/g, '').slice(-9)
+        return !BLACKLISTED_PHONES.includes(clean)
+      },
+      { message: 'Teléfono inválido, ingrese el real' },
+    ),
     deliveryReference: z
       .string()
       .trim()
@@ -662,4 +678,3 @@ export const LogAddressCaptureEventRequest = z.object({
   metadata: z.record(z.any()).optional(),
 })
 export type LogAddressCaptureEventRequest = z.infer<typeof LogAddressCaptureEventRequest>
-

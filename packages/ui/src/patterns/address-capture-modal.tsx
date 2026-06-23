@@ -1,12 +1,12 @@
 'use client'
 
-import { SAN_JACINTO_CENTER } from '@tindivo/core'
-import { useCallback, useEffect, useRef, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
+import { SAN_JACINTO_CENTER } from '@tindivo/core'
 import dynamic from 'next/dynamic'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Icon } from '../icons/icon'
 import { Button } from '../primitives/button'
 import { Input } from '../primitives/input'
-import { Icon } from '../icons/icon'
 
 const InteractiveMap = dynamic(
   () => import('./interactive-map').then((mod) => mod.InteractiveMap),
@@ -135,13 +135,7 @@ export function AddressCaptureModal({
     const finalAccuracy = accuracy ?? 999
     const finalReference = reference.trim() !== (initialReference ?? '') ? reference : undefined
 
-    onConfirm(
-      currentCoords.lat,
-      currentCoords.lng,
-      finalReference,
-      distance,
-      finalAccuracy,
-    )
+    onConfirm(currentCoords.lat, currentCoords.lng, finalReference, distance, finalAccuracy)
   }, [currentCoords, gpsCoords, accuracy, reference, initialReference, onConfirm])
 
   if (!open) return null
@@ -230,11 +224,7 @@ export function AddressCaptureModal({
 
             {/* Actions */}
             <div className="grid grid-cols-2 gap-4">
-              <Button
-                variant="secondary"
-                onClick={onSkip}
-                className="h-12 text-base font-semibold"
-              >
+              <Button variant="secondary" onClick={onSkip} className="h-12 text-base font-semibold">
                 Omitir
               </Button>
               <Button

@@ -4,20 +4,28 @@ import { useNow } from '@/shared/hooks/use-now'
 import { ApiError } from '@tindivo/api-client'
 import type { Orders } from '@tindivo/contracts'
 import { buildWaMeUrl, normalizeToE164Pe } from '@tindivo/core'
-import { BottomActionBar, Button, ColorDot, GlassTopBar, Icon, IconButton, AddressCaptureModal } from '@tindivo/ui'
+import {
+  AddressCaptureModal,
+  BottomActionBar,
+  Button,
+  ColorDot,
+  GlassTopBar,
+  Icon,
+  IconButton,
+} from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RejectAssignmentSheet } from '../../available-orders/components/reject-assignment-sheet'
 import { useAcceptOrder } from '../../available-orders/hooks/use-accept-order'
 import { useRejectOrder } from '../../available-orders/hooks/use-reject-order'
 import { useDriverSupportPhone } from '../hooks/use-driver-support-phone'
+import { useLogAddressCaptureEvent } from '../hooks/use-log-address-capture-event'
 import { useMarkArrived } from '../hooks/use-mark-arrived'
 import { useMarkDelivered } from '../hooks/use-mark-delivered'
 import { useMarkPickedUp } from '../hooks/use-mark-picked-up'
 import { useMarkReceived } from '../hooks/use-mark-received'
 import { useOrderDetail } from '../hooks/use-order-detail'
 import { useSaveCustomerData } from '../hooks/use-save-customer-data'
-import { useLogAddressCaptureEvent } from '../hooks/use-log-address-capture-event'
 import { ChangePaymentMethodModal } from './change-payment-method-modal'
 import { ConfirmPickupModal } from './confirm-pickup-modal'
 import { CustomerDataForm } from './customer-data-form'
@@ -54,24 +62,27 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const receivedFiredRef = useRef(false)
   const supportPhoneQuery = useDriverSupportPhone()
 
-  const handleAddressConfirm = useCallback((
-    lat: number,
-    lng: number,
-    ref: string | undefined,
-    distanceDragged: number,
-    accuracy: number,
-  ) => {
-    setAddressCaptureData({
-      lat,
-      lng,
-      accuracy,
-      reference: ref,
-      distanceDragged,
-      omitted: false,
-    })
-    setAddressCaptureOpen(false)
-    setMarkDeliveredOpen(true)
-  }, [])
+  const handleAddressConfirm = useCallback(
+    (
+      lat: number,
+      lng: number,
+      ref: string | undefined,
+      distanceDragged: number,
+      accuracy: number,
+    ) => {
+      setAddressCaptureData({
+        lat,
+        lng,
+        accuracy,
+        reference: ref,
+        distanceDragged,
+        omitted: false,
+      })
+      setAddressCaptureOpen(false)
+      setMarkDeliveredOpen(true)
+    },
+    [],
+  )
 
   const handleAddressSkip = useCallback(() => {
     setAddressCaptureData({
@@ -85,10 +96,12 @@ export function ActiveOrderDetail({ orderId }: Props) {
     setMarkDeliveredOpen(true)
   }, [])
 
-  const handleAddressShown = useCallback((acc: number | null) => {
-    logEvent.mutate({ action: 'shown', accuracyReported: acc ?? undefined })
-  }, [logEvent])
-
+  const handleAddressShown = useCallback(
+    (acc: number | null) => {
+      logEvent.mutate({ action: 'shown', accuracyReported: acc ?? undefined })
+    },
+    [logEvent],
+  )
 
   // Estado del form mientras el driver edita; vive solo en memoria. La fuente
   // de verdad son los datos persistidos en BD (order.client_phone +
@@ -193,7 +206,6 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const isCaseA = !!raw.customer_address_id && persistedCoords
   const showReferenceField =
     !raw.customer_address_id || !raw.delivery_reference || raw.delivery_reference.length < 20
-
 
   return (
     <div

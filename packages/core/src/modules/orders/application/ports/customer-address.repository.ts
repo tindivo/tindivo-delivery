@@ -9,6 +9,7 @@ export interface CustomerAddress {
   isDefault: boolean
   lastUsedAt: Date | null
   timesUsed: number
+  customerName?: string | null
   createdAt: Date
   updatedAt: Date
 }

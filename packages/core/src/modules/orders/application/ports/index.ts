@@ -21,4 +21,3 @@ export type {
   AddressCaptureEvent,
   CustomerAddressRepository,
 } from './customer-address.repository'
-
