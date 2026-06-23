@@ -32,6 +32,7 @@ import {
   SupabaseOrderRepository,
   SupabaseRejectionsRepository,
   SupabaseTransferRequestsRepository,
+  SupabaseCustomerAddressRepository,
   SystemClock,
   TransferOrderToDriverUseCase,
 } from '@tindivo/core/modules/orders'
@@ -63,7 +64,8 @@ function deps(sb: ServerClient) {
 
 export function buildCreateOrderUseCase(sb: ServerClient) {
   const { orders, events } = deps(sb)
-  return new CreateOrderUseCase(orders, events, clock)
+  const customerAddresses = new SupabaseCustomerAddressRepository(sb)
+  return new CreateOrderUseCase(orders, customerAddresses, events, clock)
 }
 
 export function buildAcceptOrderUseCase(sb: ServerClient) {
@@ -200,7 +202,8 @@ export function buildMarkReceivedUseCase(sb: ServerClient) {
 
 export function buildMarkDeliveredUseCase(sb: ServerClient) {
   const { orders, events } = deps(sb)
-  return new MarkDeliveredUseCase(orders, events, clock)
+  const customerAddresses = new SupabaseCustomerAddressRepository(sb)
+  return new MarkDeliveredUseCase(orders, customerAddresses, events, clock)
 }
 
 export function buildCancelOrderUseCase(sb: ServerClient) {

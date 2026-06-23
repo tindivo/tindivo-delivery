@@ -67,6 +67,7 @@ export const CreateOrderRequest = z
       .trim()
       .min(1, 'La dirección o referencia es obligatoria')
       .max(500),
+    customerAddressId: z.string().uuid().nullable().optional(),
   })
   .refine(
     (v) =>
@@ -223,6 +224,16 @@ export const MarkDeliveredRequest = z
         }),
       ])
       .default({ kind: 'unchanged' }),
+    addressCapture: z
+      .object({
+        lat: z.number(),
+        lng: z.number(),
+        accuracy: z.number(),
+        reference: z.string().optional(),
+        distanceDragged: z.number().default(0),
+        omitted: z.boolean().default(false),
+      })
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.payment.kind !== 'change_to') return
@@ -444,6 +455,7 @@ export const OrderSummaryResponse = z.object({
   appearsInQueueAt: TimestampSchema,
   clientPhone: PhonePeSchema.nullable(),
   clientName: z.string().nullable(),
+  customerAddressId: z.string().uuid().nullable().optional(),
   /**
    * Dirección o referencia textual del destino, opcional para pedidos
    * legacy (~28% son NULL en producción) pero obligatorio para pedidos
@@ -634,3 +646,20 @@ export const ChangePaymentMethodResponse = z.object({
   changeToGive: MoneyPenSchema.nullable(),
 })
 export type ChangePaymentMethodResponse = z.infer<typeof ChangePaymentMethodResponse>
+
+export const LogAddressCaptureEventRequest = z.object({
+  action: z.enum([
+    'shown',
+    'confirmed',
+    'dragged',
+    'omitted',
+    'navigate_clicked',
+    'admin_captured',
+    'admin_edited',
+  ]),
+  accuracyReported: z.number().nullable().optional(),
+  distanceDraggedM: z.number().nullable().optional(),
+  metadata: z.record(z.any()).optional(),
+})
+export type LogAddressCaptureEventRequest = z.infer<typeof LogAddressCaptureEventRequest>
+

@@ -102,6 +102,7 @@ export const OrderMapper = {
       cashOwedAtDelivery:
         row.cash_owed_at_delivery != null ? Money.pen(Number(row.cash_owed_at_delivery)) : null,
       urgentSince: row.urgent_since ? new Date(row.urgent_since) : null,
+      customerAddressId: row.customer_address_id ?? null,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     }
@@ -140,6 +141,7 @@ export const OrderMapper = {
       extension_used: p.extensionUsed,
       ready_early_used: p.readyEarlyUsed,
       occupancy_slots: p.occupancySlots.value,
+      customer_address_id: p.customerAddressId,
     }
   },
 
@@ -193,6 +195,7 @@ export const OrderMapper = {
       // delivery_fee se actualiza en markPickedUp según la banda; persistir
       // aquí asegura que el trigger DB de balance_due reciba el valor final.
       delivery_fee: p.deliveryFee.amount,
+      customer_address_id: p.customerAddressId,
     }
   },
 }

@@ -131,6 +131,7 @@ export type OrderProps = {
    * `urgent_since IS NULL` y NO disparan para urgentes.
    */
   urgentSince: Date | null
+  customerAddressId: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -167,6 +168,7 @@ export type CreateOrderInput = {
    */
   clientPhone?: string
   deliveryReference?: string
+  customerAddressId?: string | null
   now?: Date
 }
 
@@ -227,6 +229,7 @@ export class Order extends AggregateRoot<OrderId> {
       deliveryMapsUrl: null,
       deliveryAddress: null,
       deliveryReference: input.deliveryReference?.trim() || null,
+      customerAddressId: input.customerAddressId ?? null,
       extensionUsed: false,
       readyEarlyUsed: false,
       notes: input.notes ?? null,
@@ -344,8 +347,21 @@ export class Order extends AggregateRoot<OrderId> {
   get isUrgent(): boolean {
     return this._state.urgentSince !== null
   }
+  get customerAddressId(): string | null {
+    return this._state.customerAddressId
+  }
   get props(): Readonly<OrderProps> {
     return this._state
+  }
+
+  updateDeliveryCoordinates(coords: Coordinates): void {
+    this._state.deliveryCoordinates = coords
+    this._state.deliveryMapsUrl = buildMapsUrl(coords)
+    this._state.updatedAt = new Date()
+  }
+
+  setCustomerAddressId(id: string): void {
+    this._state.customerAddressId = id
   }
 
   /* ───────────────── Comportamientos ───────────────── */

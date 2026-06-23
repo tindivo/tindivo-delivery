@@ -34,6 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     orderId: id,
     driverId: auth.auth.driverId,
     payment: parsed.data.payment,
+    addressCapture: parsed.data.addressCapture,
   })
 
   if (result.isFailure) return problem(result.error)

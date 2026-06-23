@@ -16,6 +16,7 @@ type Props = {
   cashAmount: number | null
   yapeAmount: number | null
   onClose: () => void
+  addressCapture?: Orders.MarkDeliveredRequest['addressCapture']
 }
 
 function parseMoney(raw: string): number {
@@ -69,6 +70,7 @@ export function MarkDeliveredSheet({
   cashAmount,
   yapeAmount,
   onClose,
+  addressCapture,
 }: Props) {
   const isPrepaid = paymentStatus === 'prepaid'
   const hadAdvance = (changeToGive ?? 0) > 0
@@ -109,17 +111,22 @@ export function MarkDeliveredSheet({
     !deliver.isPending && (kind !== 'change_to' || (cashOk && method !== ('prepaid' as Method)))
 
   function buildBody(): Orders.MarkDeliveredRequest {
-    if (kind === 'unchanged') return { payment: { kind: 'unchanged' } }
-    if (kind === 'cash_exact') return { payment: { kind: 'cash_exact' } }
-    return {
-      payment: {
-        kind: 'change_to',
+    const payment = (() => {
+      if (kind === 'unchanged') return { kind: 'unchanged' as const }
+      if (kind === 'cash_exact') return { kind: 'cash_exact' as const }
+      return {
+        kind: 'change_to' as const,
         paymentStatus: method,
         yapeAmount: method === 'pending_mixed' ? yapeNum : undefined,
         cashAmount: method === 'pending_mixed' ? cashNum : undefined,
         clientPaysWith:
           method === 'pending_cash' || method === 'pending_mixed' ? paysWithNum : undefined,
-      },
+      }
+    })()
+
+    return {
+      payment,
+      addressCapture,
     }
   }
 

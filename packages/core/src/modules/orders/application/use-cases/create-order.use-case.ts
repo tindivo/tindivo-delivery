@@ -5,9 +5,11 @@ import { Money } from '../../domain/value-objects/money'
 import { PaymentIntent, type PaymentStatusValue } from '../../domain/value-objects/payment-intent'
 import { PrepTime } from '../../domain/value-objects/prep-time'
 import { RestaurantId } from '../../domain/value-objects/restaurant-id'
+import { Coordinates } from '../../domain/value-objects/coordinates'
 import type { Clock } from '../ports/clock'
 import type { EventPublisher } from '../ports/event-publisher'
 import type { OrderRepository } from '../ports/order.repository'
+import type { CustomerAddressRepository } from '../ports/customer-address.repository'
 
 export type CreateOrderCommand = {
   restaurantId: string
@@ -45,6 +47,7 @@ export type CreateOrderCommand = {
    */
   clientPhone?: string
   deliveryReference?: string
+  customerAddressId?: string | null
 }
 
 export type CreateOrderResult = {
@@ -59,6 +62,7 @@ export type CreateOrderResult = {
 export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrderResult, Error> {
   constructor(
     private readonly orders: OrderRepository,
+    private readonly customerAddresses: CustomerAddressRepository,
     private readonly events: EventPublisher,
     private readonly clock: Clock,
   ) {}
@@ -75,6 +79,23 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
         cmd.cashAmount != null ? Money.pen(cmd.cashAmount) : null,
       )
 
+      let finalReference = cmd.deliveryReference
+      let addressIdToLink = cmd.customerAddressId ?? null
+      let initialCoords: { lat: number; lng: number } | null = null
+
+      if (cmd.customerAddressId) {
+        const address = await this.customerAddresses.findById(cmd.customerAddressId)
+        if (address) {
+          if (!finalReference && address.reference) {
+            finalReference = address.reference
+          }
+          if (address.lat !== null && address.lng !== null) {
+            initialCoords = { lat: address.lat, lng: address.lng }
+          }
+          addressIdToLink = address.addressId
+        }
+      }
+
       const result = Order.create({
         restaurantId,
         prepTime,
@@ -85,13 +106,18 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
         notes: cmd.notes,
         source: cmd.source,
         clientPhone: cmd.clientPhone,
-        deliveryReference: cmd.deliveryReference,
+        deliveryReference: finalReference,
+        customerAddressId: addressIdToLink,
         now: this.clock.now(),
       })
 
       if (result.isFailure) return Result.fail(new Error('No se pudo crear el pedido'))
 
       const order = result.value
+      if (initialCoords) {
+        order.updateDeliveryCoordinates(Coordinates.of(initialCoords.lat, initialCoords.lng))
+      }
+
       await this.orders.insert(order)
       await this.events.publishAll(order.pullEvents())
 
@@ -108,3 +134,4 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
     }
   }
 }
+

@@ -4,9 +4,9 @@ import { useNow } from '@/shared/hooks/use-now'
 import { ApiError } from '@tindivo/api-client'
 import type { Orders } from '@tindivo/contracts'
 import { buildWaMeUrl, normalizeToE164Pe } from '@tindivo/core'
-import { BottomActionBar, Button, ColorDot, GlassTopBar, Icon, IconButton } from '@tindivo/ui'
+import { BottomActionBar, Button, ColorDot, GlassTopBar, Icon, IconButton, AddressCaptureModal } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RejectAssignmentSheet } from '../../available-orders/components/reject-assignment-sheet'
 import { useAcceptOrder } from '../../available-orders/hooks/use-accept-order'
 import { useRejectOrder } from '../../available-orders/hooks/use-reject-order'
@@ -17,6 +17,7 @@ import { useMarkPickedUp } from '../hooks/use-mark-picked-up'
 import { useMarkReceived } from '../hooks/use-mark-received'
 import { useOrderDetail } from '../hooks/use-order-detail'
 import { useSaveCustomerData } from '../hooks/use-save-customer-data'
+import { useLogAddressCaptureEvent } from '../hooks/use-log-address-capture-event'
 import { ChangePaymentMethodModal } from './change-payment-method-modal'
 import { ConfirmPickupModal } from './confirm-pickup-modal'
 import { CustomerDataForm } from './customer-data-form'
@@ -45,10 +46,49 @@ export function ActiveOrderDetail({ orderId }: Props) {
   const [changePaymentOpen, setChangePaymentOpen] = useState(false)
   const [confirmPickupOpen, setConfirmPickupOpen] = useState(false)
   const [markDeliveredOpen, setMarkDeliveredOpen] = useState(false)
+  const [addressCaptureOpen, setAddressCaptureOpen] = useState(false)
+  const [addressCaptureData, setAddressCaptureData] = useState<any>(null)
+  const logEvent = useLogAddressCaptureEvent(orderId)
   const [pickupError, setPickupError] = useState<string | null>(null)
   const [paymentDetailsOpen, setPaymentDetailsOpen] = useState(false)
   const receivedFiredRef = useRef(false)
   const supportPhoneQuery = useDriverSupportPhone()
+
+  const handleAddressConfirm = useCallback((
+    lat: number,
+    lng: number,
+    ref: string | undefined,
+    distanceDragged: number,
+    accuracy: number,
+  ) => {
+    setAddressCaptureData({
+      lat,
+      lng,
+      accuracy,
+      reference: ref,
+      distanceDragged,
+      omitted: false,
+    })
+    setAddressCaptureOpen(false)
+    setMarkDeliveredOpen(true)
+  }, [])
+
+  const handleAddressSkip = useCallback(() => {
+    setAddressCaptureData({
+      lat: 0,
+      lng: 0,
+      accuracy: 0,
+      distanceDragged: 0,
+      omitted: true,
+    })
+    setAddressCaptureOpen(false)
+    setMarkDeliveredOpen(true)
+  }, [])
+
+  const handleAddressShown = useCallback((acc: number | null) => {
+    logEvent.mutate({ action: 'shown', accuracyReported: acc ?? undefined })
+  }, [logEvent])
+
 
   // Estado del form mientras el driver edita; vive solo en memoria. La fuente
   // de verdad son los datos persistidos en BD (order.client_phone +
@@ -148,6 +188,12 @@ export function ActiveOrderDetail({ orderId }: Props) {
     prepReady,
   })
   const supportPhone = supportPhoneQuery.data ? supportPhoneQuery.data.phone : '906550166'
+
+  // Determinamos Caso A y Caso B para el modal de coordenadas
+  const isCaseA = !!raw.customer_address_id && persistedCoords
+  const showReferenceField =
+    !raw.customer_address_id || !raw.delivery_reference || raw.delivery_reference.length < 20
+
 
   return (
     <div
@@ -584,7 +630,10 @@ export function ActiveOrderDetail({ orderId }: Props) {
             {hasDeliveryCoords(raw) && (
               <button
                 type="button"
-                onClick={() => navigateMaps({ lat: raw.delivery_lat, lng: raw.delivery_lng })}
+                onClick={() => {
+                  logEvent.mutate({ action: 'navigate_clicked' })
+                  navigateMaps({ lat: raw.delivery_lat, lng: raw.delivery_lng })
+                }}
                 disabled={isLocating}
                 className="w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-on-surface font-bold tracking-wide transition-all duration-300 active:scale-95 disabled:opacity-60"
               >
@@ -602,7 +651,13 @@ export function ActiveOrderDetail({ orderId }: Props) {
               variant="success"
               className="w-full"
               disabled={delivered.isPending}
-              onClick={() => setMarkDeliveredOpen(true)}
+              onClick={() => {
+                if (isCaseA) {
+                  setMarkDeliveredOpen(true)
+                } else {
+                  setAddressCaptureOpen(true)
+                }
+              }}
             >
               <Icon name="check_circle" filled />
               Pedido entregado
@@ -623,10 +678,23 @@ export function ActiveOrderDetail({ orderId }: Props) {
               clientPaysWith={o?.client_pays_with != null ? Number(o.client_pays_with) : null}
               cashAmount={o?.cash_amount != null ? Number(o.cash_amount) : null}
               yapeAmount={o?.yape_amount != null ? Number(o.yape_amount) : null}
-              onClose={() => setMarkDeliveredOpen(false)}
+              addressCapture={addressCaptureData}
+              onClose={() => {
+                setMarkDeliveredOpen(false)
+                setAddressCaptureData(null)
+              }}
             />
           )
         })()}
+
+      <AddressCaptureModal
+        open={addressCaptureOpen}
+        initialReference={raw.delivery_reference}
+        showReferenceField={showReferenceField}
+        onConfirm={handleAddressConfirm}
+        onSkip={handleAddressSkip}
+        onShown={handleAddressShown}
+      />
     </div>
   )
 }

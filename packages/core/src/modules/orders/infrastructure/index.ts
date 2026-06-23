@@ -5,3 +5,5 @@ export { SupabaseAssignmentRulesRepository } from './supabase-assignment-rules.r
 export { SupabaseRejectionsRepository } from './supabase-rejections.repository'
 export { SupabaseDriverRepository } from './supabase-driver.repository'
 export { SupabaseTransferRequestsRepository } from './supabase-transfer-requests.repository'
+export { SupabaseCustomerAddressRepository } from './supabase-customer-address.repository'
+

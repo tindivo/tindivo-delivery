@@ -59,6 +59,7 @@ function pickedUpOrder(payment: PaymentIntent): Order {
     deliveryDistanceBand: null,
     cashOwedAtDelivery: null,
     urgentSince: null,
+    customerAddressId: null,
     createdAt: NOW,
     updatedAt: NOW,
   }

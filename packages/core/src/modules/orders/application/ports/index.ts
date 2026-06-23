@@ -16,3 +16,9 @@ export type {
   TransferRequestStatus,
   CreatePendingInput,
 } from './transfer-requests.repository'
+export type {
+  CustomerAddress,
+  AddressCaptureEvent,
+  CustomerAddressRepository,
+} from './customer-address.repository'
+

@@ -35,6 +35,8 @@ export { Timeline, type TimelineStep } from './patterns/timeline'
 export { WaLinkButton } from './patterns/wa-link-button'
 export { BottomNav, type BottomNavItem } from './patterns/bottom-nav'
 export { HeroBadge } from './patterns/hero-badge'
+export { AddressCaptureModal } from './patterns/address-capture-modal'
+
 export { SolarCTA } from './patterns/solar-cta'
 export { BottomActionBar } from './patterns/bottom-action-bar'
 export { UrgencyBadge } from './patterns/urgency-badge'
