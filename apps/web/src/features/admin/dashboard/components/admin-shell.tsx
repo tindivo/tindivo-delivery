@@ -16,6 +16,7 @@ const items = [
   { href: '/admin/cobros', label: 'Cobros', icon: 'payments' },
   { href: '/admin/finance', label: 'Disputas', icon: 'gavel' },
   { href: '/admin/audit', label: 'Auditoría', icon: 'fact_check' },
+  { href: '/admin/agenda', label: 'Agenda', icon: 'contact_phone' },
   { href: '/admin/settings', label: 'Configuración', icon: 'settings' },
 ] as const
 

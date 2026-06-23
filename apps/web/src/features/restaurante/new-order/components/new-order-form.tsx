@@ -146,7 +146,10 @@ export function NewOrderForm() {
   const clientNameValid = clientNameTrim.length > 0
   const clientPhoneValid = PHONE_PE_REGEX.test(clientPhoneDigits) && !isPhoneBlacklisted
 
-  const { data: addresses = [], isFetching: addressesLoading } = useCustomerAddresses(clientPhoneDigits, clientPhoneValid)
+  const { data: addresses = [], isFetching: addressesLoading } = useCustomerAddresses(
+    clientPhoneDigits,
+    clientPhoneValid,
+  )
 
   const lastLoggedPhoneRef = useRef<string>('')
 
@@ -233,10 +236,16 @@ export function NewOrderForm() {
   }
 
   const showSkeletons = clientPhoneDigits.length === 9 && clientPhoneValid && addressesLoading
-  const showPhoneError = (touched.clientPhone && !clientPhoneValid) || (clientPhoneDigits.length === 9 && !clientPhoneValid)
-  const namePlaceholder = !clientPhoneValid ? 'Primero ingresa el teléfono' : 'Ej: Juan, María Fernanda'
+  const showPhoneError =
+    (touched.clientPhone && !clientPhoneValid) ||
+    (clientPhoneDigits.length === 9 && !clientPhoneValid)
+  const namePlaceholder = !clientPhoneValid
+    ? 'Primero ingresa el teléfono'
+    : 'Ej: Juan, María Fernanda'
   const nameDisabled = !clientPhoneValid
-  const referencePlaceholder = !clientPhoneValid ? 'Primero ingresa el teléfono' : 'Ej: Av. Paseo de la República 3500, dpto 502, frente al parque'
+  const referencePlaceholder = !clientPhoneValid
+    ? 'Primero ingresa el teléfono'
+    : 'Ej: Av. Paseo de la República 3500, dpto 502, frente al parque'
   const referenceDisabled = !clientPhoneValid
   const deliveryReferenceValid = deliveryReferenceTrim.length > 0
 
@@ -415,19 +424,24 @@ export function NewOrderForm() {
                 obligatorio
               </span>
             </div>
-            {addresses.length >= 1 && selectedAddress?.customer_name && clientNameTrim === selectedAddress.customer_name.trim() && !isAnotherAddress && (
-              <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
-                <Icon name="check_circle" size={14} className="text-emerald-600" />
-                Pedido anterior
-              </span>
-            )}
+            {addresses.length >= 1 &&
+              selectedAddress?.customer_name &&
+              clientNameTrim === selectedAddress.customer_name.trim() &&
+              !isAnotherAddress && (
+                <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
+                  <Icon name="check_circle" size={14} className="text-emerald-600" />
+                  Pedido anterior
+                </span>
+              )}
           </div>
           {showSkeletons ? (
-            <div 
+            <div
               className="w-full h-[52px] bg-on-surface-variant/10 rounded-[20px] animate-pulse flex items-center px-4"
               style={{ border: '1px solid rgba(225, 191, 181, 0.2)' }}
             >
-              <span className="text-xs text-on-surface-variant/40 font-semibold">Buscando nombre...</span>
+              <span className="text-xs text-on-surface-variant/40 font-semibold">
+                Buscando nombre...
+              </span>
             </div>
           ) : (
             <input
@@ -443,10 +457,10 @@ export function NewOrderForm() {
               autoCapitalize="words"
               aria-invalid={touched.clientName && !clientNameValid && !nameDisabled}
               className={cn(
-                "w-full px-4 py-3.5 rounded-[20px] text-base font-semibold transition-shadow",
+                'w-full px-4 py-3.5 rounded-[20px] text-base font-semibold transition-shadow',
                 nameDisabled
-                  ? "bg-on-surface-variant/5 text-on-surface-variant/40 placeholder:text-on-surface-variant/30 cursor-not-allowed border-dashed"
-                  : "bg-white/85 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40",
+                  ? 'bg-on-surface-variant/5 text-on-surface-variant/40 placeholder:text-on-surface-variant/30 cursor-not-allowed border-dashed'
+                  : 'bg-white/85 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40',
               )}
               style={{
                 backdropFilter: 'blur(12px)',
@@ -535,11 +549,13 @@ export function NewOrderForm() {
             )}
           </div>
           {showSkeletons ? (
-            <div 
+            <div
               className="w-full h-[80px] bg-on-surface-variant/10 rounded-[20px] animate-pulse flex items-start p-4"
               style={{ border: '1px solid rgba(225, 191, 181, 0.2)' }}
             >
-              <span className="text-xs text-on-surface-variant/40 font-semibold">Buscando dirección...</span>
+              <span className="text-xs text-on-surface-variant/40 font-semibold">
+                Buscando dirección...
+              </span>
             </div>
           ) : (
             <textarea
@@ -551,12 +567,14 @@ export function NewOrderForm() {
               disabled={referenceDisabled}
               rows={2}
               maxLength={500}
-              aria-invalid={touched.deliveryReference && !deliveryReferenceValid && !referenceDisabled}
+              aria-invalid={
+                touched.deliveryReference && !deliveryReferenceValid && !referenceDisabled
+              }
               className={cn(
-                "w-full px-4 py-3 rounded-[20px] text-sm transition-shadow resize-none",
+                'w-full px-4 py-3 rounded-[20px] text-sm transition-shadow resize-none',
                 referenceDisabled
-                  ? "bg-on-surface-variant/5 text-on-surface-variant/40 placeholder:text-on-surface-variant/30 cursor-not-allowed border-dashed"
-                  : "bg-white/85 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40",
+                  ? 'bg-on-surface-variant/5 text-on-surface-variant/40 placeholder:text-on-surface-variant/30 cursor-not-allowed border-dashed'
+                  : 'bg-white/85 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40',
               )}
               style={{
                 backdropFilter: 'blur(12px)',
@@ -573,7 +591,8 @@ export function NewOrderForm() {
               Escribe la dirección o una referencia del destino.
             </p>
           ) : (
-            deliveryReferenceTrim.length > 0 && !referenceDisabled && (
+            deliveryReferenceTrim.length > 0 &&
+            !referenceDisabled && (
               <p className="text-[10px] text-on-surface-variant px-1">
                 {deliveryReferenceTrim.length}/500
               </p>

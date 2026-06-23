@@ -30,6 +30,14 @@ type Props = {
   onSkip: () => void
   showReferenceField?: boolean
   onShown?: (accuracy: number | null) => void
+  variant?: 'driver' | 'admin'
+  initialCustomerName?: string | null
+  onConfirmAdmin?: (data: {
+    lat: number
+    lng: number
+    reference: string
+    customerName: string
+  }) => void
 }
 
 function getHaversineDistance(coords1: Coordinates, coords2: Coordinates): number {
@@ -56,12 +64,23 @@ export function AddressCaptureModal({
   onSkip,
   showReferenceField = false,
   onShown,
+  variant = 'driver',
+  initialCustomerName,
+  onConfirmAdmin,
 }: Props) {
   const [loading, setLoading] = useState(true)
   const [gpsCoords, setGpsCoords] = useState<Coordinates | null>(null)
   const [currentCoords, setCurrentCoords] = useState<Coordinates | null>(null)
   const [accuracy, setAccuracy] = useState<number | null>(null)
   const [reference, setReference] = useState(initialReference ?? '')
+  const [customerName, setCustomerName] = useState(initialCustomerName ?? '')
+
+  useEffect(() => {
+    if (open) {
+      setReference(initialReference ?? '')
+      setCustomerName(initialCustomerName ?? '')
+    }
+  }, [open, initialReference, initialCustomerName])
 
   // Use a ref for onShown to avoid re-triggering the useEffect on every reference change
   const onShownRef = useRef(onShown)
@@ -85,7 +104,7 @@ export function AddressCaptureModal({
       return
     }
 
-    if (!navigator.geolocation) {
+    if (variant === 'admin' || !navigator.geolocation) {
       setGpsCoords(SAN_JACINTO_CENTER)
       setCurrentCoords(SAN_JACINTO_CENTER)
       setAccuracy(null)
@@ -127,16 +146,36 @@ export function AddressCaptureModal({
     return () => {
       active = false
     }
-  }, [open, initialLat, initialLng])
+  }, [open, initialLat, initialLng, variant])
 
   const handleConfirm = useCallback(() => {
-    if (!currentCoords || !gpsCoords) return
-    const distance = getHaversineDistance(gpsCoords, currentCoords)
-    const finalAccuracy = accuracy ?? 999
-    const finalReference = reference.trim() !== (initialReference ?? '') ? reference : undefined
+    if (!currentCoords) return
+    if (variant === 'admin') {
+      onConfirmAdmin?.({
+        lat: currentCoords.lat,
+        lng: currentCoords.lng,
+        reference: reference.trim(),
+        customerName: customerName.trim(),
+      })
+    } else {
+      if (!gpsCoords) return
+      const distance = getHaversineDistance(gpsCoords, currentCoords)
+      const finalAccuracy = accuracy ?? 999
+      const finalReference = reference.trim() !== (initialReference ?? '') ? reference : undefined
 
-    onConfirm(currentCoords.lat, currentCoords.lng, finalReference, distance, finalAccuracy)
-  }, [currentCoords, gpsCoords, accuracy, reference, initialReference, onConfirm])
+      onConfirm(currentCoords.lat, currentCoords.lng, finalReference, distance, finalAccuracy)
+    }
+  }, [
+    variant,
+    currentCoords,
+    gpsCoords,
+    accuracy,
+    reference,
+    initialReference,
+    customerName,
+    onConfirm,
+    onConfirmAdmin,
+  ])
 
   if (!open) return null
 
@@ -150,7 +189,7 @@ export function AddressCaptureModal({
             <div className="flex items-center gap-2">
               <Icon name="my_location" className="text-primary" />
               <Dialog.Title className="text-lg font-bold text-foreground">
-                Capturar Ubicación
+                {variant === 'admin' ? 'Curar Cliente y Ubicación' : 'Capturar Ubicación'}
               </Dialog.Title>
             </div>
             <Dialog.Close asChild>
@@ -187,7 +226,7 @@ export function AddressCaptureModal({
           {/* Bottom Panel */}
           <div className="flex flex-col gap-4 border-t border-outline-variant/30 bg-background p-6">
             {/* GPS Accuracy */}
-            {!loading && (
+            {!loading && variant !== 'admin' && (
               <div className="flex flex-col gap-1 rounded-xl bg-surface-container-low p-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Icon name="radar" size={18} />
@@ -205,11 +244,30 @@ export function AddressCaptureModal({
               </div>
             )}
 
+            {/* Customer Name Input (Admin only) */}
+            {variant === 'admin' && (
+              <div className="flex flex-col gap-2">
+                <label htmlFor="name-input" className="text-xs font-semibold text-muted-foreground">
+                  Nombre del cliente
+                </label>
+                <Input
+                  id="name-input"
+                  type="text"
+                  placeholder="Ej: Juan Pérez"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full text-sm"
+                />
+              </div>
+            )}
+
             {/* Reference Input */}
-            {showReferenceField && (
+            {(showReferenceField || variant === 'admin') && (
               <div className="flex flex-col gap-2">
                 <label htmlFor="ref-input" className="text-xs font-semibold text-muted-foreground">
-                  Mejorar referencia (opcional)
+                  {variant === 'admin'
+                    ? 'Referencia de la dirección'
+                    : 'Mejorar referencia (opcional)'}
                 </label>
                 <Input
                   id="ref-input"
@@ -225,7 +283,7 @@ export function AddressCaptureModal({
             {/* Actions */}
             <div className="grid grid-cols-2 gap-4">
               <Button variant="secondary" onClick={onSkip} className="h-12 text-base font-semibold">
-                Omitir
+                {variant === 'admin' ? 'Cancelar' : 'Omitir'}
               </Button>
               <Button
                 variant="primary"
@@ -233,7 +291,7 @@ export function AddressCaptureModal({
                 disabled={loading || !currentCoords}
                 className="h-12 bg-green-600 text-base font-semibold text-white hover:bg-green-700 active:bg-green-800 disabled:bg-muted"
               >
-                Confirmar
+                {variant === 'admin' ? 'Guardar' : 'Confirmar'}
               </Button>
             </div>
           </div>
