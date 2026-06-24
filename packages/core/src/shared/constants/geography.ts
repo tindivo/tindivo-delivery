@@ -6,7 +6,7 @@ import type { Coordinates } from '../utils/maps'
  * (crear/editar restaurante) y del driver (datos del cliente) carga
  * por defecto en estas coordenadas.
  */
-export const SAN_JACINTO_CENTER: Coordinates = { lat: -9.0961, lng: -78.3464 }
+export const SAN_JACINTO_CENTER: Coordinates = { lat: -9.146872, lng: -78.279047 }
 
 /**
  * Zoom inicial razonable para ver el casco urbano de San Jacinto sin
