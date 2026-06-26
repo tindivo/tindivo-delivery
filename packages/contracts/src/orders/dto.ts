@@ -57,7 +57,7 @@ export const CreateOrderRequest = z
       .max(50)
       .refine((minutes) => minutes % 5 === 0, 'prepMinutes debe ir en intervalos de 5 minutos'),
     paymentStatus: PaymentStatus,
-    orderAmount: MoneyPenSchema,
+    orderAmount: MoneyPenSchema.refine((v) => v > 0, 'El monto del pedido debe ser mayor a 0'),
     yapeAmount: MoneyPenSchema.optional(),
     cashAmount: MoneyPenSchema.optional(),
     clientPaysWith: MoneyPenSchema.optional(),
@@ -134,7 +134,7 @@ export const EditOrderByRestaurantRequest = z
   .object({
     clientName: z.string().trim().min(1).max(80).nullable().optional(),
     paymentStatus: PaymentStatus.optional(),
-    orderAmount: MoneyPenSchema.optional(),
+    orderAmount: MoneyPenSchema.refine((v) => v > 0, 'El monto del pedido debe ser mayor a 0').optional(),
     yapeAmount: MoneyPenSchema.optional(),
     cashAmount: MoneyPenSchema.optional(),
     clientPaysWith: MoneyPenSchema.optional(),

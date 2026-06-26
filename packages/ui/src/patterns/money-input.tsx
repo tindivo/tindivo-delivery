@@ -6,9 +6,9 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>
 
 export const MoneyInput = forwardRef<HTMLInputElement, Props>(({ className, ...props }, ref) => {
   return (
-    <div className="relative">
-      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant font-medium pointer-events-none">
-        S/
+    <div className="relative flex items-center">
+      <span className="absolute left-4 text-on-surface-variant font-semibold pointer-events-none select-none text-base">
+        S/.
       </span>
       <Input
         ref={ref}
@@ -17,7 +17,7 @@ export const MoneyInput = forwardRef<HTMLInputElement, Props>(({ className, ...p
         pattern="[0-9]*[.,]?[0-9]*"
         autoComplete="off"
         className={cn(
-          'pl-10 text-lg font-semibold placeholder:text-sm placeholder:font-medium',
+          'pl-12 text-lg font-semibold placeholder:text-sm placeholder:font-medium',
           className,
         )}
         {...props}

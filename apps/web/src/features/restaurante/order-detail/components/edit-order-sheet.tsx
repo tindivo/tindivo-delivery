@@ -89,6 +89,20 @@ export function EditOrderSheet({ orderId, initial, onClose }: Props) {
     initial.cashAmount != null ? initial.cashAmount.toFixed(2) : '',
   )
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [touchedAmount, setTouchedAmount] = useState(false)
+
+  const handleAmountChange = (val: string) => {
+    let cleaned = val.replace(/[^0-9.,]/g, '')
+    cleaned = cleaned.replace(',', '.')
+    const parts = cleaned.split('.')
+    if (parts.length > 2) {
+      cleaned = parts[0] + '.' + parts.slice(1).join('')
+    }
+    if (parts[1] !== undefined) {
+      cleaned = parts[0] + '.' + parts[1].slice(0, 2)
+    }
+    setAmount(cleaned)
+  }
 
   const amountNum = parseMoney(amount)
   const paysWithNum = parseMoney(paysWith)
@@ -106,23 +120,45 @@ export function EditOrderSheet({ orderId, initial, onClose }: Props) {
     return 0
   }, [payment, amountNum, paysWithNum, cashPartNum])
 
-  const needsAmount = payment !== 'prepaid'
+  const amountValidationError = useMemo(() => {
+    if (!amount) return "Ingresa el monto del pedido"
+    const hasInvalidChars = /[^0-9.]/.test(amount)
+    const parts = amount.split('.')
+    const hasMultipleDots = parts.length > 2
+    const hasTooManyDecimals = parts[1] !== undefined && parts[1].length > 2
+
+    if (hasInvalidChars || hasMultipleDots || hasTooManyDecimals) {
+      return "Ingresa solo números (ejemplo: 25.00)"
+    }
+
+    const parsed = parseMoney(amount)
+    if (parsed <= 0) {
+      return "El monto debe ser mayor a S/. 0"
+    }
+    return null
+  }, [amount])
+
   const canSubmit =
-    (!needsAmount || amountNum > 0) &&
+    amountValidationError === null &&
     (payment !== 'pending_cash' || paysWithNum >= amountNum) &&
     (payment !== 'pending_mixed' ||
       (splitBothPositive && splitSumsCorrect && paysWithNum >= cashPartNum))
 
+  const showAmountError = touchedAmount && amountValidationError !== null
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!canSubmit) return
+    if (!canSubmit) {
+      setTouchedAmount(true)
+      return
+    }
     setErrorMsg(null)
 
     const trimmedName = clientName.trim()
     const body: Orders.EditOrderByRestaurantRequest = {
       clientName: trimmedName.length > 0 ? trimmedName : null,
       paymentStatus: payment,
-      orderAmount: needsAmount ? amountNum : 0,
+      orderAmount: amountNum,
       yapeAmount: payment === 'pending_mixed' ? yapePartNum : undefined,
       cashAmount: payment === 'pending_mixed' ? cashPartNum : undefined,
       clientPaysWith:
@@ -239,20 +275,34 @@ export function EditOrderSheet({ orderId, initial, onClose }: Props) {
           </section>
 
           {/* Monto */}
-          {needsAmount && (
-            <section className="space-y-2">
+          <section className="space-y-2">
+            <div className="flex flex-col gap-1">
               <label htmlFor="edit-amount" className="text-sm font-semibold text-on-surface">
                 Monto del pedido
               </label>
-              <MoneyInput
-                id="edit-amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                required
-              />
-            </section>
-          )}
+              <span className="text-[11px] text-on-surface-variant">
+                Comida + delivery
+              </span>
+            </div>
+            <MoneyInput
+              id="edit-amount"
+              value={amount}
+              onChange={(e) => handleAmountChange(e.target.value)}
+              onBlur={() => setTouchedAmount(true)}
+              placeholder="Ej: 25.00"
+              required
+              style={{
+                border: showAmountError
+                  ? '1px solid rgba(186, 26, 26, 0.55)'
+                  : '1px solid rgba(225, 191, 181, 0.35)',
+              }}
+            />
+            {showAmountError && (
+              <p className="text-[11px] font-semibold text-red-600 px-1 mt-1">
+                {amountValidationError}
+              </p>
+            )}
+          </section>
 
           {/* Split mixto */}
           {payment === 'pending_mixed' && (

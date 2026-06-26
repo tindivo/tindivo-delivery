@@ -1,11 +1,11 @@
-'use client'
-import { PlatformClosedBanner } from '@/features/restaurante/shared/components/platform-closed-banner'
-import { usePlatformStatus } from '@/features/restaurante/shared/hooks/use-platform-status'
-import { useIdempotencyKey } from '@/lib/idempotency/use-idempotency-key'
-import { supabase } from '@/lib/supabase/client'
-import { useIsDesktop } from '@/shared/hooks/use-is-desktop'
-import { useQueryClient } from '@tanstack/react-query'
-import type { Orders } from '@tindivo/contracts'
+"use client";
+import { PlatformClosedBanner } from "@/features/restaurante/shared/components/platform-closed-banner";
+import { usePlatformStatus } from "@/features/restaurante/shared/hooks/use-platform-status";
+import { useIdempotencyKey } from "@/lib/idempotency/use-idempotency-key";
+import { supabase } from "@/lib/supabase/client";
+import { useIsDesktop } from "@/shared/hooks/use-is-desktop";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Orders } from "@tindivo/contracts";
 import {
   BottomActionBar,
   Button,
@@ -15,332 +15,394 @@ import {
   MoneyInput,
   PhoneInputPe,
   cn,
-} from '@tindivo/ui'
-import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useCreateOrder } from '../hooks/use-create-order'
-import { useCustomerAddresses } from '../hooks/use-customer-addresses'
+} from "@tindivo/ui";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useCreateOrder } from "../hooks/use-create-order";
+import { useCustomerAddresses } from "../hooks/use-customer-addresses";
 
 type CustomerAddress = {
-  phone: string
-  address_id: string
-  lat: number | null
-  lng: number | null
-  reference: string | null
-  accuracy_m: number | null
-  source: string
-  is_default: boolean
-  last_used_at: string | null
-  times_used: number
-  created_at: string
-  updated_at: string
-  customer_name: string | null
-}
+  phone: string;
+  address_id: string;
+  lat: number | null;
+  lng: number | null;
+  reference: string | null;
+  accuracy_m: number | null;
+  source: string;
+  is_default: boolean;
+  last_used_at: string | null;
+  times_used: number;
+  created_at: string;
+  updated_at: string;
+  customer_name: string | null;
+};
 
 const BLACKLISTED_PHONES = [
-  '999999999',
-  '987654321',
-  '912345678',
-  '955555555',
-  '900000000',
-  '911111111',
-  '123456789',
-]
+  "999999999",
+  "987654321",
+  "912345678",
+  "955555555",
+  "900000000",
+  "911111111",
+  "123456789",
+];
 
-type Payment = 'prepaid' | 'pending_yape' | 'pending_cash' | 'pending_mixed'
+type Payment = "prepaid" | "pending_yape" | "pending_cash" | "pending_mixed";
 
-const PREP_MINUTES = [10, 15, 20, 25, 30, 35, 40, 45, 50] as const
-type PrepMinutes = (typeof PREP_MINUTES)[number]
+const PREP_MINUTES = [10, 15, 20, 25, 30, 35, 40, 45, 50] as const;
+type PrepMinutes = (typeof PREP_MINUTES)[number];
 
 function parseMoney(raw: string): number {
-  if (!raw) return 0
-  const normalized = raw.replace(',', '.').replace(/[^0-9.]/g, '')
-  const n = Number.parseFloat(normalized)
-  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0
+  if (!raw) return 0;
+  const normalized = raw.replace(",", ".").replace(/[^0-9.]/g, "");
+  const n = Number.parseFloat(normalized);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
 }
 
 const paymentOptions: {
-  value: Payment
-  label: string
-  hint: string
-  icon: string
-  gradient: string
+  value: Payment;
+  label: string;
+  hint: string;
+  icon: string;
+  gradient: string;
 }[] = [
   {
-    value: 'prepaid',
-    label: 'Ya pagó',
-    hint: 'Cliente canceló por adelantado',
-    icon: 'verified',
-    gradient: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+    value: "prepaid",
+    label: "Ya pagó",
+    hint: "Cliente canceló por adelantado",
+    icon: "verified",
+    gradient: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
   },
   {
-    value: 'pending_yape',
-    label: 'Cobrar con Yape',
-    hint: 'Driver cobra al entregar',
-    icon: 'qr_code_2',
-    gradient: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+    value: "pending_yape",
+    label: "Cobrar con Yape",
+    hint: "Driver cobra al entregar",
+    icon: "qr_code_2",
+    gradient: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
   },
   {
-    value: 'pending_cash',
-    label: 'Cobrar efectivo',
-    hint: 'Adelanta el vuelto al driver',
-    icon: 'payments',
-    gradient: 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)',
+    value: "pending_cash",
+    label: "Cobrar efectivo",
+    hint: "Adelanta el vuelto al driver",
+    icon: "payments",
+    gradient: "linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)",
   },
   {
-    value: 'pending_mixed',
-    label: 'Yape + Efectivo',
-    hint: 'Cliente paga parte por Yape y parte cash',
-    icon: 'splitscreen',
-    gradient: 'linear-gradient(135deg, #7C3AED 0%, #FF6B35 100%)',
+    value: "pending_mixed",
+    label: "Yape + Efectivo",
+    hint: "Cliente paga parte por Yape y parte cash",
+    icon: "splitscreen",
+    gradient: "linear-gradient(135deg, #7C3AED 0%, #FF6B35 100%)",
   },
-]
+];
 
 export function NewOrderForm() {
-  const router = useRouter()
-  const createOrder = useCreateOrder()
+  const router = useRouter();
+  const createOrder = useCreateOrder();
   // UUID v4 que viaja en header Idempotency-Key. Sobrevive recargas accidentales
   // por sessionStorage. Se descarta tras 2xx/4xx (mutation onSettled abajo) para
   // que el próximo formulario tenga su propia key.
-  const idem = useIdempotencyKey('restaurante:new-order')
+  const idem = useIdempotencyKey("restaurante:new-order");
   // Guard síncrono contra doble-click dentro del mismo frame: `isPending` se
   // refleja en el siguiente render (~16ms), abriendo una micro-ventana donde
   // dos clicks ejecutan dos `mutate()` antes de que el botón aparezca disabled.
   // El ref se actualiza fuera del ciclo de React, así que el segundo handler
   // ve `true` inmediatamente. Defense-in-depth sobre el fix TOCTOU del backend.
-  const submittingRef = useRef(false)
-  const platformStatus = usePlatformStatus()
-  const isPlatformClosed = platformStatus.data ? !platformStatus.data.isOpen : false
+  const submittingRef = useRef(false);
+  const platformStatus = usePlatformStatus();
+  const isPlatformClosed = platformStatus.data
+    ? !platformStatus.data.isOpen
+    : false;
 
-  const [prepMinutes, setPrepMinutes] = useState<PrepMinutes>(20)
-  const [payment, setPayment] = useState<Payment>('pending_cash')
-  const [amount, setAmount] = useState<string>('')
-  const [paysWith, setPaysWith] = useState<string>('')
-  const [yapePart, setYapePart] = useState<string>('')
-  const [cashPart, setCashPart] = useState<string>('')
-  const [clientName, setClientName] = useState<string>('')
+  const [prepMinutes, setPrepMinutes] = useState<PrepMinutes>(20);
+  const [payment, setPayment] = useState<Payment>("pending_cash");
+  const [amount, setAmount] = useState<string>("");
+  const [paysWith, setPaysWith] = useState<string>("");
+  const [yapePart, setYapePart] = useState<string>("");
+  const [cashPart, setCashPart] = useState<string>("");
+  const [clientName, setClientName] = useState<string>("");
   // Datos del cliente OBLIGATORIOS al crear el pedido. La card del motorizado
   // los usa como identificación primaria (nombre prominente + dirección como
   // subtítulo) en lugar del código del pedido. Si hubiera un error, el driver
   // puede corregirlos en waiting_at_restaurant.
-  const [clientPhone, setClientPhone] = useState<string>('')
-  const [deliveryReference, setDeliveryReference] = useState<string>('')
+  const [clientPhone, setClientPhone] = useState<string>("");
+  const [deliveryReference, setDeliveryReference] = useState<string>("");
 
-  const queryClient = useQueryClient()
-  const [selectedAddress, setSelectedAddress] = useState<CustomerAddress | null>(null)
-  const [isAnotherAddress, setIsAnotherAddress] = useState<boolean>(false)
-  const [updatingDefault, setUpdatingDefault] = useState(false)
+  const queryClient = useQueryClient();
+  const [selectedAddress, setSelectedAddress] =
+    useState<CustomerAddress | null>(null);
+  const [isAnotherAddress, setIsAnotherAddress] = useState<boolean>(false);
+  const [updatingDefault, setUpdatingDefault] = useState(false);
 
   // Mostrar el error solo después de que el usuario interactuó con el campo,
   // para no asustar con rojos antes de empezar a escribir.
   const [touched, setTouched] = useState<{
-    clientName: boolean
-    clientPhone: boolean
-    deliveryReference: boolean
-  }>({ clientName: false, clientPhone: false, deliveryReference: false })
-  const PHONE_PE_REGEX = /^9\d{8}$/
-  const clientPhoneDigits = clientPhone.replace(/\D/g, '').slice(0, 9)
-  const isPhoneBlacklisted = BLACKLISTED_PHONES.includes(clientPhoneDigits)
-  const clientNameTrim = clientName.trim()
-  const deliveryReferenceTrim = deliveryReference.trim()
-  const clientNameValid = clientNameTrim.length > 0
-  const clientPhoneValid = PHONE_PE_REGEX.test(clientPhoneDigits) && !isPhoneBlacklisted
+    clientName: boolean;
+    clientPhone: boolean;
+    deliveryReference: boolean;
+    amount: boolean;
+  }>({
+    clientName: false,
+    clientPhone: false,
+    deliveryReference: false,
+    amount: false,
+  });
+  const PHONE_PE_REGEX = /^9\d{8}$/;
+  const clientPhoneDigits = clientPhone.replace(/\D/g, "").slice(0, 9);
+  const isPhoneBlacklisted = BLACKLISTED_PHONES.includes(clientPhoneDigits);
+  const clientNameTrim = clientName.trim();
+  const deliveryReferenceTrim = deliveryReference.trim();
+  const clientNameValid = clientNameTrim.length > 0;
+  const clientPhoneValid =
+    PHONE_PE_REGEX.test(clientPhoneDigits) && !isPhoneBlacklisted;
 
-  const { data: addresses = [], isFetching: addressesLoading } = useCustomerAddresses(
-    clientPhoneDigits,
-    clientPhoneValid,
-  )
+  const { data: addresses = [], isFetching: addressesLoading } =
+    useCustomerAddresses(clientPhoneDigits, clientPhoneValid);
 
-  const lastLoggedPhoneRef = useRef<string>('')
+  const lastLoggedPhoneRef = useRef<string>("");
 
   const handlePhoneChange = (newVal: string) => {
-    const cleanVal = newVal.replace(/\D/g, '').slice(0, 9)
+    const cleanVal = newVal.replace(/\D/g, "").slice(0, 9);
     if (cleanVal !== clientPhoneDigits) {
-      setClientName('')
-      setDeliveryReference('')
-      setSelectedAddress(null)
-      setIsAnotherAddress(false)
+      setClientName("");
+      setDeliveryReference("");
+      setSelectedAddress(null);
+      setIsAnotherAddress(false);
       setTouched((t) => ({
         ...t,
         clientName: false,
         deliveryReference: false,
-      }))
+      }));
     }
-    setClientPhone(cleanVal)
-  }
+    setClientPhone(cleanVal);
+  };
+
+  const handleAmountChange = (val: string) => {
+    let cleaned = val.replace(/[^0-9.,]/g, "");
+    cleaned = cleaned.replace(",", ".");
+    const parts = cleaned.split(".");
+    if (parts.length > 2) {
+      cleaned = parts[0] + "." + parts.slice(1).join("");
+    }
+    if (parts[1] !== undefined) {
+      cleaned = parts[0] + "." + parts[1].slice(0, 2);
+    }
+    setAmount(cleaned);
+  };
 
   useEffect(() => {
     if (!clientPhoneValid) {
-      setSelectedAddress(null)
-      setIsAnotherAddress(false)
-      lastLoggedPhoneRef.current = ''
-      return
+      setSelectedAddress(null);
+      setIsAnotherAddress(false);
+      lastLoggedPhoneRef.current = "";
+      return;
     }
 
     if (addresses.length === 0) {
-      setSelectedAddress(null)
-      setIsAnotherAddress(false)
-      return
+      setSelectedAddress(null);
+      setIsAnotherAddress(false);
+      return;
     }
 
     if (clientPhoneDigits !== lastLoggedPhoneRef.current) {
-      lastLoggedPhoneRef.current = clientPhoneDigits
+      lastLoggedPhoneRef.current = clientPhoneDigits;
 
       supabase
-        .from('address_capture_events')
+        .from("address_capture_events")
         .insert({
           phone: clientPhoneDigits,
-          action: 'shown',
+          action: "shown",
           metadata: {
             results_count: addresses.length,
-            context: 'cashier_form',
+            context: "cashier_form",
           },
         })
         .then(({ error }) => {
-          if (error) console.error('Error logging shown telemetry:', error)
-        })
+          if (error) console.error("Error logging shown telemetry:", error);
+        });
 
-      const defaultAddr = addresses.find((a) => a.is_default) || addresses[0]
+      const defaultAddr = addresses.find((a) => a.is_default) || addresses[0];
       if (defaultAddr) {
-        setSelectedAddress(defaultAddr)
-        setIsAnotherAddress(false)
-        setDeliveryReference(defaultAddr.reference ?? '')
-        setClientName(defaultAddr.customer_name ?? '')
+        setSelectedAddress(defaultAddr);
+        setIsAnotherAddress(false);
+        setDeliveryReference(defaultAddr.reference ?? "");
+        setClientName(defaultAddr.customer_name ?? "");
       }
     } else {
       if (selectedAddress) {
-        const updated = addresses.find((a) => a.address_id === selectedAddress.address_id)
+        const updated = addresses.find(
+          (a) => a.address_id === selectedAddress.address_id,
+        );
         if (updated) {
-          setSelectedAddress(updated)
+          setSelectedAddress(updated);
         }
       }
     }
-  }, [addresses, clientPhoneDigits, clientPhoneValid])
+  }, [addresses, clientPhoneDigits, clientPhoneValid]);
 
   async function handleMarkAsDefault(addr: CustomerAddress) {
-    if (updatingDefault) return
-    setUpdatingDefault(true)
+    if (updatingDefault) return;
+    setUpdatingDefault(true);
     try {
-      const { error } = await supabase.rpc('set_customer_address_default', {
+      const { error } = await supabase.rpc("set_customer_address_default", {
         p_address_id: addr.address_id,
-      })
-      if (error) throw error
+      });
+      if (error) throw error;
       await queryClient.invalidateQueries({
-        queryKey: ['customer-addresses', clientPhoneDigits],
-      })
+        queryKey: ["customer-addresses", clientPhoneDigits],
+      });
     } catch (err) {
-      console.error('Error setting default address:', err)
+      console.error("Error setting default address:", err);
     } finally {
-      setUpdatingDefault(false)
+      setUpdatingDefault(false);
     }
   }
 
-  const showSkeletons = clientPhoneDigits.length === 9 && clientPhoneValid && addressesLoading
+  const showSkeletons =
+    clientPhoneDigits.length === 9 && clientPhoneValid && addressesLoading;
   const showPhoneError =
     (touched.clientPhone && !clientPhoneValid) ||
-    (clientPhoneDigits.length === 9 && !clientPhoneValid)
+    (clientPhoneDigits.length === 9 && !clientPhoneValid);
   const namePlaceholder = !clientPhoneValid
-    ? 'Primero ingresa el teléfono'
-    : 'Ej: Juan, María Fernanda'
-  const nameDisabled = !clientPhoneValid
+    ? "Primero ingresa el teléfono"
+    : "Ej: Juan, María Fernanda";
+  const nameDisabled = !clientPhoneValid;
   const referencePlaceholder = !clientPhoneValid
-    ? 'Primero ingresa el teléfono'
-    : 'Ej: Av. Paseo de la República 3500, dpto 502, frente al parque'
-  const referenceDisabled = !clientPhoneValid
-  const deliveryReferenceValid = deliveryReferenceTrim.length > 0
+    ? "Primero ingresa el teléfono"
+    : "Ej: Av. Paseo de la República 3500, dpto 502, frente al parque";
+  const referenceDisabled = !clientPhoneValid;
+  const deliveryReferenceValid = deliveryReferenceTrim.length > 0;
 
-  const carouselRef = useRef<HTMLDivElement>(null)
-  const isDesktop = useIsDesktop()
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const isDesktop = useIsDesktop();
 
   function scrollCarousel(direction: -1 | 1) {
-    const el = carouselRef.current
-    if (!el) return
-    el.scrollBy({ left: direction * 200, behavior: 'smooth' })
+    const el = carouselRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * 200, behavior: "smooth" });
   }
 
-  const amountNum = parseMoney(amount)
-  const paysWithNum = parseMoney(paysWith)
-  const yapePartNum = parseMoney(yapePart)
-  const cashPartNum = parseMoney(cashPart)
-  const splitSumCents = Math.round((yapePartNum + cashPartNum) * 100)
-  const orderAmountCents = Math.round(amountNum * 100)
-  const splitSumsCorrect = payment !== 'pending_mixed' || splitSumCents === orderAmountCents
-  const splitBothPositive = payment !== 'pending_mixed' || (yapePartNum > 0 && cashPartNum > 0)
+  const amountNum = parseMoney(amount);
+  const paysWithNum = parseMoney(paysWith);
+  const yapePartNum = parseMoney(yapePart);
+  const cashPartNum = parseMoney(cashPart);
+  const splitSumCents = Math.round((yapePartNum + cashPartNum) * 100);
+  const orderAmountCents = Math.round(amountNum * 100);
+  const splitSumsCorrect =
+    payment !== "pending_mixed" || splitSumCents === orderAmountCents;
+  const splitBothPositive =
+    payment !== "pending_mixed" || (yapePartNum > 0 && cashPartNum > 0);
 
-  const cashTarget = payment === 'pending_mixed' ? cashPartNum : amountNum
+  const cashTarget = payment === "pending_mixed" ? cashPartNum : amountNum;
   const change = useMemo(() => {
-    if (payment === 'pending_cash') return Math.max(paysWithNum - amountNum, 0)
-    if (payment === 'pending_mixed') return Math.max(paysWithNum - cashPartNum, 0)
-    return 0
-  }, [payment, amountNum, paysWithNum, cashPartNum])
+    if (payment === "pending_cash") return Math.max(paysWithNum - amountNum, 0);
+    if (payment === "pending_mixed")
+      return Math.max(paysWithNum - cashPartNum, 0);
+    return 0;
+  }, [payment, amountNum, paysWithNum, cashPartNum]);
 
-  const needsAmount = payment !== 'prepaid'
+  const amountValidationError = useMemo(() => {
+    if (!amount) return "Ingresa el monto del pedido";
+    const hasInvalidChars = /[^0-9.]/.test(amount);
+    const parts = amount.split(".");
+    const hasMultipleDots = parts.length > 2;
+    const hasTooManyDecimals = parts[1] !== undefined && parts[1].length > 2;
+
+    if (hasInvalidChars || hasMultipleDots || hasTooManyDecimals) {
+      return "Ingresa solo números (ejemplo: 25.00)";
+    }
+
+    const parsed = parseMoney(amount);
+    if (parsed <= 0) {
+      return "El monto debe ser mayor a S/. 0";
+    }
+    return null;
+  }, [amount]);
+
   const canSubmit =
-    (!needsAmount || amountNum > 0) &&
-    (payment !== 'pending_cash' || paysWithNum >= amountNum) &&
-    (payment !== 'pending_mixed' ||
+    amountValidationError === null &&
+    (payment !== "pending_cash" || paysWithNum >= amountNum) &&
+    (payment !== "pending_mixed" ||
       (splitBothPositive && splitSumsCorrect && paysWithNum >= cashPartNum)) &&
     // Datos del cliente obligatorios: nombre, teléfono válido y dirección/referencia.
     // La card del motorizado los necesita para identificar a quién y a dónde.
     clientNameValid &&
     clientPhoneValid &&
-    deliveryReferenceValid
+    deliveryReferenceValid;
+
+  const showAmountError = touched.amount && amountValidationError !== null;
 
   useEffect(() => {
-    const idx = PREP_MINUTES.indexOf(prepMinutes)
-    const el = carouselRef.current?.querySelector<HTMLButtonElement>(`[data-prep="${idx}"]`)
-    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-  }, [prepMinutes])
+    const idx = PREP_MINUTES.indexOf(prepMinutes);
+    const el = carouselRef.current?.querySelector<HTMLButtonElement>(
+      `[data-prep="${idx}"]`,
+    );
+    el?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }, [prepMinutes]);
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (submittingRef.current) return
+    e.preventDefault();
+    if (submittingRef.current) return;
     if (!canSubmit) {
-      // Marca todos los campos del cliente como tocados para revelar los
+      // Marca todos los campos como tocados para revelar los
       // mensajes de error si el usuario presionó Crear sin completarlos.
-      setTouched({ clientName: true, clientPhone: true, deliveryReference: true })
-      return
+      setTouched({
+        clientName: true,
+        clientPhone: true,
+        deliveryReference: true,
+        amount: true,
+      });
+      return;
     }
-    submittingRef.current = true
+    submittingRef.current = true;
     const body: Orders.CreateOrderRequest = {
       prepMinutes,
       paymentStatus: payment,
-      orderAmount: needsAmount ? amountNum : 0,
-      yapeAmount: payment === 'pending_mixed' ? yapePartNum : undefined,
-      cashAmount: payment === 'pending_mixed' ? cashPartNum : undefined,
+      orderAmount: amountNum,
+      yapeAmount: payment === "pending_mixed" ? yapePartNum : undefined,
+      cashAmount: payment === "pending_mixed" ? cashPartNum : undefined,
       clientPaysWith:
-        payment === 'pending_cash' || payment === 'pending_mixed' ? paysWithNum : undefined,
+        payment === "pending_cash" || payment === "pending_mixed"
+          ? paysWithNum
+          : undefined,
       clientName: clientNameTrim,
       clientPhone: clientPhoneDigits,
       deliveryReference: deliveryReferenceTrim,
-      customerAddressId: isAnotherAddress ? null : (selectedAddress?.address_id ?? null),
-    }
+      customerAddressId: isAnotherAddress
+        ? null
+        : (selectedAddress?.address_id ?? null),
+    };
     createOrder.mutate(
       { body, idempotencyKey: idem.key },
       {
         onSuccess: () => {
-          idem.consume()
-          submittingRef.current = false
-          router.replace('/restaurante')
+          idem.consume();
+          submittingRef.current = false;
+          router.replace("/restaurante");
         },
         onError: (err) => {
           // 4xx: el servidor rechazó por validación, conflicto, etc. La key
           // ya fue consumida en BD (cache de la respuesta de error). Generar
           // nueva para que el usuario pueda reintentar con datos corregidos.
           // 5xx: NO consumir — permitir retry seguro con la misma key.
-          const status = (err as { status?: number })?.status
-          if (status !== undefined && status >= 400 && status < 500) idem.consume()
+          const status = (err as { status?: number })?.status;
+          if (status !== undefined && status >= 400 && status < 500)
+            idem.consume();
           // Liberar el guard síncrono para que el usuario pueda reintentar.
-          submittingRef.current = false
+          submittingRef.current = false;
         },
       },
-    )
+    );
   }
 
   return (
     <div
       className="min-h-screen relative"
-      style={{ paddingBottom: 'calc(130px + env(safe-area-inset-bottom))' }}
+      style={{ paddingBottom: "calc(130px + env(safe-area-inset-bottom))" }}
     >
       {/* Ambient wash behind everything */}
       <div
@@ -348,7 +410,7 @@ export function NewOrderForm() {
         className="fixed inset-0 pointer-events-none -z-10"
         style={{
           background:
-            'radial-gradient(circle at 0% 0%, rgba(255, 107, 53, 0.08) 0%, transparent 40%), radial-gradient(circle at 100% 100%, rgba(255, 140, 66, 0.06) 0%, transparent 40%)',
+            "radial-gradient(circle at 0% 0%, rgba(255, 107, 53, 0.08) 0%, transparent 40%), radial-gradient(circle at 100% 100%, rgba(255, 140, 66, 0.06) 0%, transparent 40%)",
         }}
       />
 
@@ -356,7 +418,11 @@ export function NewOrderForm() {
         title="NUEVO PEDIDO"
         subtitle="Restaurante"
         left={
-          <IconButton variant="ghost" onClick={() => router.back()} aria-label="Cancelar">
+          <IconButton
+            variant="ghost"
+            onClick={() => router.back()}
+            aria-label="Cancelar"
+          >
             <Icon name="close" />
           </IconButton>
         }
@@ -374,8 +440,8 @@ export function NewOrderForm() {
           <span
             className="inline-block w-1.5 h-5 rounded-full"
             style={{
-              background: 'linear-gradient(180deg, #FF6B35 0%, #FF8C42 100%)',
-              boxShadow: '0 4px 12px rgba(255, 107, 53, 0.35)',
+              background: "linear-gradient(180deg, #FF6B35 0%, #FF8C42 100%)",
+              boxShadow: "0 4px 12px rgba(255, 107, 53, 0.35)",
             }}
             aria-hidden="true"
           />
@@ -387,7 +453,10 @@ export function NewOrderForm() {
         {/* Teléfono del cliente — obligatorio */}
         <section className="space-y-3">
           <div className="flex items-center gap-2 px-1">
-            <label htmlFor="clientPhone" className="text-sm font-semibold text-on-surface">
+            <label
+              htmlFor="clientPhone"
+              className="text-sm font-semibold text-on-surface"
+            >
               Teléfono del cliente
             </label>
             <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
@@ -405,10 +474,10 @@ export function NewOrderForm() {
           {showPhoneError && (
             <p className="text-[11px] font-semibold text-red-600 px-1">
               {clientPhoneDigits.length === 0
-                ? 'Ingresa el teléfono del cliente.'
+                ? "Ingresa el teléfono del cliente."
                 : isPhoneBlacklisted
-                  ? 'Teléfono inválido, ingrese el real'
-                  : 'Debe empezar en 9 y tener 9 dígitos.'}
+                  ? "Teléfono inválido, ingrese el real"
+                  : "Debe empezar en 9 y tener 9 dígitos."}
             </p>
           )}
         </section>
@@ -417,7 +486,10 @@ export function NewOrderForm() {
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <label htmlFor="clientName" className="text-sm font-semibold text-on-surface">
+              <label
+                htmlFor="clientName"
+                className="text-sm font-semibold text-on-surface"
+              >
                 Nombre del cliente
               </label>
               <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
@@ -429,7 +501,11 @@ export function NewOrderForm() {
               clientNameTrim === selectedAddress.customer_name.trim() &&
               !isAnotherAddress && (
                 <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
-                  <Icon name="check_circle" size={14} className="text-emerald-600" />
+                  <Icon
+                    name="check_circle"
+                    size={14}
+                    className="text-emerald-600"
+                  />
                   Pedido anterior
                 </span>
               )}
@@ -437,7 +513,7 @@ export function NewOrderForm() {
           {showSkeletons ? (
             <div
               className="w-full h-[52px] bg-on-surface-variant/10 rounded-[20px] animate-pulse flex items-center px-4"
-              style={{ border: '1px solid rgba(225, 191, 181, 0.2)' }}
+              style={{ border: "1px solid rgba(225, 191, 181, 0.2)" }}
             >
               <span className="text-xs text-on-surface-variant/40 font-semibold">
                 Buscando nombre...
@@ -455,20 +531,22 @@ export function NewOrderForm() {
               maxLength={80}
               autoComplete="off"
               autoCapitalize="words"
-              aria-invalid={touched.clientName && !clientNameValid && !nameDisabled}
+              aria-invalid={
+                touched.clientName && !clientNameValid && !nameDisabled
+              }
               className={cn(
-                'w-full px-4 py-3.5 rounded-[20px] text-base font-semibold transition-shadow',
+                "w-full px-4 py-3.5 rounded-[20px] text-base font-semibold transition-shadow",
                 nameDisabled
-                  ? 'bg-on-surface-variant/5 text-on-surface-variant/40 placeholder:text-on-surface-variant/30 cursor-not-allowed border-dashed'
-                  : 'bg-white/85 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40',
+                  ? "bg-on-surface-variant/5 text-on-surface-variant/40 placeholder:text-on-surface-variant/30 cursor-not-allowed border-dashed"
+                  : "bg-white/85 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40",
               )}
               style={{
-                backdropFilter: 'blur(12px)',
+                backdropFilter: "blur(12px)",
                 border:
                   touched.clientName && !clientNameValid && !nameDisabled
-                    ? '1px solid rgba(186, 26, 26, 0.55)'
-                    : '1px solid rgba(225, 191, 181, 0.35)',
-                boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
+                    ? "1px solid rgba(186, 26, 26, 0.55)"
+                    : "1px solid rgba(225, 191, 181, 0.35)",
+                boxShadow: "0 2px 8px rgba(171, 53, 0, 0.05)",
               }}
             />
           )}
@@ -483,7 +561,10 @@ export function NewOrderForm() {
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <label htmlFor="deliveryReference" className="text-sm font-semibold text-on-surface">
+              <label
+                htmlFor="deliveryReference"
+                className="text-sm font-semibold text-on-surface"
+              >
                 Dirección o referencia
               </label>
               <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
@@ -493,15 +574,19 @@ export function NewOrderForm() {
             {addresses.length === 1 && !isAnotherAddress && (
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
-                  <Icon name="check_circle" size={14} className="text-emerald-600" />
+                  <Icon
+                    name="check_circle"
+                    size={14}
+                    className="text-emerald-600"
+                  />
                   Pedido anterior
                 </span>
                 <button
                   type="button"
                   onClick={() => {
-                    setIsAnotherAddress(true)
-                    setSelectedAddress(null)
-                    setDeliveryReference('')
+                    setIsAnotherAddress(true);
+                    setSelectedAddress(null);
+                    setDeliveryReference("");
                   }}
                   className="text-xs font-bold text-primary hover:underline"
                 >
@@ -513,11 +598,11 @@ export function NewOrderForm() {
               <button
                 type="button"
                 onClick={() => {
-                  const firstAddr = addresses[0]
+                  const firstAddr = addresses[0];
                   if (firstAddr) {
-                    setIsAnotherAddress(false)
-                    setSelectedAddress(firstAddr)
-                    setDeliveryReference(firstAddr.reference ?? '')
+                    setIsAnotherAddress(false);
+                    setSelectedAddress(firstAddr);
+                    setDeliveryReference(firstAddr.reference ?? "");
                   }
                 }}
                 className="text-xs font-bold text-primary hover:underline"
@@ -530,28 +615,29 @@ export function NewOrderForm() {
                 type="button"
                 onClick={() => {
                   if (isAnotherAddress) {
-                    const def = addresses.find((a) => a.is_default) || addresses[0]
+                    const def =
+                      addresses.find((a) => a.is_default) || addresses[0];
                     if (def) {
-                      setIsAnotherAddress(false)
-                      setSelectedAddress(def)
-                      setDeliveryReference(def.reference ?? '')
+                      setIsAnotherAddress(false);
+                      setSelectedAddress(def);
+                      setDeliveryReference(def.reference ?? "");
                     }
                   } else {
-                    setIsAnotherAddress(true)
-                    setSelectedAddress(null)
-                    setDeliveryReference('')
+                    setIsAnotherAddress(true);
+                    setSelectedAddress(null);
+                    setDeliveryReference("");
                   }
                 }}
                 className="text-xs font-bold text-primary hover:underline"
               >
-                {isAnotherAddress ? 'Usar guardada' : 'Otra dirección'}
+                {isAnotherAddress ? "Usar guardada" : "Otra dirección"}
               </button>
             )}
           </div>
           {showSkeletons ? (
             <div
               className="w-full h-[80px] bg-on-surface-variant/10 rounded-[20px] animate-pulse flex items-start p-4"
-              style={{ border: '1px solid rgba(225, 191, 181, 0.2)' }}
+              style={{ border: "1px solid rgba(225, 191, 181, 0.2)" }}
             >
               <span className="text-xs text-on-surface-variant/40 font-semibold">
                 Buscando dirección...
@@ -561,32 +647,42 @@ export function NewOrderForm() {
             <textarea
               id="deliveryReference"
               value={deliveryReference}
-              onChange={(e) => setDeliveryReference(e.target.value.slice(0, 500))}
-              onBlur={() => setTouched((t) => ({ ...t, deliveryReference: true }))}
+              onChange={(e) =>
+                setDeliveryReference(e.target.value.slice(0, 500))
+              }
+              onBlur={() =>
+                setTouched((t) => ({ ...t, deliveryReference: true }))
+              }
               placeholder={referencePlaceholder}
               disabled={referenceDisabled}
               rows={2}
               maxLength={500}
               aria-invalid={
-                touched.deliveryReference && !deliveryReferenceValid && !referenceDisabled
+                touched.deliveryReference &&
+                !deliveryReferenceValid &&
+                !referenceDisabled
               }
               className={cn(
-                'w-full px-4 py-3 rounded-[20px] text-sm transition-shadow resize-none',
+                "w-full px-4 py-3 rounded-[20px] text-sm transition-shadow resize-none",
                 referenceDisabled
-                  ? 'bg-on-surface-variant/5 text-on-surface-variant/40 placeholder:text-on-surface-variant/30 cursor-not-allowed border-dashed'
-                  : 'bg-white/85 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40',
+                  ? "bg-on-surface-variant/5 text-on-surface-variant/40 placeholder:text-on-surface-variant/30 cursor-not-allowed border-dashed"
+                  : "bg-white/85 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40",
               )}
               style={{
-                backdropFilter: 'blur(12px)',
+                backdropFilter: "blur(12px)",
                 border:
-                  touched.deliveryReference && !deliveryReferenceValid && !referenceDisabled
-                    ? '1px solid rgba(186, 26, 26, 0.55)'
-                    : '1px solid rgba(225, 191, 181, 0.35)',
-                boxShadow: '0 2px 8px rgba(171, 53, 0, 0.05)',
+                  touched.deliveryReference &&
+                  !deliveryReferenceValid &&
+                  !referenceDisabled
+                    ? "1px solid rgba(186, 26, 26, 0.55)"
+                    : "1px solid rgba(225, 191, 181, 0.35)",
+                boxShadow: "0 2px 8px rgba(171, 53, 0, 0.05)",
               }}
             />
           )}
-          {touched.deliveryReference && !deliveryReferenceValid && !referenceDisabled ? (
+          {touched.deliveryReference &&
+          !deliveryReferenceValid &&
+          !referenceDisabled ? (
             <p className="text-[11px] font-semibold text-red-600 px-1">
               Escribe la dirección o una referencia del destino.
             </p>
@@ -604,30 +700,36 @@ export function NewOrderForm() {
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none px-1">
                 {addresses.map((addr) => {
                   const isActive =
-                    selectedAddress?.address_id === addr.address_id && !isAnotherAddress
-                  const isDefault = addr.is_default
+                    selectedAddress?.address_id === addr.address_id &&
+                    !isAnotherAddress;
+                  const isDefault = addr.is_default;
                   const truncatedRef =
                     addr.reference && addr.reference.length > 30
-                      ? addr.reference.slice(0, 30) + '...'
-                      : addr.reference || ''
+                      ? addr.reference.slice(0, 30) + "..."
+                      : addr.reference || "";
 
                   return (
                     <div
                       key={addr.address_id}
                       className={cn(
-                        'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 border transition-all cursor-pointer select-none',
+                        "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 border transition-all cursor-pointer select-none",
                         isActive
-                          ? 'bg-primary/10 border-primary text-primary shadow-xs'
-                          : 'bg-white/70 border-outline-variant/30 text-on-surface-variant hover:bg-white hover:border-outline-variant/60',
+                          ? "bg-primary/10 border-primary text-primary shadow-xs"
+                          : "bg-white/70 border-outline-variant/30 text-on-surface-variant hover:bg-white hover:border-outline-variant/60",
                       )}
                       onClick={() => {
-                        setIsAnotherAddress(false)
-                        setSelectedAddress(addr)
-                        setDeliveryReference(addr.reference ?? '')
+                        setIsAnotherAddress(false);
+                        setSelectedAddress(addr);
+                        setDeliveryReference(addr.reference ?? "");
                       }}
                     >
                       {isDefault && (
-                        <Icon name="star" size={14} filled className="text-amber-500" />
+                        <Icon
+                          name="star"
+                          size={14}
+                          filled
+                          className="text-amber-500"
+                        />
                       )}
                       <span>{truncatedRef}</span>
 
@@ -637,8 +739,8 @@ export function NewOrderForm() {
                           type="button"
                           title="Marcar como principal"
                           onClick={async (e) => {
-                            e.stopPropagation() // Evitar seleccionar al tocar estrella
-                            await handleMarkAsDefault(addr)
+                            e.stopPropagation(); // Evitar seleccionar al tocar estrella
+                            await handleMarkAsDefault(addr);
                           }}
                           className="p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-amber-500 transition-colors"
                         >
@@ -646,7 +748,7 @@ export function NewOrderForm() {
                         </button>
                       )}
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -656,8 +758,12 @@ export function NewOrderForm() {
         {/* Prep time carousel */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <span className="text-sm font-semibold text-on-surface">Tiempo de preparación</span>
-            <span className="text-xs font-mono text-on-surface-variant">{prepMinutes} min</span>
+            <span className="text-sm font-semibold text-on-surface">
+              Tiempo de preparación
+            </span>
+            <span className="text-xs font-mono text-on-surface-variant">
+              {prepMinutes} min
+            </span>
           </div>
 
           <div className="relative">
@@ -668,14 +774,14 @@ export function NewOrderForm() {
                 onClick={() => scrollCarousel(-1)}
                 className="absolute left-0 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center transition-transform duration-200 hover:scale-105 active:scale-95"
                 style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(225, 191, 181, 0.4)',
-                  boxShadow: '0 4px 14px rgba(171, 53, 0, 0.12)',
-                  color: '#1a1c1b',
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  background: "rgba(255, 255, 255, 0.95)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(225, 191, 181, 0.4)",
+                  boxShadow: "0 4px 14px rgba(171, 53, 0, 0.12)",
+                  color: "#1a1c1b",
                 }}
               >
                 <Icon name="chevron_left" size={22} />
@@ -688,14 +794,14 @@ export function NewOrderForm() {
                 onClick={() => scrollCarousel(1)}
                 className="absolute right-0 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center transition-transform duration-200 hover:scale-105 active:scale-95"
                 style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(225, 191, 181, 0.4)',
-                  boxShadow: '0 4px 14px rgba(171, 53, 0, 0.12)',
-                  color: '#1a1c1b',
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  background: "rgba(255, 255, 255, 0.95)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(225, 191, 181, 0.4)",
+                  boxShadow: "0 4px 14px rgba(171, 53, 0, 0.12)",
+                  color: "#1a1c1b",
                 }}
               >
                 <Icon name="chevron_right" size={22} />
@@ -706,13 +812,13 @@ export function NewOrderForm() {
               ref={carouselRef}
               className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-3 -mx-4 px-4"
               style={{
-                scrollbarWidth: 'none',
-                WebkitOverflowScrolling: 'touch',
-                touchAction: 'pan-x',
+                scrollbarWidth: "none",
+                WebkitOverflowScrolling: "touch",
+                touchAction: "pan-x",
               }}
             >
               {PREP_MINUTES.map((m, idx) => {
-                const active = prepMinutes === m
+                const active = prepMinutes === m;
                 return (
                   <button
                     key={m}
@@ -720,35 +826,37 @@ export function NewOrderForm() {
                     data-prep={idx}
                     onClick={() => setPrepMinutes(m)}
                     className={cn(
-                      'snap-center shrink-0 flex flex-col items-center justify-center transition-all duration-300 ease-out',
+                      "snap-center shrink-0 flex flex-col items-center justify-center transition-all duration-300 ease-out",
                       active
-                        ? 'scale-100'
-                        : 'scale-95 opacity-70 hover:opacity-100 hover:scale-100',
+                        ? "scale-100"
+                        : "scale-95 opacity-70 hover:opacity-100 hover:scale-100",
                     )}
                     style={{
-                      width: '92px',
-                      height: '108px',
-                      borderRadius: '22px',
+                      width: "92px",
+                      height: "108px",
+                      borderRadius: "22px",
                       background: active
-                        ? 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)'
-                        : 'rgba(255, 255, 255, 0.85)',
-                      backdropFilter: 'blur(12px)',
+                        ? "linear-gradient(135deg, #FF6B35 0%, #FF8C42 55%, #FFA85C 100%)"
+                        : "rgba(255, 255, 255, 0.85)",
+                      backdropFilter: "blur(12px)",
                       border: active
-                        ? '1px solid rgba(255, 107, 53, 0.4)'
-                        : '1px solid rgba(225, 191, 181, 0.3)',
+                        ? "1px solid rgba(255, 107, 53, 0.4)"
+                        : "1px solid rgba(225, 191, 181, 0.3)",
                       boxShadow: active
-                        ? '0 12px 30px -8px rgba(255, 107, 53, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25)'
-                        : '0 2px 8px rgba(171, 53, 0, 0.05)',
-                      color: active ? '#ffffff' : '#1a1c1b',
+                        ? "0 12px 30px -8px rgba(255, 107, 53, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25)"
+                        : "0 2px 8px rgba(171, 53, 0, 0.05)",
+                      color: active ? "#ffffff" : "#1a1c1b",
                     }}
                   >
                     <span
                       className="font-black"
                       style={{
-                        fontSize: '30px',
-                        letterSpacing: '-0.04em',
+                        fontSize: "30px",
+                        letterSpacing: "-0.04em",
                         lineHeight: 1,
-                        textShadow: active ? '0 1px 2px rgba(95, 25, 0, 0.25)' : 'none',
+                        textShadow: active
+                          ? "0 1px 2px rgba(95, 25, 0, 0.25)"
+                          : "none",
                       }}
                     >
                       {m}
@@ -764,15 +872,15 @@ export function NewOrderForm() {
                         aria-hidden="true"
                         className="mt-2 inline-block rounded-full"
                         style={{
-                          width: '20px',
-                          height: '3px',
-                          background: 'rgba(255, 255, 255, 0.75)',
-                          boxShadow: '0 1px 4px rgba(255, 255, 255, 0.4)',
+                          width: "20px",
+                          height: "3px",
+                          background: "rgba(255, 255, 255, 0.75)",
+                          boxShadow: "0 1px 4px rgba(255, 255, 255, 0.4)",
                         }}
                       />
                     )}
                   </button>
-                )
+                );
               })}
             </div>
           </div>
@@ -781,11 +889,13 @@ export function NewOrderForm() {
         {/* Payment method */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <span className="text-sm font-semibold text-on-surface">Método de pago</span>
+            <span className="text-sm font-semibold text-on-surface">
+              Método de pago
+            </span>
           </div>
           <div className="space-y-2.5">
             {paymentOptions.map((opt) => {
-              const active = payment === opt.value
+              const active = payment === opt.value;
               return (
                 <button
                   key={opt.value}
@@ -793,90 +903,117 @@ export function NewOrderForm() {
                   onClick={() => setPayment(opt.value)}
                   className="w-full flex items-center gap-3.5 transition-all duration-300 ease-out active:scale-[0.98]"
                   style={{
-                    padding: '14px 16px',
-                    borderRadius: '20px',
+                    padding: "14px 16px",
+                    borderRadius: "20px",
                     background: active
-                      ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 250, 248, 0.95) 100%)'
-                      : 'rgba(255, 255, 255, 0.7)',
-                    backdropFilter: 'blur(10px)',
+                      ? "linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 250, 248, 0.95) 100%)"
+                      : "rgba(255, 255, 255, 0.7)",
+                    backdropFilter: "blur(10px)",
                     border: active
-                      ? '1.5px solid rgba(255, 107, 53, 0.45)'
-                      : '1px solid rgba(225, 191, 181, 0.3)',
+                      ? "1.5px solid rgba(255, 107, 53, 0.45)"
+                      : "1px solid rgba(225, 191, 181, 0.3)",
                     boxShadow: active
-                      ? '0 10px 30px -10px rgba(255, 107, 53, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.9)'
-                      : '0 1px 4px rgba(171, 53, 0, 0.03)',
+                      ? "0 10px 30px -10px rgba(255, 107, 53, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.9)"
+                      : "0 1px 4px rgba(171, 53, 0, 0.03)",
                   }}
                 >
                   <span
                     className="shrink-0 inline-flex items-center justify-center"
                     style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '14px',
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "14px",
                       background: opt.gradient,
-                      color: '#ffffff',
+                      color: "#ffffff",
                       boxShadow: active
-                        ? '0 8px 20px -6px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
-                        : '0 4px 10px -4px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
-                      transform: active ? 'scale(1.05)' : 'scale(1)',
-                      transition: 'transform 300ms ease-out',
+                        ? "0 8px 20px -6px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3)"
+                        : "0 4px 10px -4px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25)",
+                      transform: active ? "scale(1.05)" : "scale(1)",
+                      transition: "transform 300ms ease-out",
                     }}
                   >
                     <Icon name={opt.icon} size={22} filled />
                   </span>
                   <div className="flex-1 text-left min-w-0">
-                    <div className="font-bold text-on-surface truncate">{opt.label}</div>
-                    <div className="text-[11px] text-on-surface-variant truncate">{opt.hint}</div>
+                    <div className="font-bold text-on-surface truncate">
+                      {opt.label}
+                    </div>
+                    <div className="text-[11px] text-on-surface-variant truncate">
+                      {opt.hint}
+                    </div>
                   </div>
                   <span
                     aria-hidden="true"
                     className="shrink-0 inline-flex items-center justify-center transition-all duration-300"
                     style={{
-                      width: '22px',
-                      height: '22px',
-                      borderRadius: '50%',
-                      border: active ? 'none' : '1.5px solid rgba(225, 191, 181, 0.6)',
+                      width: "22px",
+                      height: "22px",
+                      borderRadius: "50%",
+                      border: active
+                        ? "none"
+                        : "1.5px solid rgba(225, 191, 181, 0.6)",
                       background: active
-                        ? 'linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)'
-                        : 'transparent',
-                      color: '#ffffff',
-                      boxShadow: active ? '0 4px 10px rgba(255, 107, 53, 0.4)' : 'none',
+                        ? "linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%)"
+                        : "transparent",
+                      color: "#ffffff",
+                      boxShadow: active
+                        ? "0 4px 10px rgba(255, 107, 53, 0.4)"
+                        : "none",
                     }}
                   >
                     {active && <Icon name="check" size={14} />}
                   </span>
                 </button>
-              )
+              );
             })}
           </div>
         </section>
 
-        {/* Amount (hidden for prepaid) */}
-        {needsAmount && (
-          <section key="amount-section" className="space-y-3 tindivo-reveal">
-            <div className="flex items-center gap-2 px-1">
-              <label htmlFor="amount" className="text-sm font-semibold text-on-surface">
+        {/* Amount */}
+        <section key="amount-section" className="space-y-3">
+          <div className="flex flex-col gap-1 px-1">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="amount"
+                className="text-sm font-semibold text-on-surface"
+              >
                 Monto del pedido
               </label>
               <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
                 obligatorio
               </span>
             </div>
-            <MoneyInput
-              id="amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Monto a cobrar"
-              required
-            />
-          </section>
-        )}
+            <span className="text-xs text-on-surface-variant">
+              Comida + delivery
+            </span>
+          </div>
+          <MoneyInput
+            id="amount"
+            value={amount}
+            onChange={(e) => handleAmountChange(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, amount: true }))}
+            placeholder="Ej: 25.00"
+            required
+            style={{
+              border: showAmountError
+                ? "1px solid rgba(186, 26, 26, 0.55)"
+                : "1px solid rgba(225, 191, 181, 0.35)",
+            }}
+          />
+          {showAmountError && (
+            <p className="text-[11px] font-semibold text-red-600 px-1">
+              {amountValidationError}
+            </p>
+          )}
+        </section>
 
         {/* Split de pago mixto (yape + cash) */}
-        {payment === 'pending_mixed' && (
+        {payment === "pending_mixed" && (
           <section key="mixed-section" className="space-y-3 tindivo-reveal">
             <div className="flex items-center justify-between gap-2 px-1">
-              <span className="text-sm font-semibold text-on-surface">División del pago</span>
+              <span className="text-sm font-semibold text-on-surface">
+                División del pago
+              </span>
               <span className="text-[10px] text-on-surface-variant">
                 deben sumar S/ {amountNum.toFixed(2)}
               </span>
@@ -913,26 +1050,31 @@ export function NewOrderForm() {
                 />
               </div>
             </div>
-            {amountNum > 0 && yapePartNum + cashPartNum > 0 && !splitSumsCorrect && (
-              <div className="text-xs font-semibold text-red-600 px-1">
-                La suma actual es S/ {(yapePartNum + cashPartNum).toFixed(2)} — debe ser S/{' '}
-                {amountNum.toFixed(2)}.
-              </div>
-            )}
+            {amountNum > 0 &&
+              yapePartNum + cashPartNum > 0 &&
+              !splitSumsCorrect && (
+                <div className="text-xs font-semibold text-red-600 px-1">
+                  La suma actual es S/ {(yapePartNum + cashPartNum).toFixed(2)}{" "}
+                  — debe ser S/ {amountNum.toFixed(2)}.
+                </div>
+              )}
           </section>
         )}
 
         {/* Pays with (cash only y mixed) */}
-        {(payment === 'pending_cash' || payment === 'pending_mixed') && (
+        {(payment === "pending_cash" || payment === "pending_mixed") && (
           <section key="cash-section" className="space-y-3 tindivo-reveal">
             <div className="flex items-center gap-2 px-1">
-              <label htmlFor="paysWith" className="text-sm font-semibold text-on-surface">
+              <label
+                htmlFor="paysWith"
+                className="text-sm font-semibold text-on-surface"
+              >
                 Cliente paga con
               </label>
               <span className="text-[10px] text-on-surface-variant">
-                {payment === 'pending_mixed'
+                {payment === "pending_mixed"
                   ? `billete sobre la parte efectivo (S/ ${cashTarget.toFixed(2)})`
-                  : 'para calcular vuelto'}
+                  : "para calcular vuelto"}
               </span>
             </div>
             <MoneyInput
@@ -946,12 +1088,12 @@ export function NewOrderForm() {
               <div
                 className="relative overflow-hidden flex items-center justify-between tindivo-pop"
                 style={{
-                  padding: '16px 18px',
-                  borderRadius: '20px',
+                  padding: "16px 18px",
+                  borderRadius: "20px",
                   background:
-                    'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.12) 100%)',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
-                  boxShadow: '0 8px 24px -8px rgba(16, 185, 129, 0.25)',
+                    "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.12) 100%)",
+                  border: "1px solid rgba(16, 185, 129, 0.25)",
+                  boxShadow: "0 8px 24px -8px rgba(16, 185, 129, 0.25)",
                 }}
               >
                 <div
@@ -959,19 +1101,20 @@ export function NewOrderForm() {
                   className="absolute -top-8 -right-8 w-32 h-32 rounded-full pointer-events-none"
                   style={{
                     background:
-                      'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 60%)',
+                      "radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 60%)",
                   }}
                 />
                 <div className="relative flex items-center gap-2.5">
                   <span
                     className="inline-flex items-center justify-center"
                     style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                      color: '#ffffff',
-                      boxShadow: '0 6px 16px -4px rgba(16, 185, 129, 0.5)',
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "12px",
+                      background:
+                        "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                      color: "#ffffff",
+                      boxShadow: "0 6px 16px -4px rgba(16, 185, 129, 0.5)",
                     }}
                   >
                     <Icon name="payments" size={18} filled />
@@ -980,14 +1123,16 @@ export function NewOrderForm() {
                     <div className="text-[10px] font-bold tracking-widest uppercase text-emerald-700">
                       Vuelto a entregar al driver
                     </div>
-                    <div className="text-[10px] text-emerald-900/60">prepáralo en efectivo</div>
+                    <div className="text-[10px] text-emerald-900/60">
+                      prepáralo en efectivo
+                    </div>
                   </div>
                 </div>
                 <span
                   className="relative font-black text-emerald-900"
                   style={{
-                    fontSize: '26px',
-                    letterSpacing: '-0.03em',
+                    fontSize: "26px",
+                    letterSpacing: "-0.03em",
                     lineHeight: 1,
                   }}
                 >
@@ -1008,13 +1153,15 @@ export function NewOrderForm() {
           disabled={!canSubmit || createOrder.isPending || isPlatformClosed}
         >
           {createOrder.isPending
-            ? 'Creando pedido...'
+            ? "Creando pedido..."
             : isPlatformClosed
-              ? 'Tindivo cerrado'
-              : 'Crear pedido'}
-          <Icon name={createOrder.isPending ? 'progress_activity' : 'arrow_forward'} />
+              ? "Tindivo cerrado"
+              : "Crear pedido"}
+          <Icon
+            name={createOrder.isPending ? "progress_activity" : "arrow_forward"}
+          />
         </Button>
       </BottomActionBar>
     </div>
-  )
+  );
 }
