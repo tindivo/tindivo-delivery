@@ -1,53 +1,38 @@
-"use client";
-import {
-  AddressCaptureModal,
-  Badge,
-  Button,
-  EmptyState,
-  Icon,
-  Skeleton,
-  cn,
-} from "@tindivo/ui";
-import { useEffect, useState } from "react";
-import {
-  useAgendaStats,
-  useAgendaVista1,
-  useCurateAddress,
-} from "../hooks/use-agenda";
+'use client'
+import { AddressCaptureModal, Badge, Button, EmptyState, Icon, Skeleton, cn } from '@tindivo/ui'
+import { useEffect, useState } from 'react'
+import { useAgendaStats, useAgendaVista1, useCurateAddress } from '../hooks/use-agenda'
 
 function formatRelativeDate(isoString: string | null | undefined): string {
-  if (!isoString) return "-";
-  const date = new Date(isoString);
-  const diffMs = Date.now() - date.getTime();
-  const diffSecs = Math.floor(diffMs / 1000);
-  const diffMins = Math.floor(diffSecs / 60);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
+  if (!isoString) return '-'
+  const date = new Date(isoString)
+  const diffMs = Date.now() - date.getTime()
+  const diffSecs = Math.floor(diffMs / 1000)
+  const diffMins = Math.floor(diffSecs / 60)
+  const diffHours = Math.floor(diffMins / 60)
+  const diffDays = Math.floor(diffHours / 24)
 
-  if (diffSecs < 60) return "hace unos segundos";
-  if (diffMins < 60) return `hace ${diffMins} min`;
-  if (diffHours < 24)
-    return `hace ${diffHours} ${diffHours === 1 ? "hora" : "horas"}`;
-  if (diffDays === 1) return "ayer";
-  return `hace ${diffDays} días`;
+  if (diffSecs < 60) return 'hace unos segundos'
+  if (diffMins < 60) return `hace ${diffMins} min`
+  if (diffHours < 24) return `hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`
+  if (diffDays === 1) return 'ayer'
+  return `hace ${diffDays} días`
 }
 
 export function PorCurarView() {
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [onlySinPin, setOnlySinPin] = useState(false);
-  const [onlyRefCorta, setOnlyRefCorta] = useState(false);
-  const [onlySinNombre, setOnlySinNombre] = useState(false);
-  const [minTimesUsed, setMinTimesUsed] = useState(0);
-  const [curationSession, setCurationSession] = useState<"solo" | "ernesto">(
-    "solo",
-  );
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [onlySinPin, setOnlySinPin] = useState(false)
+  const [onlyRefCorta, setOnlyRefCorta] = useState(false)
+  const [onlySinNombre, setOnlySinNombre] = useState(false)
+  const [minTimesUsed, setMinTimesUsed] = useState(0)
+  const [curationSession, setCurationSession] = useState<'solo' | 'ernesto'>('solo')
 
   // Estado del modal de curación activa
-  const [curatingIndex, setCuratingIndex] = useState<number | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [curatingIndex, setCuratingIndex] = useState<number | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
 
-  const { data: stats, refetch: refetchStats } = useAgendaStats();
+  const { data: stats, refetch: refetchStats } = useAgendaStats()
   const {
     data: listData,
     isLoading,
@@ -59,30 +44,30 @@ export function PorCurarView() {
     onlyRefCorta,
     onlySinNombre,
     minTimesUsed,
-  });
+  })
 
-  const curate = useCurateAddress();
-  const items = listData?.items ?? [];
-  const totalItems = listData?.total ?? 0;
-  const totalPages = Math.ceil(totalItems / 30) || 1;
+  const curate = useCurateAddress()
+  const items = listData?.items ?? []
+  const totalItems = listData?.total ?? 0
+  const totalPages = Math.ceil(totalItems / 30) || 1
 
-  const activeRecord = curatingIndex !== null ? items[curatingIndex] : null;
+  const activeRecord = curatingIndex !== null ? items[curatingIndex] : null
 
   // Auto-dismiss toast
   useEffect(() => {
     if (toastMessage) {
-      const t = setTimeout(() => setToastMessage(null), 4000);
-      return () => clearTimeout(t);
+      const t = setTimeout(() => setToastMessage(null), 4000)
+      return () => clearTimeout(t)
     }
-  }, [toastMessage]);
+  }, [toastMessage])
 
   async function handleConfirmCuration(coords: {
-    lat: number;
-    lng: number;
-    reference: string;
-    customerName: string;
+    lat: number
+    lng: number
+    reference: string
+    customerName: string
   }) {
-    if (!activeRecord) return;
+    if (!activeRecord) return
 
     try {
       await curate.mutateAsync({
@@ -97,46 +82,45 @@ export function PorCurarView() {
         previousSource: activeRecord.source,
         previousTimesUsed: activeRecord.times_used,
         curationSession,
-      });
+      })
 
       // Lógica de auto-avance
-      const hasNextInPage =
-        curatingIndex !== null && curatingIndex + 1 < items.length;
+      const hasNextInPage = curatingIndex !== null && curatingIndex + 1 < items.length
 
-      if (curationSession === "ernesto" && hasNextInPage) {
-        setCuratingIndex(curatingIndex + 1);
+      if (curationSession === 'ernesto' && hasNextInPage) {
+        setCuratingIndex(curatingIndex + 1)
       } else {
         // Fin de la página actual o modo 'solo'
-        setCuratingIndex(null);
-        refetchStats();
-        refetchList();
+        setCuratingIndex(null)
+        refetchStats()
+        refetchList()
 
-        if (curationSession === "ernesto") {
+        if (curationSession === 'ernesto') {
           if (page < totalPages) {
-            setPage((p) => p + 1);
+            setPage((p) => p + 1)
             setToastMessage(
-              "¡Página completada! Cargando la siguiente página de registros por curar...",
-            );
+              '¡Página completada! Cargando la siguiente página de registros por curar...',
+            )
           } else {
             setToastMessage(
-              "¡Felicidades! Has curado todos los registros pendientes de esta página.",
-            );
+              '¡Felicidades! Has curado todos los registros pendientes de esta página.',
+            )
           }
         } else {
-          setToastMessage("Cliente curado exitosamente.");
+          setToastMessage('Cliente curado exitosamente.')
         }
       }
     } catch (err) {
-      console.error(err);
-      alert("Error al guardar la curación. Por favor intenta de nuevo.");
+      console.error(err)
+      alert('Error al guardar la curación. Por favor intenta de nuevo.')
     }
   }
 
   // Si cambiamos filtros, volvemos a la página 1
   // biome-ignore lint/correctness/useExhaustiveDependencies: run when filters change
   useEffect(() => {
-    setPage(1);
-  }, [search, onlySinPin, onlyRefCorta, onlySinNombre, minTimesUsed]);
+    setPage(1)
+  }, [search, onlySinPin, onlyRefCorta, onlySinNombre, minTimesUsed])
 
   return (
     <div className="space-y-6">
@@ -148,8 +132,7 @@ export function PorCurarView() {
               Progreso de Agenda
             </h2>
             <p className="text-xl md:text-2xl font-black mt-1 text-primary">
-              {stats.curated} de {stats.total} registros con curación completa (
-              {stats.percentage}%)
+              {stats.curated} de {stats.total} registros con curación completa ({stats.percentage}%)
             </p>
             <div className="w-full bg-surface-container-high/40 rounded-full h-2.5 mt-3 overflow-hidden">
               <div
@@ -199,24 +182,24 @@ export function PorCurarView() {
             <div className="flex bg-surface-container rounded-xl p-1 border border-outline-variant/15">
               <button
                 type="button"
-                onClick={() => setCurationSession("solo")}
+                onClick={() => setCurationSession('solo')}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                  curationSession === "solo"
-                    ? "bg-surface-container-lowest text-primary shadow-xs"
-                    : "text-on-surface-variant hover:text-on-surface",
+                  'px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+                  curationSession === 'solo'
+                    ? 'bg-surface-container-lowest text-primary shadow-xs'
+                    : 'text-on-surface-variant hover:text-on-surface',
                 )}
               >
                 Solo
               </button>
               <button
                 type="button"
-                onClick={() => setCurationSession("ernesto")}
+                onClick={() => setCurationSession('ernesto')}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                  curationSession === "ernesto"
-                    ? "bg-surface-container-lowest text-primary shadow-xs"
-                    : "text-on-surface-variant hover:text-on-surface",
+                  'px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+                  curationSession === 'ernesto'
+                    ? 'bg-surface-container-lowest text-primary shadow-xs'
+                    : 'text-on-surface-variant hover:text-on-surface',
                 )}
               >
                 Ernesto (Activa autoavance)
@@ -257,9 +240,7 @@ export function PorCurarView() {
 
           {/* Slider Pedidos Mínimos */}
           <div className="flex items-center gap-2 ml-auto">
-            <span className="font-semibold text-on-surface-variant">
-              Pedidos mínimos:
-            </span>
+            <span className="font-semibold text-on-surface-variant">Pedidos mínimos:</span>
             <input
               type="range"
               min="0"
@@ -315,22 +296,16 @@ export function PorCurarView() {
                     </td>
                     <td className="px-4 py-3">
                       {row.customer_name ? (
-                        <span className="font-semibold">
-                          {row.customer_name}
-                        </span>
+                        <span className="font-semibold">{row.customer_name}</span>
                       ) : (
-                        <span className="italic text-on-surface-variant/50">
-                          Sin nombre
-                        </span>
+                        <span className="italic text-on-surface-variant/50">Sin nombre</span>
                       )}
                     </td>
                     <td className="px-4 py-3 max-w-[240px]">
                       <div className="flex flex-col gap-1">
                         <span className="truncate block" title={row.reference}>
                           {row.reference || (
-                            <span className="italic text-on-surface-variant/40">
-                              Sin dirección
-                            </span>
+                            <span className="italic text-on-surface-variant/40">Sin dirección</span>
                           )}
                         </span>
                         <div className="flex gap-1.5 flex-wrap">
@@ -362,22 +337,22 @@ export function PorCurarView() {
                     <td className="px-4 py-3">
                       <span
                         className={cn(
-                          "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border",
-                          row.source === "admin_curated" &&
-                            "bg-green-500/10 text-green-700 border-green-500/20",
-                          row.source === "driver_verified" &&
-                            "bg-blue-500/10 text-blue-700 border-blue-500/20",
-                          row.source === "backfill" &&
-                            "bg-yellow-500/10 text-yellow-700 border-yellow-500/20",
+                          'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
+                          row.source === 'admin_curated' &&
+                            'bg-green-500/10 text-green-700 border-green-500/20',
+                          row.source === 'driver_verified' &&
+                            'bg-blue-500/10 text-blue-700 border-blue-500/20',
+                          row.source === 'backfill' &&
+                            'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
                         )}
                       >
-                        {row.source === "admin_curated" && "curada"}
-                        {row.source === "driver_verified" && "motorizado"}
-                        {row.source === "backfill" && "backfill"}
+                        {row.source === 'admin_curated' && 'curada'}
+                        {row.source === 'driver_verified' && 'motorizado'}
+                        {row.source === 'backfill' && 'backfill'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs font-semibold text-on-surface-variant">
-                      {row.favorite_restaurant || "-"}
+                      {row.favorite_restaurant || '-'}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Button size="sm" onClick={() => setCuratingIndex(idx)}>
@@ -428,14 +403,14 @@ export function PorCurarView() {
           initialReference={activeRecord.reference}
           initialCustomerName={activeRecord.customer_name}
           onSkip={() => {
-            setCuratingIndex(null);
-            refetchStats();
-            refetchList();
+            setCuratingIndex(null)
+            refetchStats()
+            refetchList()
           }}
           onConfirmAdmin={handleConfirmCuration}
           onConfirm={() => {}}
         />
       )}
     </div>
-  );
+  )
 }

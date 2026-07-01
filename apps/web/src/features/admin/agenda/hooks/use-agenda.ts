@@ -216,7 +216,9 @@ export function useAgendaVista2({
       const from = (page - 1) * 50
       const to = from + 49
 
-      let q = (supabase as any).from('customer_addresses_with_stats').select('*', { count: 'exact' })
+      let q = (supabase as any)
+        .from('customer_addresses_with_stats')
+        .select('*', { count: 'exact' })
 
       if (search.trim()) {
         const s = `%${search.trim()}%`

@@ -25,6 +25,7 @@ function lastMondayToSunday(now: Date): { start: string; end: string; due: strin
   }
 }
 
+// @ts-expect-error: Deno.serve
 Deno.serve(async () => {
   const sb = createServiceRoleClient()
   const { start, end, due } = lastMondayToSunday(new Date())

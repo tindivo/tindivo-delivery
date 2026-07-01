@@ -619,7 +619,10 @@ async function resolveRecipients(
     switch (event.event_type) {
       case 'CashSettlementDelivered':
         if (settlement.restaurants?.user_id) {
-          out.push({ userId: settlement.restaurants.user_id, role: 'restaurant' })
+          out.push({
+            userId: settlement.restaurants.user_id,
+            role: 'restaurant',
+          })
         }
         break
       case 'CashSettlementConfirmed':
@@ -633,7 +636,10 @@ async function resolveRecipients(
           out.push({ userId: settlement.drivers.user_id, role: 'driver' })
         }
         if (settlement.restaurants?.user_id) {
-          out.push({ userId: settlement.restaurants.user_id, role: 'restaurant' })
+          out.push({
+            userId: settlement.restaurants.user_id,
+            role: 'restaurant',
+          })
         }
         break
     }
@@ -685,7 +691,10 @@ async function sendToSubscriptions(
 
     try {
       await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        {
+          endpoint: sub.endpoint,
+          keys: { p256dh: sub.p256dh, auth: sub.auth },
+        },
         JSON.stringify(notification),
         { TTL: 86400, urgency: 'high', topic: safeTopic },
       )
@@ -707,7 +716,10 @@ async function sendToSubscriptions(
       try {
         await sb
           .from('push_subscriptions')
-          .update({ last_success_at: new Date().toISOString(), consecutive_failures: 0 })
+          .update({
+            last_success_at: new Date().toISOString(),
+            consecutive_failures: 0,
+          })
           .eq('id', sub.id)
       } catch (updateErr) {
         console.warn(
@@ -768,13 +780,16 @@ async function sendToSubscriptions(
   return pushed
 }
 
+// @ts-expect-error: Deno.serve
 Deno.serve(async () => {
   const sb = createServiceRoleClient()
   // requestId acota cada invocación en los logs. 8 hex chars son suficientes
   // para correlacionar líneas dentro de un mismo Deno.serve sin pesar.
   const requestId = crypto.randomUUID().slice(0, 8)
 
-  const { data: events, error } = await sb.rpc('claim_pending_domain_events', { p_limit: 50 })
+  const { data: events, error } = await sb.rpc('claim_pending_domain_events', {
+    p_limit: 50,
+  })
 
   if (error) {
     console.error(`[send-push:${requestId}] events_query_error msg=${error.message}`)
@@ -786,8 +801,11 @@ Deno.serve(async () => {
 
   console.log(`[send-push:${requestId}] start events=${events?.length ?? 0}`)
 
-  const { data: flagRow } = await sb.from('app_settings')
-    .select('value').eq('key', 'push_urgent_notification_enabled').maybeSingle()
+  const { data: flagRow } = await sb
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'push_urgent_notification_enabled')
+    .maybeSingle()
   const urgentEnabled = flagRow?.value === 'true'
 
   let processed = 0
@@ -798,7 +816,10 @@ Deno.serve(async () => {
       if (event.event_type === 'OrderMarkedUrgent' && !urgentEnabled) {
         await sb
           .from('domain_events')
-          .update({ published_at: new Date().toISOString(), status: 'published' })
+          .update({
+            published_at: new Date().toISOString(),
+            status: 'published',
+          })
           .eq('id', event.id)
         processed++
         continue
@@ -829,7 +850,10 @@ Deno.serve(async () => {
       if (recipients.length === 0) {
         await sb
           .from('domain_events')
-          .update({ published_at: new Date().toISOString(), status: 'published' })
+          .update({
+            published_at: new Date().toISOString(),
+            status: 'published',
+          })
           .eq('id', event.id)
         processed++
         continue
@@ -842,7 +866,11 @@ Deno.serve(async () => {
       const byGroup = new Map<GroupKey, { role: Role; kind?: 'from' | 'to'; userIds: string[] }>()
       for (const r of recipients) {
         const key = `${r.role}:${r.kind ?? ''}` as GroupKey
-        const entry = byGroup.get(key) ?? { role: r.role, kind: r.kind, userIds: [] }
+        const entry = byGroup.get(key) ?? {
+          role: r.role,
+          kind: r.kind,
+          userIds: [],
+        }
         entry.userIds.push(r.userId)
         byGroup.set(key, entry)
       }

@@ -55,7 +55,11 @@ export function useIdempotencyKey(formId: string): {
 }
 
 function generateUUID(): string {
-  if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.randomUUID === 'function') {
+  if (
+    typeof window !== 'undefined' &&
+    window.crypto &&
+    typeof window.crypto.randomUUID === 'function'
+  ) {
     return window.crypto.randomUUID()
   }
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {

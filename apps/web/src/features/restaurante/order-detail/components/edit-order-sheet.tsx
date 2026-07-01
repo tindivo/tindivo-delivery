@@ -121,19 +121,19 @@ export function EditOrderSheet({ orderId, initial, onClose }: Props) {
   }, [payment, amountNum, paysWithNum, cashPartNum])
 
   const amountValidationError = useMemo(() => {
-    if (!amount) return "Ingresa el monto del pedido"
+    if (!amount) return 'Ingresa el monto del pedido'
     const hasInvalidChars = /[^0-9.]/.test(amount)
     const parts = amount.split('.')
     const hasMultipleDots = parts.length > 2
     const hasTooManyDecimals = parts[1] !== undefined && parts[1].length > 2
 
     if (hasInvalidChars || hasMultipleDots || hasTooManyDecimals) {
-      return "Ingresa solo números (ejemplo: 25.00)"
+      return 'Ingresa solo números (ejemplo: 25.00)'
     }
 
     const parsed = parseMoney(amount)
     if (parsed <= 0) {
-      return "El monto debe ser mayor a S/. 0"
+      return 'El monto debe ser mayor a S/. 0'
     }
     return null
   }, [amount])
@@ -280,9 +280,7 @@ export function EditOrderSheet({ orderId, initial, onClose }: Props) {
               <label htmlFor="edit-amount" className="text-sm font-semibold text-on-surface">
                 Monto del pedido
               </label>
-              <span className="text-[11px] text-on-surface-variant">
-                Comida + delivery
-              </span>
+              <span className="text-[11px] text-on-surface-variant">Comida + delivery</span>
             </div>
             <MoneyInput
               id="edit-amount"

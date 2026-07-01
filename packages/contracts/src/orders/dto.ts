@@ -134,7 +134,10 @@ export const EditOrderByRestaurantRequest = z
   .object({
     clientName: z.string().trim().min(1).max(80).nullable().optional(),
     paymentStatus: PaymentStatus.optional(),
-    orderAmount: MoneyPenSchema.refine((v) => v > 0, 'El monto del pedido debe ser mayor a 0').optional(),
+    orderAmount: MoneyPenSchema.refine(
+      (v) => v > 0,
+      'El monto del pedido debe ser mayor a 0',
+    ).optional(),
     yapeAmount: MoneyPenSchema.optional(),
     cashAmount: MoneyPenSchema.optional(),
     clientPaysWith: MoneyPenSchema.optional(),

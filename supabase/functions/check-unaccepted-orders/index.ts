@@ -21,6 +21,7 @@ type ExistingAlert = {
   payload: { orderId?: string } | null
 }
 
+// @ts-expect-error: Deno.serve
 Deno.serve(async () => {
   const sb = createServiceRoleClient()
   const cutoff = new Date(Date.now() - THRESHOLD_SECONDS * 1000).toISOString()
@@ -46,11 +47,13 @@ Deno.serve(async () => {
     .is('resolved_at', null)
     .returns<ExistingAlert[]>()
 
-  const existingIds = new Set((existingAlerts ?? []).map((a) => a.payload?.orderId).filter(Boolean))
+  const existingIds = new Set(
+    (existingAlerts ?? []).map((a: any) => a.payload?.orderId).filter(Boolean),
+  )
 
   const newAlerts = stuck
-    .filter((o) => !existingIds.has(o.id))
-    .map((o) => ({
+    .filter((o: any) => !existingIds.has(o.id))
+    .map((o: any) => ({
       type: 'order.unaccepted-90s',
       payload: {
         orderId: o.id,
