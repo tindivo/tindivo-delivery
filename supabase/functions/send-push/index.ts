@@ -38,6 +38,7 @@ type EventRow = {
   aggregate_type: string
   aggregate_id: string
   payload: Record<string, unknown>
+  retry_count?: number
 }
 
 type Notification = {
@@ -262,6 +263,17 @@ function notificationFor(
           vibrate: [400, 150, 400, 150, 400],
         }
 
+      case 'OrderMarkedUrgent':
+        if (role !== 'driver') return null
+        return {
+          title: `¡Pedido urgente disponible! — ${restaurantName}`,
+          body: `Se liberó ${amount} · tómalo ya`,
+          url: `/motorizado?tab=team`,
+          tag: `urgent-${shortId || event.aggregate_id}`,
+          requireInteraction: true,
+          vibrate: [400, 150, 400, 150, 400],
+        }
+
       case 'OrderAccepted':
         if (role !== 'restaurant') return null
         return {
@@ -458,7 +470,8 @@ async function resolveRecipients(
 
     switch (event.event_type) {
       case 'OrderReadyForDrivers':
-      case 'OrderOverdue': {
+      case 'OrderOverdue':
+      case 'OrderMarkedUrgent': {
         // Push se envía a TODOS los drivers activos con suscripción push,
         // sin importar `driver_availability.is_available`. El motorizado "No
         // disponible" recibe el push informativo y puede:
@@ -761,13 +774,7 @@ Deno.serve(async () => {
   // para correlacionar líneas dentro de un mismo Deno.serve sin pesar.
   const requestId = crypto.randomUUID().slice(0, 8)
 
-  const { data: events, error } = await sb
-    .from('domain_events')
-    .select('id, event_type, aggregate_type, aggregate_id, payload')
-    .is('published_at', null)
-    .eq('status', 'pending')
-    .order('occurred_at', { ascending: true })
-    .limit(50)
+  const { data: events, error } = await sb.rpc('claim_pending_domain_events', { p_limit: 50 })
 
   if (error) {
     console.error(`[send-push:${requestId}] events_query_error msg=${error.message}`)
@@ -779,85 +786,114 @@ Deno.serve(async () => {
 
   console.log(`[send-push:${requestId}] start events=${events?.length ?? 0}`)
 
+  const { data: flagRow } = await sb.from('app_settings')
+    .select('value').eq('key', 'push_urgent_notification_enabled').maybeSingle()
+  const urgentEnabled = flagRow?.value === 'true'
+
   let processed = 0
   let pushed = 0
 
   for (const event of (events ?? []) as EventRow[]) {
-    // Cargar contexto del agregado para los mensajes.
-    let context: EventContext = null
-    if (event.aggregate_type === 'Order') {
-      const { data } = await sb
-        .from('orders')
-        .select('short_id, client_name, order_amount, restaurants(name)')
-        .eq('id', event.aggregate_id)
-        .maybeSingle<OrderContext>()
-      context = data
-    } else if (event.aggregate_type === 'CashSettlement') {
-      const { data } = await sb
-        .from('cash_settlements')
-        .select('delivered_amount, restaurants(name), drivers(full_name)')
-        .eq('id', event.aggregate_id)
-        .maybeSingle<CashSettlementContext>()
-      context = data
-    }
+    try {
+      if (event.event_type === 'OrderMarkedUrgent' && !urgentEnabled) {
+        await sb
+          .from('domain_events')
+          .update({ published_at: new Date().toISOString(), status: 'published' })
+          .eq('id', event.id)
+        processed++
+        continue
+      }
 
-    const recipients = await resolveRecipients(sb, event)
-    console.log(
-      `[send-push:${requestId}] event=${event.event_type} agg=${event.aggregate_id} recipients=${recipients.length}`,
-    )
-    if (recipients.length === 0) {
+      // Cargar contexto del agregado para los mensajes.
+      let context: EventContext = null
+      if (event.aggregate_type === 'Order') {
+        const { data } = await sb
+          .from('orders')
+          .select('short_id, client_name, order_amount, restaurants(name)')
+          .eq('id', event.aggregate_id)
+          .maybeSingle<OrderContext>()
+        context = data
+      } else if (event.aggregate_type === 'CashSettlement') {
+        const { data } = await sb
+          .from('cash_settlements')
+          .select('delivered_amount, restaurants(name), drivers(full_name)')
+          .eq('id', event.aggregate_id)
+          .maybeSingle<CashSettlementContext>()
+        context = data
+      }
+
+      const recipients = await resolveRecipients(sb, event)
+      console.log(
+        `[send-push:${requestId}] event=${event.event_type} agg=${event.aggregate_id} recipients=${recipients.length}`,
+      )
+      if (recipients.length === 0) {
+        await sb
+          .from('domain_events')
+          .update({ published_at: new Date().toISOString(), status: 'published' })
+          .eq('id', event.id)
+        processed++
+        continue
+      }
+
+      // Agrupar recipients por (rol, kind) para que recipients del mismo rol
+      // pero distinto kind reciban notificaciones diferenciadas
+      // (ej: OrderTransferAutoAccepted → push 'from' ≠ push 'to').
+      type GroupKey = `${Role}:${'from' | 'to' | ''}`
+      const byGroup = new Map<GroupKey, { role: Role; kind?: 'from' | 'to'; userIds: string[] }>()
+      for (const r of recipients) {
+        const key = `${r.role}:${r.kind ?? ''}` as GroupKey
+        const entry = byGroup.get(key) ?? { role: r.role, kind: r.kind, userIds: [] }
+        entry.userIds.push(r.userId)
+        byGroup.set(key, entry)
+      }
+
+      for (const [, group] of byGroup) {
+        const notification = notificationFor(event, context, group.role, group.kind)
+        if (!notification) continue
+
+        const { data: subs } = await sb
+          .from('push_subscriptions')
+          .select('id, endpoint, p256dh, auth, consecutive_failures, user_id')
+          .in('user_id', group.userIds)
+
+        if (!subs || subs.length === 0) {
+          console.log(
+            `[send-push:${requestId}] no_subs role=${group.role} kind=${group.kind ?? '-'} users=${group.userIds.length} event=${event.event_type}`,
+          )
+          continue
+        }
+
+        const count = await sendToSubscriptions(
+          sb,
+          subs,
+          notification,
+          notification.tag ?? event.event_type,
+          requestId,
+          event.event_type,
+        )
+        pushed += count
+      }
+
       await sb
         .from('domain_events')
         .update({ published_at: new Date().toISOString(), status: 'published' })
         .eq('id', event.id)
       processed++
-      continue
-    }
-
-    // Agrupar recipients por (rol, kind) para que recipients del mismo rol
-    // pero distinto kind reciban notificaciones diferenciadas
-    // (ej: OrderTransferAutoAccepted → push 'from' ≠ push 'to').
-    type GroupKey = `${Role}:${'from' | 'to' | ''}`
-    const byGroup = new Map<GroupKey, { role: Role; kind?: 'from' | 'to'; userIds: string[] }>()
-    for (const r of recipients) {
-      const key = `${r.role}:${r.kind ?? ''}` as GroupKey
-      const entry = byGroup.get(key) ?? { role: r.role, kind: r.kind, userIds: [] }
-      entry.userIds.push(r.userId)
-      byGroup.set(key, entry)
-    }
-
-    for (const [, group] of byGroup) {
-      const notification = notificationFor(event, context, group.role, group.kind)
-      if (!notification) continue
-
-      const { data: subs } = await sb
-        .from('push_subscriptions')
-        .select('id, endpoint, p256dh, auth, consecutive_failures, user_id')
-        .in('user_id', group.userIds)
-
-      if (!subs || subs.length === 0) {
-        console.log(
-          `[send-push:${requestId}] no_subs role=${group.role} kind=${group.kind ?? '-'} users=${group.userIds.length} event=${event.event_type}`,
-        )
-        continue
-      }
-
-      const count = await sendToSubscriptions(
-        sb,
-        subs,
-        notification,
-        notification.tag ?? event.event_type,
-        requestId,
-        event.event_type,
+    } catch (err) {
+      console.error(
+        `[send-push:${requestId}] error processing event=${event.id} type=${event.event_type}:`,
+        err,
       )
-      pushed += count
+      const errorMsg = (err as Error | null)?.message ?? 'unknown'
+      await sb
+        .from('domain_events')
+        .update({
+          status: 'pending',
+          retry_count: (event.retry_count ?? 0) + 1,
+          last_error: errorMsg.slice(0, 500),
+        })
+        .eq('id', event.id)
     }
-
-    await sb
-      .from('domain_events')
-      .update({ published_at: new Date().toISOString(), status: 'published' })
-      .eq('id', event.id)
-    processed++
   }
 
   console.log(`[send-push:${requestId}] done processed=${processed} pushed=${pushed}`)
