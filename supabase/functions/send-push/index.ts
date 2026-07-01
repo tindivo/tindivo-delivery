@@ -119,7 +119,7 @@ function notificationFor(
           title: `Nuevo pedido — ${restaurantName}`,
           body: `${amount} · listo pronto`,
           url: `/motorizado/pedidos/${event.aggregate_id}/preview`,
-          tag,
+          tag: `ready-${shortId || event.aggregate_id}`,
           // En Android Chrome con Doze Mode, las notificaciones sin
           // requireInteraction se marcan como "low priority" y pueden
           // ocultarse silenciosamente. Para el evento principal de la
@@ -280,7 +280,7 @@ function notificationFor(
           title: 'Motorizado en camino',
           body: `Pedido de ${restaurantOrderLabel} fue aceptado`,
           url: `/restaurante/pedidos/${event.aggregate_id}`,
-          tag,
+          tag: `accepted-${shortId || event.aggregate_id}`,
         }
 
       case 'OrderPendingAcceptance':
@@ -309,7 +309,7 @@ function notificationFor(
           title: 'Motorizado en el local',
           body: `Recogiendo pedido de ${restaurantOrderLabel}`,
           url: `/restaurante/pedidos/${event.aggregate_id}`,
-          tag,
+          tag: `arrived-${shortId || event.aggregate_id}`,
         }
 
       case 'OrderDelivered':
@@ -318,7 +318,7 @@ function notificationFor(
           title: 'Pedido entregado',
           body: `Pedido de ${restaurantOrderLabel} completado`,
           url: `/restaurante/pedidos/${event.aggregate_id}`,
-          tag,
+          tag: `delivered-${shortId || event.aggregate_id}`,
         }
 
       case 'OrderEditedByRestaurant': {
@@ -348,7 +348,7 @@ function notificationFor(
           title: `Pedido actualizado — ${restaurantName}`,
           body: `El restaurante cambió ${parts.join(' y ')}.`,
           url: `/motorizado/pedidos/${event.aggregate_id}`,
-          tag: `${event.event_type}-${shortId || event.aggregate_id}`,
+          tag: `edited-${shortId || event.aggregate_id}`,
           requireInteraction: true,
           vibrate: [250, 100, 250],
         }
@@ -360,7 +360,7 @@ function notificationFor(
             title: 'Pedido cancelado',
             body: `#${shortId} ha sido cancelado`,
             url: `/motorizado/pedidos/${event.aggregate_id}`,
-            tag,
+            tag: `cancelled-${shortId || event.aggregate_id}`,
           }
         }
         if (role === 'restaurant') {
@@ -368,7 +368,7 @@ function notificationFor(
             title: 'Pedido cancelado',
             body: `Pedido de ${restaurantOrderLabel} ha sido cancelado`,
             url: `/restaurante/pedidos/${event.aggregate_id}`,
-            tag,
+            tag: `cancelled-${shortId || event.aggregate_id}`,
           }
         }
         return null
