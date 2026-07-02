@@ -1,6 +1,7 @@
 'use client'
 import { Icon, Skeleton } from '@tindivo/ui'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useRestaurantFrequentCustomerDetail } from '../hooks/use-restaurant-frequent-customer-detail'
 
 type Props = {
@@ -88,6 +89,13 @@ function getCategoryMeta(cat: 'vip' | 'active' | 'dormant' | null | undefined) {
 export function FrequentCustomerDetailDrawer({ phone, onClose, dateRange }: Props) {
   const router = useRouter()
   const { data, isLoading } = useRestaurantFrequentCustomerDetail(phone, dateRange)
+  const [copied, setCopied] = useState(false)
+
+  function handleCopyPhone() {
+    navigator.clipboard.writeText(phone)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const catMeta = data ? getCategoryMeta(data.category) : null
 
@@ -228,7 +236,7 @@ export function FrequentCustomerDetailDrawer({ phone, onClose, dateRange }: Prop
                       <p className="text-sm font-semibold text-on-surface mt-0.5">
                         {translateDayOfWeek(data.behavior.favorite_day_of_week)}{' '}
                         <span className="text-xs text-on-surface-variant font-medium">
-                          ({data.behavior.favorite_day_count} pedidos)
+                          ({data.behavior.favorite_day_count} {data.behavior.favorite_day_count === 1 ? 'pedido' : 'pedidos'})
                         </span>
                       </p>
                     </div>
@@ -246,7 +254,7 @@ export function FrequentCustomerDetailDrawer({ phone, onClose, dateRange }: Prop
                       <p className="text-sm font-semibold text-on-surface mt-0.5">
                         {translateTimeRange(data.behavior.favorite_time_range)}{' '}
                         <span className="text-xs text-on-surface-variant font-medium">
-                          ({data.behavior.favorite_time_range_count} pedidos)
+                          ({data.behavior.favorite_time_range_count} {data.behavior.favorite_time_range_count === 1 ? 'pedido' : 'pedidos'})
                         </span>
                       </p>
                     </div>
@@ -332,6 +340,20 @@ export function FrequentCustomerDetailDrawer({ phone, onClose, dateRange }: Prop
             </>
           )}
         </div>
+
+        {/* Sticky Copy Phone Footer */}
+        {data && (
+          <div className="p-4 border-t border-[rgba(225,191,181,0.2)] bg-slate-50 flex gap-3">
+            <button
+              type="button"
+              onClick={handleCopyPhone}
+              className="flex-1 py-3 px-4 rounded-2xl bg-primary text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary/95 transition-all duration-250 active:scale-98 shadow-md"
+            >
+              <Icon name={copied ? 'done' : 'content_copy'} size={18} />
+              {copied ? '¡Teléfono copiado!' : 'Copiar teléfono'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
