@@ -89,6 +89,7 @@ function notificationFor(
   context: EventContext,
   role: Role,
   kind?: 'from' | 'to',
+  earlyPreviewEnabled = false,
 ): Notification | null {
   if (event.aggregate_type === 'Order') {
     const order = context as OrderContext
@@ -110,6 +111,7 @@ function notificationFor(
     switch (event.event_type) {
       case 'OrderCreated':
       case 'OrderAcceptedByRestaurant': {
+        if (earlyPreviewEnabled) return null
         const prepMinutes = Number(
           event.payload?.prepMinutes ?? event.payload?.acceptedPrepMinutes ?? 0,
         )
@@ -119,6 +121,20 @@ function notificationFor(
           body: `Se acaba de registrar un pedido en ${restaurantName}. Estará listo en ${prepMinutes} minutos. Atento.`,
           url: `/motorizado?tab=available`,
           tag: `preparing-${shortId || event.aggregate_id}`,
+        }
+      }
+
+      case 'OrderEarlyPreview': {
+        if (!earlyPreviewEnabled) return null
+        if (role !== 'driver') return null
+        const prepMinutes = Number(event.payload?.prepMinutes ?? 0)
+        return {
+          title: `Pedido próximo — ${restaurantName}`,
+          body: `${amount} · estará listo en ${prepMinutes} min`,
+          url: `/motorizado/pedidos/${event.aggregate_id}/preview`,
+          tag: `preview-${shortId || event.aggregate_id}`,
+          requireInteraction: false,
+          vibrate: [200],
         }
       }
 
@@ -454,6 +470,7 @@ function notificationFor(
 async function resolveRecipients(
   sb: ReturnType<typeof createServiceRoleClient>,
   event: EventRow,
+  earlyPreviewEnabled = false,
 ): Promise<Recipient[]> {
   if (event.aggregate_type === 'Order') {
     // Hint `!orders_driver_id_fkey` desambigua el embed `drivers(...)`. Sin
@@ -476,6 +493,7 @@ async function resolveRecipients(
     switch (event.event_type) {
       case 'OrderCreated':
       case 'OrderAcceptedByRestaurant': {
+        if (earlyPreviewEnabled) break
         const prepMinutes = Number(
           event.payload?.prepMinutes ?? event.payload?.acceptedPrepMinutes ?? 0,
         )
@@ -492,7 +510,9 @@ async function resolveRecipients(
 
       case 'OrderReadyForDrivers':
       case 'OrderOverdue':
-      case 'OrderMarkedUrgent': {
+      case 'OrderMarkedUrgent':
+      case 'OrderEarlyPreview': {
+        if (event.event_type === 'OrderEarlyPreview' && !earlyPreviewEnabled) break
         // Push se envía a TODOS los drivers activos con suscripción push,
         // sin importar `driver_availability.is_available`. El motorizado "No
         // disponible" recibe el push informativo y puede:
@@ -829,12 +849,31 @@ Deno.serve(async () => {
     .maybeSingle()
   const urgentEnabled = flagRow?.value === 'true'
 
+  const { data: earlyPreviewFlagRow } = await sb
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'push_early_preview_enabled')
+    .maybeSingle()
+  const earlyPreviewEnabled = earlyPreviewFlagRow?.value === 'true'
+
   let processed = 0
   let pushed = 0
 
   for (const event of (events ?? []) as EventRow[]) {
     try {
       if (event.event_type === 'OrderMarkedUrgent' && !urgentEnabled) {
+        await sb
+          .from('domain_events')
+          .update({
+            published_at: new Date().toISOString(),
+            status: 'published',
+          })
+          .eq('id', event.id)
+        processed++
+        continue
+      }
+
+      if (event.event_type === 'OrderEarlyPreview' && !earlyPreviewEnabled) {
         await sb
           .from('domain_events')
           .update({
@@ -864,7 +903,7 @@ Deno.serve(async () => {
         context = data
       }
 
-      const recipients = await resolveRecipients(sb, event)
+      const recipients = await resolveRecipients(sb, event, earlyPreviewEnabled)
       console.log(
         `[send-push:${requestId}] event=${event.event_type} agg=${event.aggregate_id} recipients=${recipients.length}`,
       )
@@ -897,7 +936,13 @@ Deno.serve(async () => {
       }
 
       for (const [, group] of byGroup) {
-        const notification = notificationFor(event, context, group.role, group.kind)
+        const notification = notificationFor(
+          event,
+          context,
+          group.role,
+          group.kind,
+          earlyPreviewEnabled,
+        )
         if (!notification) continue
 
         const { data: subs } = await sb

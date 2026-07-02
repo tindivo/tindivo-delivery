@@ -106,6 +106,26 @@ describe('AcceptOrderByRestaurantUseCase', () => {
     expect(result.value.estimatedReadyAt).toBe(expected)
     expect(saveMock).toHaveBeenCalledOnce()
     expect(publisher.collected.map((e) => e.eventType)).toContain('OrderAcceptedByRestaurant')
+    expect(publisher.collected.map((e) => e.eventType)).toContain('OrderEarlyPreview')
+  })
+
+  it('acepta pedido pending_acceptance con prep_time < 15 y NO raise OrderEarlyPreview', async () => {
+    const order = buildCustomerPwaOrder(20, new Date(NOW.getTime() - 60_000))
+    const { repo } = buildRepo({ order })
+    const publisher = buildPublisher()
+    const useCase = new AcceptOrderByRestaurantUseCase(repo, publisher, fixedClock(NOW))
+
+    const result = await useCase.execute({
+      orderId: order.id.value,
+      restaurantId: RESTAURANT_ID,
+      prepMinutes: 10,
+    })
+
+    expect(result.isSuccess).toBe(true)
+    if (!result.isSuccess) return
+    const events = publisher.collected.map((e) => e.eventType)
+    expect(events).toContain('OrderAcceptedByRestaurant')
+    expect(events).not.toContain('OrderEarlyPreview')
   })
 
   it('rechaza si el pedido pertenece a otro restaurante', async () => {
@@ -159,6 +179,7 @@ describe('AcceptOrderByRestaurantUseCase', () => {
     const events = result.value.pullEvents().map((e) => e.eventType)
     expect(events).toContain('OrderCreated')
     expect(events).toContain('OrderPendingAcceptance')
+    expect(events).not.toContain('OrderEarlyPreview')
     expect(result.value.status.value).toBe('pending_acceptance')
     expect(result.value.props.pendingAcceptanceAt).toEqual(NOW)
   })
@@ -177,8 +198,26 @@ describe('AcceptOrderByRestaurantUseCase', () => {
     if (!result.isSuccess) return
     const events = result.value.pullEvents().map((e) => e.eventType)
     expect(events).toContain('OrderCreated')
+    expect(events).toContain('OrderEarlyPreview')
     expect(events).not.toContain('OrderPendingAcceptance')
     expect(result.value.status.value).toBe('waiting_driver')
     expect(result.value.props.pendingAcceptanceAt).toBeNull()
+  })
+
+  it('Order.create con prepTime < 15 NO raise OrderEarlyPreview', () => {
+    const result = Order.create({
+      restaurantId: RestaurantId.of(RESTAURANT_ID),
+      prepTime: PrepTime.of(10),
+      payment: PaymentIntent.create('prepaid', Money.pen(50)),
+      baseCommission: Money.pen(3),
+      farSurchargeAmount: Money.pen(0.5),
+      source: 'restaurant_pwa',
+      now: NOW,
+    })
+    expect(result.isSuccess).toBe(true)
+    if (!result.isSuccess) return
+    const events = result.value.pullEvents().map((e) => e.eventType)
+    expect(events).toContain('OrderCreated')
+    expect(events).not.toContain('OrderEarlyPreview')
   })
 })

@@ -121,7 +121,9 @@ export const FrequentCustomersQuery = z.object({
   page: z.coerce.number().int().min(1).default(1),
   page_size: z.coerce.number().int().min(10).max(100).default(25),
   search: z.string().max(100).optional(),
-  include_suspicious: z.preprocess((val) => val === 'true' || val === '1', z.boolean()).default(false),
+  include_suspicious: z
+    .preprocess((val) => val === 'true' || val === '1', z.boolean())
+    .default(false),
   sort_by: FrequentCustomersSortBy.default('order_count'),
   sort_dir: FrequentCustomersSortDir.default('desc'),
 })
@@ -188,9 +190,7 @@ export const FrequentCustomerDetailResponse = z.object({
       short_id: z.string(),
       created_at: z.string(),
       order_amount: z.number(),
-    })
+    }),
   ),
 })
 export type FrequentCustomerDetailResponse = z.infer<typeof FrequentCustomerDetailResponse>
-
-

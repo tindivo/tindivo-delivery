@@ -5,10 +5,7 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ phone: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ phone: string }> }) {
   const { phone } = await params
 
   const auth = await requireAuth(req, ['restaurant'])

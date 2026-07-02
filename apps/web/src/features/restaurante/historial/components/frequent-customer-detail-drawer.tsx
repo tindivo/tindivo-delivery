@@ -236,7 +236,8 @@ export function FrequentCustomerDetailDrawer({ phone, onClose, dateRange }: Prop
                       <p className="text-sm font-semibold text-on-surface mt-0.5">
                         {translateDayOfWeek(data.behavior.favorite_day_of_week)}{' '}
                         <span className="text-xs text-on-surface-variant font-medium">
-                          ({data.behavior.favorite_day_count} {data.behavior.favorite_day_count === 1 ? 'pedido' : 'pedidos'})
+                          ({data.behavior.favorite_day_count}{' '}
+                          {data.behavior.favorite_day_count === 1 ? 'pedido' : 'pedidos'})
                         </span>
                       </p>
                     </div>
@@ -254,7 +255,8 @@ export function FrequentCustomerDetailDrawer({ phone, onClose, dateRange }: Prop
                       <p className="text-sm font-semibold text-on-surface mt-0.5">
                         {translateTimeRange(data.behavior.favorite_time_range)}{' '}
                         <span className="text-xs text-on-surface-variant font-medium">
-                          ({data.behavior.favorite_time_range_count} {data.behavior.favorite_time_range_count === 1 ? 'pedido' : 'pedidos'})
+                          ({data.behavior.favorite_time_range_count}{' '}
+                          {data.behavior.favorite_time_range_count === 1 ? 'pedido' : 'pedidos'})
                         </span>
                       </p>
                     </div>

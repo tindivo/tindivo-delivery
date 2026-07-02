@@ -8,7 +8,6 @@ import {
   Icon,
   IconButton,
   Skeleton,
-  StatusChip,
   Timeline,
   type TimelineStep,
   UrgencyBadge,
@@ -192,11 +191,7 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                 Dirección de entrega
               </span>
               <div className="flex items-start gap-2 text-sm text-on-surface">
-                <Icon
-                  name="location_on"
-                  size={18}
-                  className="mt-0.5 flex-shrink-0 text-primary"
-                />
+                <Icon name="location_on" size={18} className="mt-0.5 flex-shrink-0 text-primary" />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-on-surface whitespace-normal break-words">
                     {order.delivery_address ?? order.delivery_reference}
@@ -269,8 +264,8 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                     EN ENTREGA
                   </span>
                 )}
-                {!['cancelled', 'delivered', 'picked_up'].includes(status) && (
-                  remainingMinutes > 0 ? (
+                {!['cancelled', 'delivered', 'picked_up'].includes(status) &&
+                  (remainingMinutes > 0 ? (
                     <div className="flex flex-col items-end gap-1">
                       {order.ready_early_at ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-100 text-emerald-950 border border-emerald-300/20 shadow-xs animate-in fade-in duration-200">
@@ -284,7 +279,11 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                         </span>
                       )}
                       {order.estimated_ready_at && (
-                        <UrgencyBadge estimatedReadyAt={order.estimated_ready_at} now={now} variant="chip" />
+                        <UrgencyBadge
+                          estimatedReadyAt={order.estimated_ready_at}
+                          now={now}
+                          variant="chip"
+                        />
                       )}
                     </div>
                   ) : (
@@ -292,8 +291,7 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                       <Icon name="shopping_bag" size={14} filled />
                       LISTO PARA RECOGER
                     </span>
-                  )
-                )}
+                  ))}
               </div>
             </div>
           </div>
@@ -561,7 +559,9 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                         size="lg"
                         className="flex-1"
                         disabled={extend.isPending}
-                        onClick={() => extend.mutate(5, { onSuccess: () => setShowExtension(false) })}
+                        onClick={() =>
+                          extend.mutate(5, { onSuccess: () => setShowExtension(false) })
+                        }
                       >
                         +5 min
                       </Button>

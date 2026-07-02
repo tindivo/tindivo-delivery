@@ -7,7 +7,9 @@ interface AddressSuggestionPopupProps {
   isOpen: boolean
   phone: string
   addresses: HistoricalAddress[]
-  onConfirm: (selected: { delivery_reference: string; client_name: string; address_id: string } | null) => void
+  onConfirm: (
+    selected: { delivery_reference: string; client_name: string; address_id: string } | null,
+  ) => void
   onClose: () => void
 }
 
@@ -94,20 +96,22 @@ export function AddressSuggestionPopup({
       {/* Modal Container */}
       <div
         className={cn(
-          "relative bg-surface-container-lowest rounded-[28px] border border-outline-variant/15 shadow-2xl w-full flex flex-col overflow-hidden max-h-[90vh] animate-in fade-in zoom-in-95 duration-200",
-          isMultiple ? "max-w-md" : "max-w-sm"
+          'relative bg-surface-container-lowest rounded-[28px] border border-outline-variant/15 shadow-2xl w-full flex flex-col overflow-hidden max-h-[90vh] animate-in fade-in zoom-in-95 duration-200',
+          isMultiple ? 'max-w-md' : 'max-w-sm',
         )}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-5 pb-3 border-b border-outline-variant/10">
           <div className="flex items-center gap-2">
             <Icon
-              name={isMultiple ? "fact_check" : "contact_phone"}
+              name={isMultiple ? 'fact_check' : 'contact_phone'}
               className="text-primary"
               size={24}
             />
             <h3 className="text-base font-black text-on-surface tracking-tight">
-              {isMultiple ? "Este cliente tiene varias direcciones" : "Cliente frecuente encontrado"}
+              {isMultiple
+                ? 'Este cliente tiene varias direcciones'
+                : 'Cliente frecuente encontrado'}
             </h3>
           </div>
           <IconButton onClick={onClose} variant="ghost" size="sm" aria-label="Cerrar">
@@ -166,7 +170,12 @@ export function AddressSuggestionPopup({
                   <Icon name="check" size={18} />
                   Usar esta dirección
                 </Button>
-                <Button onClick={() => onConfirm(null)} variant="secondary" className="w-full" size="lg">
+                <Button
+                  onClick={() => onConfirm(null)}
+                  variant="secondary"
+                  className="w-full"
+                  size="lg"
+                >
                   Escribir otra
                 </Button>
               </div>
@@ -185,12 +194,12 @@ export function AddressSuggestionPopup({
                     <label
                       key={`${addr.reference}-${idx}`}
                       className={cn(
-                        "flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none",
+                        'flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none',
                         isSelected
-                          ? "bg-primary/5 border-primary/40 shadow-xs"
+                          ? 'bg-primary/5 border-primary/40 shadow-xs'
                           : addr.is_default
-                            ? "bg-amber-50/20 border-amber-200/50 hover:border-amber-300"
-                            : "bg-surface border-outline-variant/10 hover:border-outline-variant/30"
+                            ? 'bg-amber-50/20 border-amber-200/50 hover:border-amber-300'
+                            : 'bg-surface border-outline-variant/10 hover:border-outline-variant/30',
                       )}
                     >
                       <input
@@ -221,7 +230,9 @@ export function AddressSuggestionPopup({
                             </>
                           )}
                           <span className="text-outline-variant">•</span>
-                          <span className="text-primary/80">{addr.times_used} {addr.times_used === 1 ? 'pedido' : 'pedidos'}</span>
+                          <span className="text-primary/80">
+                            {addr.times_used} {addr.times_used === 1 ? 'pedido' : 'pedidos'}
+                          </span>
                           {addr.has_gps && (
                             <>
                               <span className="text-outline-variant">•</span>
@@ -240,10 +251,10 @@ export function AddressSuggestionPopup({
                 {/* Option for writing a new address */}
                 <label
                   className={cn(
-                    "flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none",
+                    'flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none',
                     selectedIndex === 'new'
-                      ? "bg-primary/5 border-primary/40 shadow-xs"
-                      : "bg-surface border-outline-variant/10 hover:border-outline-variant/30"
+                      ? 'bg-primary/5 border-primary/40 shadow-xs'
+                      : 'bg-surface border-outline-variant/10 hover:border-outline-variant/30',
                   )}
                 >
                   <input
@@ -255,7 +266,9 @@ export function AddressSuggestionPopup({
                   />
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Icon name="add" size={16} className="text-on-surface-variant shrink-0" />
-                    <span className="text-xs font-black text-on-surface">Escribir dirección nueva</span>
+                    <span className="text-xs font-black text-on-surface">
+                      Escribir dirección nueva
+                    </span>
                   </div>
                 </label>
               </div>

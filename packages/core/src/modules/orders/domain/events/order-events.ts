@@ -24,6 +24,27 @@ export class OrderCreated extends BaseDomainEvent {
   }
 }
 
+export class OrderEarlyPreview extends BaseDomainEvent {
+  readonly eventType = 'OrderEarlyPreview' as const
+  readonly aggregateType = AGG
+  readonly aggregateId: string
+  readonly payload: {
+    orderId: string
+    shortId: string
+    restaurantId: string
+    orderAmount: number
+    prepMinutes: number
+    expectedReadyAt: string
+    willAppearInQueueAt: string
+  }
+
+  constructor(payload: OrderEarlyPreview['payload'], metadata?: EventMetadata) {
+    super(metadata)
+    this.aggregateId = payload.orderId
+    this.payload = payload
+  }
+}
+
 export class OrderAccepted extends BaseDomainEvent {
   readonly eventType = 'OrderAccepted' as const
   readonly aggregateType = AGG

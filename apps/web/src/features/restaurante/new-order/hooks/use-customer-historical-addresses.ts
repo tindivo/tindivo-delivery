@@ -24,7 +24,7 @@ export function useCustomerHistoricalAddresses(phone: string, enabled: boolean) 
       if (!phone || phone.length !== 9) return null
       try {
         const res = await api.get<HistoricalAddressesResponse>(
-          `/restaurant/customers/${phone}/addresses`
+          `/restaurant/customers/${phone}/addresses`,
         )
         return res
       } catch (err) {

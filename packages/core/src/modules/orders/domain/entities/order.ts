@@ -6,7 +6,6 @@ import {
   DriverNotAssigned,
   InvalidPaymentChange,
   InvalidStateTransition,
-  NoPrepTimeToReduce,
   OrderNotCancellable,
   OrderNotEditable,
   PaymentChangeNotAllowed,
@@ -23,6 +22,7 @@ import {
   OrderCancelled,
   OrderCreated,
   OrderDelivered,
+  OrderEarlyPreview,
   OrderEditedByRestaurant,
   OrderExtended,
   OrderMarkedUrgent,
@@ -272,6 +272,20 @@ export class Order extends AggregateRoot<OrderId> {
       }),
     )
 
+    if (source !== 'customer_pwa' && input.prepTime.minutes >= 15) {
+      order.raise(
+        new OrderEarlyPreview({
+          orderId: id.value,
+          shortId: shortId.value,
+          restaurantId: input.restaurantId.value,
+          orderAmount: input.payment.orderAmount.amount,
+          prepMinutes: input.prepTime.minutes,
+          expectedReadyAt: estimatedReadyAt.toISOString(),
+          willAppearInQueueAt: appearsInQueueAt.toISOString(),
+        }),
+      )
+    }
+
     if (source === 'customer_pwa') {
       order.raise(
         new OrderPendingAcceptance({
@@ -377,7 +391,11 @@ export class Order extends AggregateRoot<OrderId> {
    * Solo aplica a pedidos source='customer_pwa'. Pedidos restaurant_pwa
    * nacen ya en waiting_driver — esta transición rechaza por canTransition.
    */
-  acceptByRestaurant(prepMinutes: number, now: Date, readyEarly?: boolean): Result<void, InvalidStateTransition> {
+  acceptByRestaurant(
+    prepMinutes: number,
+    now: Date,
+    readyEarly?: boolean,
+  ): Result<void, InvalidStateTransition> {
     if (!StateTransitionPolicy.canTransition(this._state.status.value, 'waiting_driver'))
       return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
     if (this._state.status.value !== 'pending_acceptance')
@@ -409,6 +427,19 @@ export class Order extends AggregateRoot<OrderId> {
         acceptedAt: now.toISOString(),
       }),
     )
+    if (prepMinutes >= 15) {
+      this.raise(
+        new OrderEarlyPreview({
+          orderId: this.id.value,
+          shortId: this.shortId.value,
+          restaurantId: this._state.restaurantId.value,
+          orderAmount: this._state.payment.orderAmount.amount,
+          prepMinutes,
+          expectedReadyAt: newEstimatedReadyAt.toISOString(),
+          willAppearInQueueAt: newAppearsInQueueAt.toISOString(),
+        }),
+      )
+    }
     if (readyEarly) {
       this.raise(
         new OrderReadyEarly({

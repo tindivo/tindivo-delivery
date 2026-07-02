@@ -235,7 +235,7 @@ export function NewOrderForm() {
   }, [historicalAddresses, clientPhoneDigits, clientPhoneValid, phoneWithPopupShown])
 
   const handleSuggestionConfirm = (
-    selected: { delivery_reference: string; client_name: string; address_id: string } | null
+    selected: { delivery_reference: string; client_name: string; address_id: string } | null,
   ) => {
     if (selected) {
       setClientName(selected.client_name)
@@ -306,8 +306,6 @@ export function NewOrderForm() {
         })
     }
   }
-
-
 
   const showSkeletons = clientPhoneDigits.length === 9 && clientPhoneValid && addressesLoading
   const showPhoneError =
@@ -449,7 +447,7 @@ export function NewOrderForm() {
       isReady = window.confirm('¿El pedido ya está terminado y listo para recoger?')
     }
     setReadyEarlyParam(isReady)
-    
+
     // CONDICIONAL: Solo mostrar el modal de confirmación si el cliente tiene direcciones históricas
     if (historicalAddresses.length > 0) {
       setIsConfirming(true)
@@ -545,7 +543,6 @@ export function NewOrderForm() {
                 obligatorio
               </span>
             </div>
-
           </div>
           {showSkeletons ? (
             <div
@@ -599,7 +596,9 @@ export function NewOrderForm() {
               <label htmlFor="deliveryReference" className="text-sm font-semibold text-on-surface">
                 Dirección de entrega
               </label>
-              <span className="text-red-500 font-bold text-sm" title="Obligatorio">*</span>
+              <span className="text-red-500 font-bold text-sm" title="Obligatorio">
+                *
+              </span>
             </div>
             {historicalAddresses.length > 0 && (
               <button
@@ -632,7 +631,7 @@ export function NewOrderForm() {
                 // con esa dirección → desvincular el GPS para no enviarlo al motorizado
                 if (selectedAddressId) {
                   const linkedAddr = historicalAddresses.find(
-                    (a) => a.address_id === selectedAddressId
+                    (a) => a.address_id === selectedAddressId,
                   )
                   if (linkedAddr && newVal.trim() !== linkedAddr.reference.trim()) {
                     setSelectedAddressId(null)
@@ -1080,25 +1079,37 @@ export function NewOrderForm() {
               <Icon name="check_circle" size={24} className="text-primary" />
               <h3 className="text-lg">Confirmar pedido</h3>
             </div>
-            
+
             <div className="space-y-3 p-4 bg-surface-container-low rounded-2xl border border-outline-variant/10">
               <div>
-                <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">Dirección de Entrega</span>
-                <p className="text-sm font-black text-primary mt-0.5 whitespace-pre-wrap break-words">{deliveryReferenceTrim}</p>
+                <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
+                  Dirección de Entrega
+                </span>
+                <p className="text-sm font-black text-primary mt-0.5 whitespace-pre-wrap break-words">
+                  {deliveryReferenceTrim}
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-outline-variant/10">
                 <div>
-                  <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">Cliente</span>
-                  <p className="text-xs font-bold text-on-surface truncate">{clientNameTrim} ({clientPhoneDigits})</p>
+                  <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
+                    Cliente
+                  </span>
+                  <p className="text-xs font-bold text-on-surface truncate">
+                    {clientNameTrim} ({clientPhoneDigits})
+                  </p>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">Monto</span>
+                  <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
+                    Monto
+                  </span>
                   <p className="text-xs font-bold text-on-surface">S/ {amountNum.toFixed(2)}</p>
                 </div>
               </div>
             </div>
 
-            <p className="text-xs text-on-surface-variant font-medium text-center">¿Todo correcto?</p>
+            <p className="text-xs text-on-surface-variant font-medium text-center">
+              ¿Todo correcto?
+            </p>
 
             <div className="flex gap-3">
               <Button

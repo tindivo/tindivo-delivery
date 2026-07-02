@@ -1,10 +1,10 @@
 'use client'
 import { useRestaurantProfile } from '@/features/restaurante/perfil/hooks/use-restaurant-profile'
-import { Button, EmptyState, OrderCard, Skeleton, cn, Icon } from '@tindivo/ui'
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { Button, EmptyState, Icon, OrderCard, Skeleton, cn } from '@tindivo/ui'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
-import { useRestaurantHistory } from '../hooks/use-restaurant-history'
 import { useRestaurantFrequentCustomers } from '../hooks/use-restaurant-frequent-customers'
+import { useRestaurantHistory } from '../hooks/use-restaurant-history'
 import { FrequentCustomerDetailDrawer } from './frequent-customer-detail-drawer'
 
 type StatusFilter = 'all' | 'delivered' | 'cancelled'
@@ -133,7 +133,9 @@ export function RestaurantHistory() {
   const [minOrders, setMinOrders] = useState<number>(2)
   const [custSearch, setCustSearch] = useState<string>('')
   const [includeSuspicious, setIncludeSuspicious] = useState<boolean>(false)
-  const [custSortBy, setCustSortBy] = useState<'order_count' | 'total_spent' | 'last_order'>('order_count')
+  const [custSortBy, setCustSortBy] = useState<'order_count' | 'total_spent' | 'last_order'>(
+    'order_count',
+  )
   const [custSortDir, setCustSortDir] = useState<'asc' | 'desc'>('desc')
   const [custPage, setCustPage] = useState<number>(1)
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null)
@@ -307,7 +309,9 @@ export function RestaurantHistory() {
             {/* Selectores */}
             <div className="space-y-3">
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-on-surface-variant/75 uppercase px-1">Mínimo pedidos</span>
+                <span className="text-[10px] font-bold text-on-surface-variant/75 uppercase px-1">
+                  Mínimo pedidos
+                </span>
                 <select
                   value={minOrders}
                   aria-label="Mínimo de pedidos"
@@ -325,7 +329,9 @@ export function RestaurantHistory() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-on-surface-variant/75 uppercase px-1">Ordenar por</span>
+                <span className="text-[10px] font-bold text-on-surface-variant/75 uppercase px-1">
+                  Ordenar por
+                </span>
                 <div className="flex gap-1.5">
                   <select
                     value={custSortBy}
@@ -350,7 +356,10 @@ export function RestaurantHistory() {
                     }}
                     className="px-2.5 rounded-2xl border border-[rgba(225,191,181,0.4)] bg-white/70 text-on-surface hover:bg-white flex items-center justify-center transition-all duration-300"
                   >
-                    <Icon name={custSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward'} size={16} />
+                    <Icon
+                      name={custSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                      size={16}
+                    />
                   </button>
                 </div>
               </div>
@@ -436,7 +445,8 @@ export function RestaurantHistory() {
                 </div>
                 <div className="mt-1 flex items-baseline justify-between gap-3">
                   <div className="font-black text-2xl text-on-surface">
-                    {summary.deliveredCount} {summary.deliveredCount === 1 ? 'entregado' : 'entregados'}
+                    {summary.deliveredCount}{' '}
+                    {summary.deliveredCount === 1 ? 'entregado' : 'entregados'}
                   </div>
                   <div className="text-right">
                     <div className="text-[10px] font-bold tracking-wider uppercase text-on-surface-variant">
@@ -550,12 +560,28 @@ export function RestaurantHistory() {
                   {custData.data.map((c) => {
                     const cat =
                       c.category === 'vip'
-                        ? { label: 'VIP', bg: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' }
+                        ? {
+                            label: 'VIP',
+                            bg: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                            dot: 'bg-emerald-500',
+                          }
                         : c.category === 'active'
-                          ? { label: 'Activo', bg: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-500' }
+                          ? {
+                              label: 'Activo',
+                              bg: 'bg-amber-100 text-amber-800 border-amber-200',
+                              dot: 'bg-amber-500',
+                            }
                           : c.category === 'dormant'
-                            ? { label: 'Dormido', bg: 'bg-rose-100 text-rose-800 border-rose-200', dot: 'bg-rose-500' }
-                            : { label: 'Nuevo', bg: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' }
+                            ? {
+                                label: 'Dormido',
+                                bg: 'bg-rose-100 text-rose-800 border-rose-200',
+                                dot: 'bg-rose-500',
+                              }
+                            : {
+                                label: 'Nuevo',
+                                bg: 'bg-slate-100 text-slate-600 border-slate-200',
+                                dot: 'bg-slate-400',
+                              }
                     return (
                       <div
                         key={c.client_phone}
@@ -603,7 +629,13 @@ export function RestaurantHistory() {
                             </p>
                             <p
                               className="font-semibold text-on-surface mt-0.5 text-[11px] truncate"
-                              title={c.days_since_last_order < 1 ? 'Hoy' : c.days_since_last_order < 2 ? 'Ayer' : `Hace ${Math.floor(c.days_since_last_order)} días`}
+                              title={
+                                c.days_since_last_order < 1
+                                  ? 'Hoy'
+                                  : c.days_since_last_order < 2
+                                    ? 'Ayer'
+                                    : `Hace ${Math.floor(c.days_since_last_order)} días`
+                              }
                             >
                               {c.days_since_last_order < 1
                                 ? 'Hoy'

@@ -26,10 +26,7 @@ function shiftYmd(ymd: string, days: number): string {
   return dt.toISOString().slice(0, 10)
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ phone: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ phone: string }> }) {
   const { phone } = await params
 
   const auth = await requireAuth(req, ['restaurant'])

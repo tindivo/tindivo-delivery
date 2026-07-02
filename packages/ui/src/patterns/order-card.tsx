@@ -246,9 +246,7 @@ export function OrderCard({
                         : displayReference}
                     </span>
                   </div>
-                  <div
-                    className="flex md:hidden items-start gap-1 text-xs text-on-surface-variant mt-1.5 font-medium leading-tight text-left"
-                  >
+                  <div className="flex md:hidden items-start gap-1 text-xs text-on-surface-variant mt-1.5 font-medium leading-tight text-left">
                     <Icon name="location_on" size={14} className="shrink-0 mt-0.5 text-primary" />
                     <span className="line-clamp-2 break-words">{displayReference}</span>
                   </div>
@@ -277,9 +275,7 @@ export function OrderCard({
                         : displayReference}
                     </span>
                   </div>
-                  <div
-                    className="flex md:hidden items-start gap-1 text-xs text-on-surface-variant mt-1.5 font-medium leading-tight text-left"
-                  >
+                  <div className="flex md:hidden items-start gap-1 text-xs text-on-surface-variant mt-1.5 font-medium leading-tight text-left">
                     <Icon name="location_on" size={14} className="shrink-0 mt-0.5 text-primary" />
                     <span className="line-clamp-2 break-words">{displayReference}</span>
                   </div>
@@ -308,9 +304,7 @@ export function OrderCard({
                         : displayReference}
                     </span>
                   </div>
-                  <div
-                    className="flex md:hidden items-start gap-1 text-xs text-on-surface-variant mt-1.5 font-medium leading-tight text-left"
-                  >
+                  <div className="flex md:hidden items-start gap-1 text-xs text-on-surface-variant mt-1.5 font-medium leading-tight text-left">
                     <Icon name="location_on" size={14} className="shrink-0 mt-0.5 text-primary" />
                     <span className="line-clamp-2 break-words">{displayReference}</span>
                   </div>
@@ -336,9 +330,7 @@ export function OrderCard({
           )}
           <StatusChip status={status} />
           {readyEarlyAt && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black tracking-wider bg-emerald-100 text-emerald-950 border border-emerald-300/20 shadow-xs"
-            >
+            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black tracking-wider bg-emerald-100 text-emerald-950 border border-emerald-300/20 shadow-xs">
               <Icon name="restaurant" size={10} filled />
               COMIDA LISTA
             </span>

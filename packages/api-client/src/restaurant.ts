@@ -1,5 +1,5 @@
-import type { ApiClient } from './client'
 import type { Restaurants } from '@tindivo/contracts'
+import type { ApiClient } from './client'
 
 export type RestaurantProfile = {
   id: string
@@ -225,7 +225,10 @@ export function restaurantApi(client: ApiClient) {
     getFrequentCustomers: (query?: Restaurants.FrequentCustomersQuery) =>
       client.get<Restaurants.FrequentCustomersResponse>('restaurant/frequent-customers', { query }),
     getFrequentCustomerDetail: (phone: string, query?: Restaurants.FrequentCustomerDetailQuery) =>
-      client.get<Restaurants.FrequentCustomerDetailResponse>(`restaurant/frequent-customers/${phone}/detail`, { query }),
+      client.get<Restaurants.FrequentCustomerDetailResponse>(
+        `restaurant/frequent-customers/${phone}/detail`,
+        { query },
+      ),
     getSettlements: () => client.get<RestaurantSettlementsResponse>('restaurant/settlements'),
     listMyPayments: () => client.get<RestaurantPaymentsResponse>('restaurant/payments'),
     listCashSettlements: () =>
@@ -247,8 +250,10 @@ export function restaurantApi(client: ApiClient) {
       client.get<{ items: PendingAcceptanceOrder[] }>('restaurant/orders/pending-acceptance'),
     getOrderItems: (orderId: string) =>
       client.get<CustomerOrderItemsResponse>(`restaurant/orders/${orderId}/items`),
-    acceptOrderByRestaurant: (orderId: string, body: { prepMinutes: number; readyEarly?: boolean }) =>
-      client.post<AcceptOrderByRestaurantResponse>(`restaurant/orders/${orderId}/accept`, body),
+    acceptOrderByRestaurant: (
+      orderId: string,
+      body: { prepMinutes: number; readyEarly?: boolean },
+    ) => client.post<AcceptOrderByRestaurantResponse>(`restaurant/orders/${orderId}/accept`, body),
 
     // Editor de menu (catalogo) — endpoints CRUD del restaurante
     getMenuTree: () => client.get<RestaurantMenuTree>('restaurant/menu'),

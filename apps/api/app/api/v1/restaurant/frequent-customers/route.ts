@@ -36,17 +36,8 @@ export async function GET(req: NextRequest) {
   const parsed = parseQuery(req.nextUrl.searchParams, Restaurants.FrequentCustomersQuery)
   if (!parsed.ok) return parsed.response
 
-  const {
-    from,
-    to,
-    min_orders,
-    page,
-    page_size,
-    search,
-    include_suspicious,
-    sort_by,
-    sort_dir,
-  } = parsed.data
+  const { from, to, min_orders, page, page_size, search, include_suspicious, sort_by, sort_dir } =
+    parsed.data
 
   const now = new Date()
   const fromYmd = from ?? shiftYmd(todayPeruYmd(now), -30)

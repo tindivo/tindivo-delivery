@@ -176,7 +176,7 @@ export class MarkDeliveredUseCase
       const existingAddresses = await this.customerAddresses.findByPhone(order.clientPhone)
       const normalizedRef = (finalReference ?? '').trim().toLowerCase()
       const matchingAddress = existingAddresses.find(
-        (addr) => (addr.reference ?? '').trim().toLowerCase() === normalizedRef
+        (addr) => (addr.reference ?? '').trim().toLowerCase() === normalizedRef,
       )
 
       if (matchingAddress) {
