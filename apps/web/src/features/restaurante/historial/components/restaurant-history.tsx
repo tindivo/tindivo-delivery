@@ -1,7 +1,7 @@
 'use client'
 import { useRestaurantProfile } from '@/features/restaurante/perfil/hooks/use-restaurant-profile'
 import { Button, EmptyState, OrderCard, Skeleton, cn } from '@tindivo/ui'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { useRestaurantHistory } from '../hooks/use-restaurant-history'
 
@@ -103,7 +103,17 @@ const DATE_INPUT_CLASS =
 
 export function RestaurantHistory() {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const profile = useRestaurantProfile()
+
+  const activeTab = (searchParams.get('tab') || 'pedidos') as 'pedidos' | 'clientes'
+
+  function setTab(newTab: 'pedidos' | 'clientes') {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', newTab)
+    router.replace(`${pathname}?${params.toString()}`)
+  }
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [preset, setPreset] = useState<Preset>('today')
@@ -141,6 +151,48 @@ export function RestaurantHistory() {
 
   return (
     <div className="space-y-5">
+      {/* Tabs de Navegación Superior */}
+      <div className="border-b border-[rgba(225,191,181,0.2)] flex">
+        <button
+          type="button"
+          onClick={() => setTab('pedidos')}
+          className="flex-1 py-3 text-center text-sm font-bold tracking-wider transition-all duration-300 relative"
+          style={{
+            color: activeTab === 'pedidos' ? '#FF6B35' : '#594139',
+          }}
+        >
+          Pedidos
+          {activeTab === 'pedidos' && (
+            <span
+              className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+              style={{
+                background: 'linear-gradient(90deg, #FF6B35 0%, #FF8C42 100%)',
+              }}
+            />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('clientes')}
+          className="flex-1 py-3 text-center text-sm font-bold tracking-wider transition-all duration-300 relative"
+          style={{
+            color: activeTab === 'clientes' ? '#FF6B35' : '#594139',
+          }}
+        >
+          Clientes Frecuentes
+          {activeTab === 'clientes' && (
+            <span
+              className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+              style={{
+                background: 'linear-gradient(90deg, #FF6B35 0%, #FF8C42 100%)',
+              }}
+            />
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'pedidos' ? (
+        <div className="space-y-5">
       {/* Selector de fecha — atajos */}
       <div className="space-y-3">
         <div className="flex gap-2">
@@ -321,6 +373,12 @@ export function RestaurantHistory() {
             </Button>
           )}
         </>
+      )}
+        </div>
+      ) : (
+        <div className="p-4 text-center text-sm font-semibold text-on-surface-variant">
+          Sección Clientes Frecuentes (Placeholder)
+        </div>
       )}
     </div>
   )

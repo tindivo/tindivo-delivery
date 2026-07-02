@@ -1172,6 +1172,13 @@ export type Database = {
             referencedColumns: ["address_id"]
           },
           {
+            foreignKeyName: "orders_customer_address_id_fkey"
+            columns: ["customer_address_id"]
+            isOneToOne: false
+            referencedRelation: "customer_addresses_with_stats"
+            referencedColumns: ["address_id"]
+          },
+          {
             foreignKeyName: "orders_customer_user_id_fkey"
             columns: ["customer_user_id"]
             isOneToOne: false
@@ -1511,7 +1518,66 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      customer_addresses_with_stats: {
+        Row: {
+          accuracy_m: number | null
+          address_id: string | null
+          created_at: string | null
+          customer_name: string | null
+          has_name: boolean | null
+          has_pin: boolean | null
+          has_valid_ref: boolean | null
+          is_default: boolean | null
+          is_fully_curated: boolean | null
+          last_used_at: string | null
+          lat: number | null
+          lng: number | null
+          phone: string | null
+          reference: string | null
+          source: string | null
+          times_used: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          accuracy_m?: number | null
+          address_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          has_name?: never
+          has_pin?: never
+          has_valid_ref?: never
+          is_default?: boolean | null
+          is_fully_curated?: never
+          last_used_at?: string | null
+          lat?: number | null
+          lng?: number | null
+          phone?: string | null
+          reference?: string | null
+          source?: string | null
+          times_used?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          accuracy_m?: number | null
+          address_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          has_name?: never
+          has_pin?: never
+          has_valid_ref?: never
+          is_default?: boolean | null
+          is_fully_curated?: never
+          last_used_at?: string | null
+          lat?: number | null
+          lng?: number | null
+          phone?: string | null
+          reference?: string | null
+          source?: string | null
+          times_used?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_cancellation_reasons: {
@@ -1643,6 +1709,28 @@ export type Database = {
           outcome: string
         }[]
       }
+      claim_pending_domain_events: {
+        Args: { p_limit?: number }
+        Returns: {
+          aggregate_id: string
+          aggregate_type: string
+          event_type: string
+          id: string
+          last_error: string | null
+          metadata: Json
+          occurred_at: string
+          payload: Json
+          published_at: string | null
+          retry_count: number
+          status: Database["public"]["Enums"]["domain_event_status"]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "domain_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       claim_pending_orders: {
         Args: { p_limit?: number }
         Returns: {
@@ -1671,6 +1759,59 @@ export type Database = {
         Returns: undefined
       }
       generate_short_id: { Args: never; Returns: string }
+      get_app_setting: { Args: { p_key: string }; Returns: string }
+      get_frequent_customer_detail: {
+        Args: {
+          p_client_phone: string
+          p_from: string
+          p_restaurant_id: string
+          p_to: string
+        }
+        Returns: {
+          avg_days_between_orders: number
+          avg_ticket: number
+          category: string
+          client_name: string
+          client_phone: string
+          days_since_last_order: number
+          favorite_day_count: number
+          favorite_day_of_week: string
+          favorite_time_range: string
+          favorite_time_range_count: number
+          first_order_in_range: string
+          last_order_in_range: string
+          order_count: number
+          restaurant_avg_ticket: number
+          ticket_vs_restaurant: string
+          total_spent: number
+        }[]
+      }
+      get_frequent_customers: {
+        Args: {
+          p_from: string
+          p_include_suspicious: boolean
+          p_limit: number
+          p_min_orders: number
+          p_offset: number
+          p_restaurant_id: string
+          p_search: string
+          p_sort_by: string
+          p_sort_dir: string
+          p_to: string
+        }
+        Returns: {
+          avg_ticket: number
+          category: string
+          client_name: string
+          client_phone: string
+          days_since_last_order: number
+          first_order_in_range: string
+          last_order_in_range: string
+          order_count: number
+          total_count: number
+          total_spent: number
+        }[]
+      }
       get_restaurant_history_summary: {
         Args: { p_from: string; p_restaurant_id: string; p_to: string }
         Returns: {
@@ -1685,6 +1826,7 @@ export type Database = {
         Args: never
         Returns: undefined
       }
+      invoke_send_push_safety_net: { Args: never; Returns: undefined }
       list_available_for_driver: {
         Args: { p_driver_id: string }
         Returns: {
@@ -1839,6 +1981,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      process_orders_ready_queue: { Args: never; Returns: Json }
       prune_expired_idempotency_keys: { Args: never; Returns: undefined }
       prune_expired_rejections: { Args: never; Returns: undefined }
       prune_old_push_delivery_log: { Args: never; Returns: undefined }
@@ -1870,7 +2013,7 @@ export type Database = {
         | "disputed"
         | "resolved"
       delivery_distance_band: "near" | "far"
-      domain_event_status: "pending" | "published" | "failed"
+      domain_event_status: "pending" | "published" | "failed" | "processing"
       order_source: "restaurant_pwa" | "customer_pwa"
       order_status:
         | "pending_acceptance"
@@ -2477,7 +2620,7 @@ export const Constants = {
         "resolved",
       ],
       delivery_distance_band: ["near", "far"],
-      domain_event_status: ["pending", "published", "failed"],
+      domain_event_status: ["pending", "published", "failed", "processing"],
       order_source: ["restaurant_pwa", "customer_pwa"],
       order_status: [
         "pending_acceptance",

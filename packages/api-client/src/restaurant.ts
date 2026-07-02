@@ -1,4 +1,5 @@
 import type { ApiClient } from './client'
+import type { Restaurants } from '@tindivo/contracts'
 
 export type RestaurantProfile = {
   id: string
@@ -221,6 +222,10 @@ export function restaurantApi(client: ApiClient) {
         nextCursor: string | null
         summary: { deliveredCount: number; totalCommission: number }
       }>('restaurant/history', { query }),
+    getFrequentCustomers: (query?: Restaurants.FrequentCustomersQuery) =>
+      client.get<Restaurants.FrequentCustomersResponse>('restaurant/frequent-customers', { query }),
+    getFrequentCustomerDetail: (phone: string, query?: Restaurants.FrequentCustomerDetailQuery) =>
+      client.get<Restaurants.FrequentCustomerDetailResponse>(`restaurant/frequent-customers/${phone}/detail`, { query }),
     getSettlements: () => client.get<RestaurantSettlementsResponse>('restaurant/settlements'),
     listMyPayments: () => client.get<RestaurantPaymentsResponse>('restaurant/payments'),
     listCashSettlements: () =>
