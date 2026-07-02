@@ -55,25 +55,32 @@ function translateTimeRange(range: string | null | undefined): string {
   return mapping[range.trim().toLowerCase()] ?? range
 }
 
-function getCategoryMeta(cat: 'vip' | 'active' | 'dormant') {
+function getCategoryMeta(cat: 'vip' | 'active' | 'dormant' | null | undefined) {
+  if (!cat) {
+    return {
+      label: 'Nuevo',
+      bg: 'bg-slate-100 text-slate-600 border-slate-200',
+      dot: 'bg-slate-400',
+    }
+  }
   switch (cat) {
     case 'vip':
       return {
         label: 'VIP',
-        bg: 'bg-amber-100 text-amber-800 border-amber-200',
-        dot: 'bg-amber-500',
+        bg: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        dot: 'bg-emerald-500',
       }
     case 'active':
       return {
         label: 'Activo',
-        bg: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-        dot: 'bg-emerald-500',
+        bg: 'bg-amber-100 text-amber-800 border-amber-200',
+        dot: 'bg-amber-500',
       }
     case 'dormant':
       return {
-        label: 'Inactivo',
-        bg: 'bg-slate-100 text-slate-600 border-slate-200',
-        dot: 'bg-slate-400',
+        label: 'Dormido',
+        bg: 'bg-rose-100 text-rose-800 border-rose-200',
+        dot: 'bg-rose-500',
       }
   }
 }

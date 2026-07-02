@@ -410,38 +410,39 @@ export function RestaurantHistory() {
       ) : (
         <div className="space-y-5">
           {/* Header/Filtros de Clientes Frecuentes */}
-          <div className="space-y-3.5">
-            {/* Buscador + Ordenamiento */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o teléfono..."
-                  value={custSearch}
-                  onChange={(e) => {
-                    setCustSearch(e.target.value)
+          <div className="space-y-3">
+            {/* Buscador - Fila Completa */}
+            <div className="relative w-full">
+              <input
+                type="text"
+                placeholder="Buscar por nombre o teléfono..."
+                value={custSearch}
+                onChange={(e) => {
+                  setCustSearch(e.target.value)
+                  setCustPage(1)
+                }}
+                className="w-full pl-10 pr-10 py-2.5 text-sm font-semibold rounded-2xl border text-on-surface bg-white/70 border-[rgba(225,191,181,0.4)] focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center text-on-surface-variant/60">
+                <Icon name="search" size={18} />
+              </div>
+              {custSearch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustSearch('')
                     setCustPage(1)
                   }}
-                  className="w-full pl-10 pr-10 py-2.5 text-sm font-semibold rounded-2xl border text-on-surface bg-white/70 border-[rgba(225,191,181,0.4)] focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center text-on-surface-variant/60">
-                  <Icon name="search" size={18} />
-                </div>
-                {custSearch && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCustSearch('')
-                      setCustPage(1)
-                    }}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center text-on-surface-variant/60 hover:text-on-surface"
-                  >
-                    <Icon name="close" size={18} />
-                  </button>
-                )}
-              </div>
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center text-on-surface-variant/60 hover:text-on-surface"
+                >
+                  <Icon name="close" size={18} />
+                </button>
+              )}
+            </div>
 
-              <div className="flex gap-2 items-center">
+            {/* Selectores + Checkbox - Segunda Fila */}
+            <div className="flex flex-wrap gap-3 items-center justify-between">
+              <div className="flex gap-2 items-center flex-wrap">
                 <div className="flex flex-col gap-1 min-w-[110px]">
                   <select
                     value={minOrders}
@@ -487,24 +488,24 @@ export function RestaurantHistory() {
                   <Icon name={custSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward'} size={18} />
                 </button>
               </div>
-            </div>
 
-            {/* Checkbox para sospechosos */}
-            <div className="flex items-center">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={includeSuspicious}
-                  onChange={(e) => {
-                    setIncludeSuspicious(e.target.checked)
-                    setCustPage(1)
-                  }}
-                  className="w-4 h-4 rounded text-primary focus:ring-primary border-gray-300 transition-colors"
-                />
-                <span className="text-xs font-bold text-on-surface-variant">
-                  Incluir teléfonos sospechosos (ej. 999999999)
-                </span>
-              </label>
+              {/* Checkbox para sospechosos */}
+              <div className="flex items-center">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeSuspicious}
+                    onChange={(e) => {
+                      setIncludeSuspicious(e.target.checked)
+                      setCustPage(1)
+                    }}
+                    className="w-4 h-4 rounded text-primary focus:ring-primary border-gray-300 transition-colors"
+                  />
+                  <span className="text-xs font-bold text-on-surface-variant">
+                    Incluir teléfonos sospechosos (ej. 999999999)
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -528,10 +529,12 @@ export function RestaurantHistory() {
                 {custData.data.map((c) => {
                   const cat =
                     c.category === 'vip'
-                      ? { label: 'VIP', bg: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-500' }
+                      ? { label: 'VIP', bg: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' }
                       : c.category === 'active'
-                        ? { label: 'Activo', bg: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' }
-                        : { label: 'Inactivo', bg: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' }
+                        ? { label: 'Activo', bg: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-500' }
+                        : c.category === 'dormant'
+                          ? { label: 'Dormido', bg: 'bg-rose-100 text-rose-800 border-rose-200', dot: 'bg-rose-500' }
+                          : { label: 'Nuevo', bg: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' }
                   return (
                     <div
                       key={c.client_phone}
