@@ -580,12 +580,15 @@ export function RestaurantHistory() {
                           <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
                             Último Pedido
                           </p>
-                          <p className="font-semibold text-on-surface mt-0.5 text-[11px] truncate">
+                          <p
+                            className="font-semibold text-on-surface mt-0.5 text-[11px] truncate"
+                            title={c.days_since_last_order < 1 ? 'Hoy' : c.days_since_last_order < 2 ? 'Ayer' : `Hace ${Math.floor(c.days_since_last_order)} días`}
+                          >
                             {c.days_since_last_order < 1
                               ? 'Hoy'
                               : c.days_since_last_order < 2
                                 ? 'Ayer'
-                                : `Hace ${Math.floor(c.days_since_last_order)} días`}
+                                : `Hace ${Math.floor(c.days_since_last_order)}d`}
                           </p>
                         </div>
                       </div>
