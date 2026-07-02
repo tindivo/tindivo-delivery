@@ -91,6 +91,7 @@ export function TeamOrdersList() {
                       paymentLabel={paymentLabel(order.payment_status)}
                       prepTimeMinutes={order.prep_minutes}
                       estimatedReadyAt={order.estimated_ready_at}
+                      readyEarlyAt={order.ready_early_at}
                       now={now}
                       driverName={driverName}
                     />

@@ -116,7 +116,8 @@ export function RestaurantOrderDetail({ orderId }: Props) {
     : 0
   const canReadyEarly =
     ['waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant'].includes(status) &&
-    remainingMinutes > 0
+    remainingMinutes > 0 &&
+    !order.ready_early_at
   const isActive = !['delivered', 'cancelled'].includes(status)
   // El countdown del prep_time se muestra durante toda la fase activa hasta que
   // el driver recibe el pedido (después ya no aporta info al restaurante).
@@ -271,10 +272,17 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                 {!['cancelled', 'delivered', 'picked_up'].includes(status) && (
                   remainingMinutes > 0 ? (
                     <div className="flex flex-col items-end gap-1">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-50 text-amber-800 border border-amber-200 shadow-xs">
-                        <Icon name="restaurant" size={14} className="text-amber-600" />
-                        EN COCINA
-                      </span>
+                      {order.ready_early_at ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-100 text-emerald-950 border border-emerald-300/20 shadow-xs animate-in fade-in duration-200">
+                          <Icon name="restaurant" size={14} filled className="text-emerald-700" />
+                          COMIDA LISTA
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-50 text-amber-800 border border-amber-200 shadow-xs">
+                          <Icon name="restaurant" size={14} className="text-amber-600" />
+                          EN COCINA
+                        </span>
+                      )}
                       {order.estimated_ready_at && (
                         <UrgencyBadge estimatedReadyAt={order.estimated_ready_at} now={now} variant="chip" />
                       )}
@@ -497,7 +505,7 @@ export function RestaurantOrderDetail({ orderId }: Props) {
         <BottomActionBar>
           <div className="flex flex-col gap-3">
             {/* Primary Action Button / Element */}
-            {remainingMinutes > 0 ? (
+            {remainingMinutes > 0 && !order.ready_early_at ? (
               // EN COCINA state: PEDIDO LISTO is the primary button
               <Button
                 variant="primary"
@@ -510,8 +518,8 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                 PEDIDO LISTO
               </Button>
             ) : (
-              // LISTO PARA RECOGER state: Information block (no button)
-              <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-sm animate-pulse">
+              // LISTO PARA RECOGER or COMIDA LISTA state: Information block (no button)
+              <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-sm animate-pulse w-full">
                 <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-white">
                   <Icon name="check" size={14} />
                 </span>

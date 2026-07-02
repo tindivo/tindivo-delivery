@@ -48,6 +48,7 @@ export type CreateOrderCommand = {
   clientPhone?: string
   deliveryReference?: string
   customerAddressId?: string | null
+  readyEarly?: boolean
 }
 
 export type CreateOrderResult = {
@@ -145,6 +146,7 @@ export class CreateOrderUseCase implements UseCase<CreateOrderCommand, CreateOrd
         clientPhone: cmd.clientPhone,
         deliveryReference: finalReference,
         customerAddressId: addressIdToLink,
+        readyEarly: cmd.readyEarly,
         now: this.clock.now(),
       })
 

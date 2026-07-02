@@ -97,6 +97,7 @@ export function MyActiveOrdersList() {
                 paymentLabel={paymentLabel(order.payment_status)}
                 estimatedReadyAt={order.estimated_ready_at}
                 now={now}
+                readyEarlyAt={order.ready_early_at}
                 onClick={() => router.push(`/motorizado/pedidos/${order.id}`)}
               />
             </motion.li>

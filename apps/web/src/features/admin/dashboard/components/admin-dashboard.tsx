@@ -177,6 +177,7 @@ export function AdminDashboard() {
                   paymentLabel={paymentLabel(order.payment_status)}
                   prepTimeMinutes={order.prep_minutes}
                   driverName={order.drivers?.full_name?.split(' ')[0] ?? null}
+                  readyEarlyAt={order.ready_early_at}
                 />
               </Link>
             ))}

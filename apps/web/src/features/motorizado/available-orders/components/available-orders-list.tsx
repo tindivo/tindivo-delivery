@@ -118,6 +118,7 @@ export function AvailableOrdersList() {
                         now={now}
                         isUrgent={isUrgent}
                         disabled={isLocked}
+                        readyEarlyAt={order.ready_early_at}
                         onClick={() => router.push(`/motorizado/pedidos/${order.id}/preview`)}
                       />
                     </motion.li>

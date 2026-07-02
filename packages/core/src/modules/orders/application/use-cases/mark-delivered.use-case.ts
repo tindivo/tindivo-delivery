@@ -157,10 +157,6 @@ export class MarkDeliveredUseCase
         await this.customerAddresses.update(address)
       }
     } else if (order.clientPhone) {
-      // Crear nueva dirección
-      const defaultAddress = await this.customerAddresses.findDefaultByPhone(order.clientPhone)
-      const isDefault = !defaultAddress
-
       // Solo guardar la referencia si la precisión es aceptable (<= 500m)
       const finalReference =
         capture.accuracy <= 500
@@ -176,21 +172,47 @@ export class MarkDeliveredUseCase
         newReferenceLength = capture.reference.length
       }
 
-      const newAddress = await this.customerAddresses.insert({
-        phone: order.clientPhone,
-        lat: capture.lat,
-        lng: capture.lng,
-        accuracyM: capture.accuracy,
-        source: 'driver_verified',
-        reference: finalReference,
-        isDefault,
-        lastUsedAt: now,
-        timesUsed: 1,
-        customerName: order.props.clientName,
-      })
+      // Evitar duplicados: buscar si ya existe una dirección con la misma referencia (case-insensitive)
+      const existingAddresses = await this.customerAddresses.findByPhone(order.clientPhone)
+      const normalizedRef = (finalReference ?? '').trim().toLowerCase()
+      const matchingAddress = existingAddresses.find(
+        (addr) => (addr.reference ?? '').trim().toLowerCase() === normalizedRef
+      )
 
-      // Enlazar orden con la nueva dirección creada
-      order.setCustomerAddressId(newAddress.addressId)
+      if (matchingAddress) {
+        if (matchingAddress.source !== 'admin_curated') {
+          matchingAddress.lat = capture.lat
+          matchingAddress.lng = capture.lng
+          matchingAddress.accuracyM = capture.accuracy
+          matchingAddress.source = 'driver_verified'
+        }
+        matchingAddress.lastUsedAt = now
+        matchingAddress.timesUsed += 1
+        if (order.props.clientName) {
+          matchingAddress.customerName = order.props.clientName
+        }
+        await this.customerAddresses.update(matchingAddress)
+        order.setCustomerAddressId(matchingAddress.addressId)
+      } else {
+        const defaultAddress = await this.customerAddresses.findDefaultByPhone(order.clientPhone)
+        const isDefault = !defaultAddress
+
+        const newAddress = await this.customerAddresses.insert({
+          phone: order.clientPhone,
+          lat: capture.lat,
+          lng: capture.lng,
+          accuracyM: capture.accuracy,
+          source: 'driver_verified',
+          reference: finalReference,
+          isDefault,
+          lastUsedAt: now,
+          timesUsed: 1,
+          customerName: order.props.clientName,
+        })
+
+        // Enlazar orden con la nueva dirección creada
+        order.setCustomerAddressId(newAddress.addressId)
+      }
     }
 
     // Registrar evento de captura exitosa

@@ -55,6 +55,7 @@ export function DriverHistory() {
             orderAmount={Number(order.order_amount)}
             paymentLabel={paymentLabel(order.payment_status)}
             prepTimeMinutes={order.prep_minutes}
+            readyEarlyAt={order.ready_early_at}
           />
         </li>
       ))}

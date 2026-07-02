@@ -131,6 +131,13 @@ export function NewOrderForm() {
   const [isConfirming, setIsConfirming] = useState<boolean>(false)
   const [showSuggestionPopup, setShowSuggestionPopup] = useState<boolean>(false)
   const [phoneWithPopupShown, setPhoneWithPopupShown] = useState<string | null>(null)
+  // address_id de la dirección guardada que seleccionó el usuario en el popup.
+  // null = dirección nueva / no seleccionada todavía.
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+  // true cuando el cajero seleccionó una dirección guardada (con GPS) y luego
+  // editó manualmente el texto → GPS ya no viajará → mostramos advertencia ámbar.
+  const [wasAddressDeselectedByEdit, setWasAddressDeselectedByEdit] = useState<boolean>(false)
+  const [readyEarlyParam, setReadyEarlyParam] = useState<boolean>(false)
 
   // Mostrar el error solo después de que el usuario interactuó con el campo,
   // para no asustar con rojos antes de empezar a escribir.
@@ -175,6 +182,9 @@ export function NewOrderForm() {
       // Al cambiar el número, resetear el guard del popup
       // para que vuelva a aparecer si el nuevo número tiene historial
       setPhoneWithPopupShown(null)
+      // Al cambiar el número, limpiar también la dirección seleccionada y el flag
+      setSelectedAddressId(null)
+      setWasAddressDeselectedByEdit(false)
     }
     setClientPhone(cleanVal)
   }
@@ -225,11 +235,13 @@ export function NewOrderForm() {
   }, [historicalAddresses, clientPhoneDigits, clientPhoneValid, phoneWithPopupShown])
 
   const handleSuggestionConfirm = (
-    selected: { delivery_reference: string; client_name: string } | null
+    selected: { delivery_reference: string; client_name: string; address_id: string } | null
   ) => {
     if (selected) {
       setClientName(selected.client_name)
       setDeliveryReference(selected.delivery_reference)
+      setSelectedAddressId(selected.address_id)
+      setWasAddressDeselectedByEdit(false)
       supabase
         .from('address_capture_events')
         .insert({
@@ -238,6 +250,7 @@ export function NewOrderForm() {
           metadata: {
             delivery_reference: selected.delivery_reference,
             client_name: selected.client_name,
+            address_id: selected.address_id,
             context: 'cashier_form_popup',
           },
         })
@@ -245,10 +258,12 @@ export function NewOrderForm() {
           if (error) console.error('Error logging confirmed telemetry:', error)
         })
     } else {
-      // Keep client name if historical is available, or keep existing clientName
+      // El usuario eligió "Escribir otra" — no vincular ninguna dirección guardada
       const histName = historicalAddresses[0]?.customer_name || clientName
       setClientName(histName)
       setDeliveryReference('')
+      setSelectedAddressId(null)
+      setWasAddressDeselectedByEdit(false)
       supabase
         .from('address_capture_events')
         .insert({
@@ -271,6 +286,9 @@ export function NewOrderForm() {
     if (firstAddr) {
       setClientName(firstAddr.customer_name || 'Cliente')
       setDeliveryReference(firstAddr.reference)
+      // Al cerrar con X también vinculamos la primera dirección (es la que se autocompleta)
+      setSelectedAddressId(firstAddr.address_id)
+      setWasAddressDeselectedByEdit(false)
       supabase
         .from('address_capture_events')
         .insert({
@@ -279,6 +297,7 @@ export function NewOrderForm() {
           metadata: {
             delivery_reference: firstAddr.reference,
             client_name: firstAddr.customer_name || 'Cliente',
+            address_id: firstAddr.address_id,
             context: 'cashier_form_popup_close_autofill',
           },
         })
@@ -370,9 +389,10 @@ export function NewOrderForm() {
     })
   }, [prepMinutes])
 
-  async function executeSubmit() {
+  async function executeSubmit(readyEarlyVal?: boolean) {
     if (submittingRef.current) return
     submittingRef.current = true
+    const isReady = readyEarlyVal !== undefined ? readyEarlyVal : readyEarlyParam
     const body: Orders.CreateOrderRequest = {
       prepMinutes,
       paymentStatus: payment,
@@ -384,7 +404,8 @@ export function NewOrderForm() {
       clientName: clientNameTrim,
       clientPhone: clientPhoneDigits,
       deliveryReference: deliveryReferenceTrim,
-      customerAddressId: null,
+      customerAddressId: selectedAddressId,
+      readyEarly: isReady,
     }
     createOrder.mutate(
       { body, idempotencyKey: idem.key },
@@ -422,12 +443,18 @@ export function NewOrderForm() {
       })
       return
     }
+
+    let isReady = false
+    if (prepMinutes === 10) {
+      isReady = window.confirm('¿El pedido ya está terminado y listo para recoger?')
+    }
+    setReadyEarlyParam(isReady)
     
     // CONDICIONAL: Solo mostrar el modal de confirmación si el cliente tiene direcciones históricas
     if (historicalAddresses.length > 0) {
       setIsConfirming(true)
     } else {
-      executeSubmit()
+      executeSubmit(isReady)
     }
   }
 
@@ -598,7 +625,21 @@ export function NewOrderForm() {
             <textarea
               id="deliveryReference"
               value={deliveryReference}
-              onChange={(e) => setDeliveryReference(e.target.value.slice(0, 500))}
+              onChange={(e) => {
+                const newVal = e.target.value.slice(0, 500)
+                setDeliveryReference(newVal)
+                // Si había una dirección guardada vinculada y el texto ya no coincide
+                // con esa dirección → desvincular el GPS para no enviarlo al motorizado
+                if (selectedAddressId) {
+                  const linkedAddr = historicalAddresses.find(
+                    (a) => a.address_id === selectedAddressId
+                  )
+                  if (linkedAddr && newVal.trim() !== linkedAddr.reference.trim()) {
+                    setSelectedAddressId(null)
+                    setWasAddressDeselectedByEdit(true)
+                  }
+                }
+              }}
               onBlur={() => setTouched((t) => ({ ...t, deliveryReference: true }))}
               placeholder={referencePlaceholder}
               disabled={referenceDisabled}
@@ -631,15 +672,23 @@ export function NewOrderForm() {
             deliveryReferenceTrim.length > 0 &&
             !referenceDisabled && (
               <div className="flex items-center justify-between px-1 text-[10px] font-bold">
-                {historicalAddresses.some((a) => a.reference.trim() === deliveryReferenceTrim) ? (
+                {selectedAddressId ? (
+                  // Caso A: texto coincide con dirección guardada que tiene GPS
                   <span className="text-emerald-600 flex items-center gap-0.5 animate-in fade-in duration-200">
-                    <Icon name="check_circle" size={13} className="text-emerald-600" />
-                    Usando dirección registrada
+                    <Icon name="gps_fixed" size={13} className="text-emerald-600" />
+                    Usando dirección registrada · GPS incluido
+                  </span>
+                ) : wasAddressDeselectedByEdit ? (
+                  // Caso B: había una dirección seleccionada pero el cajero editó el texto
+                  <span className="text-amber-600 flex items-center gap-1 animate-in fade-in duration-200">
+                    <Icon name="warning" size={13} className="text-amber-600" />
+                    Dirección modificada · el GPS no se enviará al motorizado
                   </span>
                 ) : (
+                  // Caso C: dirección nueva escrita desde cero
                   <span className="text-primary flex items-center gap-0.5 animate-in fade-in duration-200">
                     <Icon name="edit" size={13} className="text-primary" />
-                    Escribiendo dirección nueva o modificada
+                    Escribiendo dirección nueva
                   </span>
                 )}
                 <span className="text-on-surface-variant/70 font-mono">
@@ -1064,7 +1113,7 @@ export function NewOrderForm() {
                 type="button"
                 className="flex-1"
                 disabled={createOrder.isPending}
-                onClick={executeSubmit}
+                onClick={() => executeSubmit()}
               >
                 {createOrder.isPending ? 'Creando...' : 'Sí, crear pedido'}
               </Button>

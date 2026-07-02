@@ -35,7 +35,7 @@ export async function GET(
     return problemCode('INTERNAL_ERROR', 500, error.message)
   }
 
-  const items = (addresses || []).map((addr) => ({
+  const rawItems = (addresses || []).map((addr) => ({
     address_id: addr.address_id,
     customer_name: addr.customer_name,
     reference: addr.reference ?? '',
@@ -44,6 +44,34 @@ export async function GET(
     last_used_at: addr.last_used_at,
     has_gps: addr.lat !== null && addr.lng !== null,
   }))
+
+  // Deduplicación de direcciones por referencia (ignora mayúsculas/minúsculas y espacios adicionales)
+  const items: typeof rawItems = []
+  const seenReferences = new Set<string>()
+
+  for (const item of rawItems) {
+    const normRef = item.reference.trim().toLowerCase()
+    if (!seenReferences.has(normRef)) {
+      seenReferences.add(normRef)
+      items.push(item)
+    } else {
+      const idx = items.findIndex((u) => u.reference.trim().toLowerCase() === normRef)
+      if (idx !== -1) {
+        const existing = items[idx]
+        if (existing) {
+          // Preferimos conservar el registro que tenga GPS, sea principal o tenga más usos.
+          const preferNew =
+            (!existing.is_default && item.is_default) ||
+            (!existing.has_gps && item.has_gps) ||
+            (existing.has_gps === item.has_gps && item.times_used > existing.times_used)
+
+          if (preferNew) {
+            items[idx] = item
+          }
+        }
+      }
+    }
+  }
 
   return NextResponse.json({
     phone,

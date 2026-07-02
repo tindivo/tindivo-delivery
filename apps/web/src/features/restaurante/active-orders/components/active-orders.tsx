@@ -104,6 +104,7 @@ export function ActiveOrders() {
                 // sigue mostrando vía StatusChip, así que la UI no miente.
                 estimatedReadyAt={showCountdown ? order.estimated_ready_at : undefined}
                 now={showCountdown ? now : undefined}
+                readyEarlyAt={order.ready_early_at}
                 prominentCode
                 highlight={tier === 'overdue' && order.status === 'waiting_driver'}
                 onClick={() => router.push(`/restaurante/pedidos/${order.id}`)}

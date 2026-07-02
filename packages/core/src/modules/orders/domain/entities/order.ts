@@ -169,6 +169,7 @@ export type CreateOrderInput = {
   clientPhone?: string
   deliveryReference?: string
   customerAddressId?: string | null
+  readyEarly?: boolean
   now?: Date
 }
 
@@ -231,7 +232,7 @@ export class Order extends AggregateRoot<OrderId> {
       deliveryReference: input.deliveryReference?.trim() || null,
       customerAddressId: input.customerAddressId ?? null,
       extensionUsed: false,
-      readyEarlyUsed: false,
+      readyEarlyUsed: !!input.readyEarly,
       notes: input.notes ?? null,
       trackingLinkSentAt: null,
       trackingLinkSentBy: null,
@@ -249,7 +250,7 @@ export class Order extends AggregateRoot<OrderId> {
       acceptCountdownSeconds: null,
       prepExtendedAt: null,
       prepExtensionMinutes: null,
-      readyEarlyAt: null,
+      readyEarlyAt: input.readyEarly ? now : null,
       occupancySlots: OccupancySlots.default(),
       deliveryDistanceBand: null,
       cashOwedAtDelivery: null,
@@ -376,7 +377,7 @@ export class Order extends AggregateRoot<OrderId> {
    * Solo aplica a pedidos source='customer_pwa'. Pedidos restaurant_pwa
    * nacen ya en waiting_driver — esta transición rechaza por canTransition.
    */
-  acceptByRestaurant(prepMinutes: number, now: Date): Result<void, InvalidStateTransition> {
+  acceptByRestaurant(prepMinutes: number, now: Date, readyEarly?: boolean): Result<void, InvalidStateTransition> {
     if (!StateTransitionPolicy.canTransition(this._state.status.value, 'waiting_driver'))
       return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
     if (this._state.status.value !== 'pending_acceptance')
@@ -393,6 +394,10 @@ export class Order extends AggregateRoot<OrderId> {
     this._state.restaurantAcceptedAt = now
     this._state.restaurantAcceptedPrepMinutes = prepMinutes
     this._state.updatedAt = now
+    if (readyEarly) {
+      this._state.readyEarlyUsed = true
+      this._state.readyEarlyAt = now
+    }
 
     this.raise(
       new OrderAcceptedByRestaurant({
@@ -404,6 +409,15 @@ export class Order extends AggregateRoot<OrderId> {
         acceptedAt: now.toISOString(),
       }),
     )
+    if (readyEarly) {
+      this.raise(
+        new OrderReadyEarly({
+          orderId: this.id.value,
+          newAppearsInQueueAt: now.toISOString(),
+          newEstimatedReadyAt: newEstimatedReadyAt.toISOString(),
+        }),
+      )
+    }
     return Result.okVoid()
   }
 
@@ -975,7 +989,14 @@ export class Order extends AggregateRoot<OrderId> {
     if (!allowedStatuses.includes(this._state.status.value))
       return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
 
-    const newReadyAt = now
+    const diffMs = this._state.estimatedReadyAt.getTime() - now.getTime()
+    const remainingMin = diffMs / 60_000
+
+    let newReadyAt = this._state.estimatedReadyAt
+    if (remainingMin > 10) {
+      newReadyAt = new Date(now.getTime() + 10 * 60_000)
+    }
+
     this._state.estimatedReadyAt = newReadyAt
     this._state.appearsInQueueAt = now
     this._state.readyEarlyUsed = true

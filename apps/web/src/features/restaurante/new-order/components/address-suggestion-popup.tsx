@@ -7,7 +7,7 @@ interface AddressSuggestionPopupProps {
   isOpen: boolean
   phone: string
   addresses: HistoricalAddress[]
-  onConfirm: (selected: { delivery_reference: string; client_name: string } | null) => void
+  onConfirm: (selected: { delivery_reference: string; client_name: string; address_id: string } | null) => void
   onClose: () => void
 }
 
@@ -66,6 +66,7 @@ export function AddressSuggestionPopup({
       onConfirm({
         delivery_reference: addr.reference,
         client_name: addr.customer_name || 'Cliente',
+        address_id: addr.address_id,
       })
     }
   }
@@ -79,6 +80,7 @@ export function AddressSuggestionPopup({
         onConfirm({
           delivery_reference: addr.reference,
           client_name: addr.customer_name || 'Cliente',
+          address_id: addr.address_id,
         })
       }
     }

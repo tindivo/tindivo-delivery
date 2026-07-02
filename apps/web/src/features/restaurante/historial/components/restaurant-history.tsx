@@ -480,6 +480,7 @@ export function RestaurantHistory() {
                           paymentLabel={paymentLabel(order.payment_status)}
                           prepTimeMinutes={order.prep_minutes}
                           driverName={order.drivers?.full_name ?? null}
+                          readyEarlyAt={order.ready_early_at}
                           onClick={() => router.push(`/restaurante/pedidos/${order.id}`)}
                         />
                         {showCommission ? (

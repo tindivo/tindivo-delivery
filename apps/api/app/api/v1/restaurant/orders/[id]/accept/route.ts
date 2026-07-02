@@ -19,6 +19,7 @@ const AcceptSchema = z.object({
     .min(10, 'mínimo 10 minutos')
     .max(50, 'máximo 50 minutos')
     .refine((minutes) => minutes % 5 === 0, 'prepMinutes debe ir en intervalos de 5 minutos'),
+  readyEarly: z.boolean().optional(),
 })
 
 /**
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     orderId,
     restaurantId: auth.auth.restaurantId,
     prepMinutes: body.data.prepMinutes,
+    readyEarly: body.data.readyEarly,
   })
 
   if (result.isFailure) return problem(result.error)

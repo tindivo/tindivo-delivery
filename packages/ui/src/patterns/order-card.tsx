@@ -94,6 +94,7 @@ type Props = {
    * tier calculado por estimated_ready_at. Solo aplica si status='waiting_driver'.
    */
   isUrgent?: boolean
+  readyEarlyAt?: string | Date | null
 }
 
 const TIER_STYLES: Record<
@@ -137,6 +138,7 @@ export function OrderCard({
   deliveryReference,
   driverLayout = false,
   isUrgent = false,
+  readyEarlyAt,
 }: Props) {
   const displayLabel = clientName?.trim() || null
   const displayReference = deliveryReference?.trim() || null
@@ -333,6 +335,14 @@ export function OrderCard({
             </span>
           )}
           <StatusChip status={status} />
+          {readyEarlyAt && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black tracking-wider bg-emerald-100 text-emerald-950 border border-emerald-300/20 shadow-xs"
+            >
+              <Icon name="restaurant" size={10} filled />
+              COMIDA LISTA
+            </span>
+          )}
         </div>
       </div>
 

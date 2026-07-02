@@ -11,6 +11,7 @@ export type AcceptOrderByRestaurantCommand = {
   orderId: string
   restaurantId: string
   prepMinutes: number
+  readyEarly?: boolean
 }
 
 export type AcceptOrderByRestaurantResult = {
@@ -49,7 +50,7 @@ export class AcceptOrderByRestaurantUseCase
     }
 
     const previousStatus = order.status
-    const result = order.acceptByRestaurant(cmd.prepMinutes, this.clock.now())
+    const result = order.acceptByRestaurant(cmd.prepMinutes, this.clock.now(), cmd.readyEarly)
     if (result.isFailure) return Result.fail(result.error)
 
     await this.orders.save(order, previousStatus)

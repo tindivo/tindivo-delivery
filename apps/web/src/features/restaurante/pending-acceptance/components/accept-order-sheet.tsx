@@ -34,7 +34,11 @@ export function AcceptOrderSheet({ orderId, order, onClose }: Props) {
   async function handleAccept() {
     setErrorMsg(null)
     try {
-      await accept.mutateAsync({ orderId, prepMinutes })
+      let isReady = false
+      if (prepMinutes === 10) {
+        isReady = window.confirm('¿El pedido ya está terminado y listo para recoger?')
+      }
+      await accept.mutateAsync({ orderId, prepMinutes, readyEarly: isReady })
       onClose()
     } catch (err) {
       setErrorMsg(humanize(err))

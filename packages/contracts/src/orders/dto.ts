@@ -84,6 +84,7 @@ export const CreateOrderRequest = z
       .min(1, 'La dirección o referencia es obligatoria')
       .max(500),
     customerAddressId: z.string().uuid().nullable().optional(),
+    readyEarly: z.boolean().optional(),
   })
   .refine(
     (v) =>

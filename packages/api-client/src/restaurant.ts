@@ -247,7 +247,7 @@ export function restaurantApi(client: ApiClient) {
       client.get<{ items: PendingAcceptanceOrder[] }>('restaurant/orders/pending-acceptance'),
     getOrderItems: (orderId: string) =>
       client.get<CustomerOrderItemsResponse>(`restaurant/orders/${orderId}/items`),
-    acceptOrderByRestaurant: (orderId: string, body: { prepMinutes: number }) =>
+    acceptOrderByRestaurant: (orderId: string, body: { prepMinutes: number; readyEarly?: boolean }) =>
       client.post<AcceptOrderByRestaurantResponse>(`restaurant/orders/${orderId}/accept`, body),
 
     // Editor de menu (catalogo) — endpoints CRUD del restaurante
