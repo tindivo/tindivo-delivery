@@ -109,9 +109,18 @@ function notificationFor(
 
     switch (event.event_type) {
       case 'OrderCreated':
-        // Ya no notifica a drivers en OrderCreated. El push al driver se dispara
-        // con OrderReadyForDrivers cuando el pedido entra en su bandeja.
-        return null
+      case 'OrderAcceptedByRestaurant': {
+        const prepMinutes = Number(
+          event.payload?.prepMinutes ?? event.payload?.acceptedPrepMinutes ?? 0,
+        )
+        if (role !== 'driver' || prepMinutes <= 10) return null
+        return {
+          title: `Pedido en preparación — ${restaurantName}`,
+          body: `Se acaba de registrar un pedido en ${restaurantName}. Estará listo en ${prepMinutes} minutos. Atento.`,
+          url: `/motorizado?tab=available`,
+          tag: `preparing-${shortId || event.aggregate_id}`,
+        }
+      }
 
       case 'OrderReadyForDrivers':
         if (role !== 'driver') return null
@@ -297,11 +306,7 @@ function notificationFor(
           vibrate: [400, 150, 400, 150, 400],
         }
 
-      case 'OrderAcceptedByRestaurant':
-        // Sin push activo. La transición a waiting_driver dispara el
-        // flujo normal de assign-pending-orders y ya hay push para el
-        // driver via OrderReadyForDrivers cuando entre en bandeja.
-        return null
+      // Removido caso viejo ya mapeado arriba
 
       case 'DriverArrived':
         if (role !== 'restaurant') return null
@@ -469,6 +474,22 @@ async function resolveRecipients(
     const out: Recipient[] = []
 
     switch (event.event_type) {
+      case 'OrderCreated':
+      case 'OrderAcceptedByRestaurant': {
+        const prepMinutes = Number(
+          event.payload?.prepMinutes ?? event.payload?.acceptedPrepMinutes ?? 0,
+        )
+        if (prepMinutes > 10) {
+          const { data: drivers } = await sb.from('drivers').select('user_id').eq('is_active', true)
+          for (const d of drivers ?? []) {
+            if (d.user_id) {
+              out.push({ userId: d.user_id, role: 'driver' })
+            }
+          }
+        }
+        break
+      }
+
       case 'OrderReadyForDrivers':
       case 'OrderOverdue':
       case 'OrderMarkedUrgent': {
