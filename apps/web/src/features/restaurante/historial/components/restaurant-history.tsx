@@ -1,9 +1,11 @@
 'use client'
 import { useRestaurantProfile } from '@/features/restaurante/perfil/hooks/use-restaurant-profile'
-import { Button, EmptyState, OrderCard, Skeleton, cn } from '@tindivo/ui'
+import { Button, EmptyState, OrderCard, Skeleton, cn, Icon } from '@tindivo/ui'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { useRestaurantHistory } from '../hooks/use-restaurant-history'
+import { useRestaurantFrequentCustomers } from '../hooks/use-restaurant-frequent-customers'
+import { FrequentCustomerDetailDrawer } from './frequent-customer-detail-drawer'
 
 type StatusFilter = 'all' | 'delivered' | 'cancelled'
 type Preset = 'today' | 'yesterday' | 'last7' | 'month' | 'custom'
@@ -113,11 +115,40 @@ export function RestaurantHistory() {
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', newTab)
     router.replace(`${pathname}?${params.toString()}`)
+
+    if (newTab === 'clientes' && preset === 'today') {
+      setPreset('month')
+      setRange(presetRange('month'))
+    } else if (newTab === 'pedidos' && preset === 'month') {
+      setPreset('today')
+      setRange(presetRange('today'))
+    }
   }
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [preset, setPreset] = useState<Preset>('today')
   const [range, setRange] = useState<{ from: string; to: string }>(() => presetRange('today'))
+
+  // Clientes frecuentes states
+  const [minOrders, setMinOrders] = useState<number>(2)
+  const [custSearch, setCustSearch] = useState<string>('')
+  const [includeSuspicious, setIncludeSuspicious] = useState<boolean>(false)
+  const [custSortBy, setCustSortBy] = useState<'order_count' | 'total_spent' | 'last_order'>('order_count')
+  const [custSortDir, setCustSortDir] = useState<'asc' | 'desc'>('desc')
+  const [custPage, setCustPage] = useState<number>(1)
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(null)
+
+  const { data: custData, isLoading: isLoadingCust } = useRestaurantFrequentCustomers({
+    from: range.from,
+    to: range.to,
+    min_orders: minOrders,
+    page: custPage,
+    page_size: 25,
+    search: custSearch || undefined,
+    include_suspicious: includeSuspicious,
+    sort_by: custSortBy,
+    sort_dir: custSortDir,
+  })
 
   const today = peruToday()
 
@@ -191,8 +222,6 @@ export function RestaurantHistory() {
         </button>
       </div>
 
-      {activeTab === 'pedidos' ? (
-        <div className="space-y-5">
       {/* Selector de fecha — atajos */}
       <div className="space-y-3">
         <div className="flex gap-2">
@@ -241,6 +270,9 @@ export function RestaurantHistory() {
           />
         </div>
       </div>
+
+      {activeTab === 'pedidos' ? (
+        <div className="space-y-5">
 
       {/* Resumen del periodo — refleja siempre los entregados del rango */}
       {summary.deliveredCount > 0 && (
@@ -376,8 +408,224 @@ export function RestaurantHistory() {
       )}
         </div>
       ) : (
-        <div className="p-4 text-center text-sm font-semibold text-on-surface-variant">
-          Sección Clientes Frecuentes (Placeholder)
+        <div className="space-y-5">
+          {/* Header/Filtros de Clientes Frecuentes */}
+          <div className="space-y-3.5">
+            {/* Buscador + Ordenamiento */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre o teléfono..."
+                  value={custSearch}
+                  onChange={(e) => {
+                    setCustSearch(e.target.value)
+                    setCustPage(1)
+                  }}
+                  className="w-full pl-10 pr-10 py-2.5 text-sm font-semibold rounded-2xl border text-on-surface bg-white/70 border-[rgba(225,191,181,0.4)] focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center text-on-surface-variant/60">
+                  <Icon name="search" size={18} />
+                </div>
+                {custSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustSearch('')
+                      setCustPage(1)
+                    }}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center text-on-surface-variant/60 hover:text-on-surface"
+                  >
+                    <Icon name="close" size={18} />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex gap-2 items-center">
+                <div className="flex flex-col gap-1 min-w-[110px]">
+                  <select
+                    value={minOrders}
+                    aria-label="Mínimo de pedidos"
+                    onChange={(e) => {
+                      setMinOrders(Number(e.target.value))
+                      setCustPage(1)
+                    }}
+                    className="rounded-2xl border px-3 py-2 text-xs font-semibold bg-white/70 border-[rgba(225,191,181,0.4)] text-on-surface focus:outline-none"
+                  >
+                    <option value={1}>1+ pedido</option>
+                    <option value={2}>2+ pedidos</option>
+                    <option value={3}>3+ pedidos</option>
+                    <option value={5}>5+ pedidos</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1 min-w-[130px]">
+                  <select
+                    value={custSortBy}
+                    aria-label="Ordenar por"
+                    onChange={(e) => {
+                      setCustSortBy(e.target.value as any)
+                      setCustPage(1)
+                    }}
+                    className="rounded-2xl border px-3 py-2 text-xs font-semibold bg-white/70 border-[rgba(225,191,181,0.4)] text-on-surface focus:outline-none"
+                  >
+                    <option value="order_count">Nº Pedidos</option>
+                    <option value="total_spent">Total Gastado</option>
+                    <option value="last_order">Último Pedido</option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label="Dirección del ordenamiento"
+                  onClick={() => {
+                    setCustSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                    setCustPage(1)
+                  }}
+                  className="p-2.5 rounded-2xl border border-[rgba(225,191,181,0.4)] bg-white/70 text-on-surface hover:bg-white flex items-center justify-center transition-all duration-300"
+                >
+                  <Icon name={custSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward'} size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Checkbox para sospechosos */}
+            <div className="flex items-center">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={includeSuspicious}
+                  onChange={(e) => {
+                    setIncludeSuspicious(e.target.checked)
+                    setCustPage(1)
+                  }}
+                  className="w-4 h-4 rounded text-primary focus:ring-primary border-gray-300 transition-colors"
+                />
+                <span className="text-xs font-bold text-on-surface-variant">
+                  Incluir teléfonos sospechosos (ej. 999999999)
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Listado de Clientes */}
+          {isLoadingCust ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Skeleton className="h-32 rounded-2xl" />
+              <Skeleton className="h-32 rounded-2xl" />
+              <Skeleton className="h-32 rounded-2xl" />
+              <Skeleton className="h-32 rounded-2xl" />
+            </div>
+          ) : !custData?.data || custData.data.length === 0 ? (
+            <EmptyState
+              icon="group"
+              title="Sin clientes frecuentes"
+              description="No hay clientes que cumplan con los filtros de búsqueda."
+            />
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {custData.data.map((c) => {
+                  const cat =
+                    c.category === 'vip'
+                      ? { label: 'VIP', bg: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-500' }
+                      : c.category === 'active'
+                        ? { label: 'Activo', bg: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' }
+                        : { label: 'Inactivo', bg: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' }
+                  return (
+                    <div
+                      key={c.client_phone}
+                      onClick={() => setSelectedPhone(c.client_phone)}
+                      className="cursor-pointer rounded-2xl border p-4 bg-white/75 hover:bg-white hover:border-primary/40 hover:shadow-lg transition-all duration-300 relative flex flex-col justify-between"
+                      style={{ borderColor: 'rgba(225,191,181,0.25)' }}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <h4 className="font-black text-on-surface text-base">
+                            {c.client_name || 'Sin nombre registrado'}
+                          </h4>
+                          <p className="text-xs text-on-surface-variant font-bold font-mono">
+                            {c.client_phone}
+                          </p>
+                        </div>
+                        <span
+                          className={`text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full border flex items-center gap-1.5 ${cat.bg}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${cat.dot}`} />
+                          {cat.label}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 border-t border-[rgba(225,191,181,0.15)] pt-3 text-xs">
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                            Pedidos
+                          </p>
+                          <p className="font-mono font-black text-on-surface mt-0.5">
+                            {c.order_count}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                            Total Gastado
+                          </p>
+                          <p className="font-mono font-black text-on-surface mt-0.5">
+                            S/ {c.total_spent.toFixed(2)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                            Último Pedido
+                          </p>
+                          <p className="font-semibold text-on-surface mt-0.5 text-[11px] truncate">
+                            {c.days_since_last_order < 1
+                              ? 'Hoy'
+                              : c.days_since_last_order < 2
+                                ? 'Ayer'
+                                : `Hace ${Math.floor(c.days_since_last_order)} días`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Paginación */}
+              {custData.total > 25 && (
+                <div className="flex items-center justify-between mt-4 px-2">
+                  <button
+                    type="button"
+                    disabled={custPage <= 1}
+                    onClick={() => setCustPage((p) => p - 1)}
+                    className="px-4 py-2 text-xs font-bold uppercase rounded-full border border-[rgba(225,191,181,0.4)] bg-white/70 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-xs font-bold text-on-surface-variant">
+                    Pág. {custPage} de {Math.ceil(custData.total / 25)}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={custPage >= Math.ceil(custData.total / 25)}
+                    onClick={() => setCustPage((p) => p + 1)}
+                    className="px-4 py-2 text-xs font-bold uppercase rounded-full border border-[rgba(225,191,181,0.4)] bg-white/70 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Drawer de Detalle */}
+          {selectedPhone && (
+            <FrequentCustomerDetailDrawer
+              phone={selectedPhone}
+              onClose={() => setSelectedPhone(null)}
+              dateRange={{ from: range.from, to: range.to }}
+            />
+          )}
         </div>
       )}
     </div>
