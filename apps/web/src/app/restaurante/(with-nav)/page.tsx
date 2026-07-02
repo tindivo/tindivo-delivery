@@ -10,8 +10,10 @@ export default function RestauranteHome() {
   const isClosed = data && !data.isOpen
 
   return (
-    <main className="mx-auto max-w-md space-y-8 px-4 pb-8 pt-24">
+    <main className="mx-auto w-full px-4 pb-8 pt-24 max-w-md md:max-w-2xl lg:max-w-5xl xl:max-w-6xl space-y-5">
       <PlatformClosedBanner />
+
+      {/* ── CTA "PEDIR MOTO" — full-width del contenedor en todos los breakpoints ── */}
       {isClosed ? (
         <div
           className="flex flex-col items-center gap-2 rounded-3xl border-2 border-dashed border-outline-variant/40 bg-surface-container/30 px-5 py-7 text-center"
@@ -35,19 +37,23 @@ export default function RestauranteHome() {
         />
       )}
 
+      {/* Pedidos en espera de aceptación — máxima urgencia */}
       <PendingAcceptanceList />
 
-      <section>
-        <div className="mb-4 flex items-center gap-3 px-1">
+      {/* ── Pedidos activos ── */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-3 px-1">
           <span
-            className="inline-block h-5 w-1.5 rounded-full"
+            className="inline-block h-5 w-1.5 rounded-full shrink-0"
             style={{
               background: 'linear-gradient(180deg, #FF6B35 0%, #FF8C42 100%)',
               boxShadow: '0 4px 12px rgba(255, 107, 53, 0.3)',
             }}
             aria-hidden="true"
           />
-          <h2 className="text-xs font-bold uppercase text-on-surface-variant">Pedidos activos</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+            Pedidos activos
+          </h2>
         </div>
         <ActiveOrders />
       </section>

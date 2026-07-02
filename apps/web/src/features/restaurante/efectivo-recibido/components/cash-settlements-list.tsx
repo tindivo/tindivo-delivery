@@ -78,7 +78,7 @@ export function CashSettlementsList() {
           description="Cuando un motorizado cobre efectivo de tus pedidos, lo verás aquí en tiempo real."
         />
       ) : items.length === 0 ? null : (
-        <ul className="space-y-3">
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {items.map((s) => (
             <SettlementCard
               key={s.id}

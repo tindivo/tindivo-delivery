@@ -159,7 +159,8 @@ export function NewOrderForm() {
   )
   const historicalAddresses = histData?.addresses || []
 
-  const lastLoggedPhoneRef = useRef<string>('')
+  // Guard para evitar mostrar el popup más de una vez por número.
+  // Se limpia en handlePhoneChange al cambiar el número, y en el useEffect cuando el teléfono es inválido.
 
   const handlePhoneChange = (newVal: string) => {
     const cleanVal = newVal.replace(/\D/g, '').slice(0, 9)
@@ -171,6 +172,9 @@ export function NewOrderForm() {
         clientName: false,
         deliveryReference: false,
       }))
+      // Al cambiar el número, resetear el guard del popup
+      // para que vuelva a aparecer si el nuevo número tiene historial
+      setPhoneWithPopupShown(null)
     }
     setClientPhone(cleanVal)
   }
@@ -190,7 +194,6 @@ export function NewOrderForm() {
 
   useEffect(() => {
     if (!clientPhoneValid) {
-      lastLoggedPhoneRef.current = ''
       setShowSuggestionPopup(false)
       setPhoneWithPopupShown(null)
       return
@@ -200,8 +203,10 @@ export function NewOrderForm() {
       return
     }
 
-    if (clientPhoneDigits !== lastLoggedPhoneRef.current) {
-      lastLoggedPhoneRef.current = clientPhoneDigits
+    // Mostrar el popup si aún no lo hemos mostrado para este número
+    if (phoneWithPopupShown !== clientPhoneDigits) {
+      setShowSuggestionPopup(true)
+      setPhoneWithPopupShown(clientPhoneDigits)
 
       supabase
         .from('address_capture_events')
@@ -216,11 +221,6 @@ export function NewOrderForm() {
         .then(({ error }) => {
           if (error) console.error('Error logging shown telemetry:', error)
         })
-
-      if (phoneWithPopupShown !== clientPhoneDigits) {
-        setShowSuggestionPopup(true)
-        setPhoneWithPopupShown(clientPhoneDigits)
-      }
     }
   }, [historicalAddresses, clientPhoneDigits, clientPhoneValid, phoneWithPopupShown])
 

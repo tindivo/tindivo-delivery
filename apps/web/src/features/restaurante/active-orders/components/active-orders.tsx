@@ -73,7 +73,7 @@ export function ActiveOrders() {
   return (
     <div className="space-y-3">
       <UrgentCallCard count={urgentNoDriverCount} />
-      <ul className="space-y-3">
+      <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         {sortedItems.map((order) => {
           // Mostrar countdown live solo para pedidos con prep activo (no entregados/cancelados)
           // y mientras todavía importa (status del flow de cocina/recogida).

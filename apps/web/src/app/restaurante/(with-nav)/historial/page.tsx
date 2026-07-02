@@ -2,7 +2,7 @@ import { RestaurantHistory } from '@/features/restaurante/historial/components/r
 
 export default function RestauranteHistorialPage() {
   return (
-    <main className="pt-24 pb-8 px-4 max-w-md mx-auto space-y-6">
+    <main className="pt-24 pb-8 px-4 max-w-md lg:max-w-5xl xl:max-w-7xl w-full mx-auto space-y-6">
       <section>
         <div className="flex items-center gap-3 mb-4 px-1">
           <span

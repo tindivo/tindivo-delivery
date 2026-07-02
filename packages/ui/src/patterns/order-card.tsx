@@ -239,8 +239,8 @@ export function OrderCard({
                   >
                     <Icon name="location_on" size={14} className="shrink-0 text-primary" />
                     <span className="truncate">
-                      {displayReference.length > 40
-                        ? displayReference.slice(0, 40) + '...'
+                      {displayReference.length > 55
+                        ? displayReference.slice(0, 55) + '...'
                         : displayReference}
                     </span>
                   </div>
@@ -270,8 +270,8 @@ export function OrderCard({
                   >
                     <Icon name="location_on" size={14} className="shrink-0 text-primary" />
                     <span className="truncate">
-                      {displayReference.length > 40
-                        ? displayReference.slice(0, 40) + '...'
+                      {displayReference.length > 55
+                        ? displayReference.slice(0, 55) + '...'
                         : displayReference}
                     </span>
                   </div>
@@ -301,8 +301,8 @@ export function OrderCard({
                   >
                     <Icon name="location_on" size={14} className="shrink-0 text-primary" />
                     <span className="truncate">
-                      {displayReference.length > 40
-                        ? displayReference.slice(0, 40) + '...'
+                      {displayReference.length > 55
+                        ? displayReference.slice(0, 55) + '...'
                         : displayReference}
                     </span>
                   </div>

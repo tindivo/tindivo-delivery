@@ -112,10 +112,8 @@ export function SolarCTA(props: Props) {
             style={{ background: 'rgba(255, 255, 255, 0.45)' }}
           />
           <span
-            className="relative flex items-center justify-center"
+            className="relative flex items-center justify-center w-[60px] h-[60px] shrink-0"
             style={{
-              width: 60,
-              height: 60,
               borderRadius: '9999px',
               background:
                 'linear-gradient(135deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.18) 100%)',
@@ -145,11 +143,9 @@ export function SolarCTA(props: Props) {
             </span>
           )}
           <span
-            className="block font-black"
+            className="block font-black text-[30px] md:text-[26px] lg:text-[28px] leading-none"
             style={{
-              fontSize: '30px',
               letterSpacing: '-0.035em',
-              lineHeight: 1,
             }}
           >
             {title}
@@ -158,10 +154,8 @@ export function SolarCTA(props: Props) {
 
         {/* Arrow circle glass */}
         <span
-          className="shrink-0 flex items-center justify-center transition-transform duration-300 group-hover:translate-x-1"
+          className="shrink-0 flex items-center justify-center transition-transform duration-300 group-hover:translate-x-1 w-[38px] h-[38px]"
           style={{
-            width: 38,
-            height: 38,
             borderRadius: '9999px',
             background: 'rgba(255, 255, 255, 0.22)',
             backdropFilter: 'blur(6px)',
@@ -180,13 +174,12 @@ export function SolarCTA(props: Props) {
     'transition-all duration-300',
     'hover:-translate-y-1 hover:shadow-[0_25px_50px_-12px_rgba(255,107,53,0.55)]',
     'active:scale-[0.98] active:translate-y-0',
+    'p-5 min-h-[100px] md:min-h-[96px]',
     className,
   )
 
   const inlineStyle: React.CSSProperties = {
     borderRadius: '28px',
-    padding: '20px 22px',
-    minHeight: '100px',
     background: s.gradient,
     color: s.text,
     boxShadow: s.glow,
