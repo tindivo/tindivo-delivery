@@ -115,7 +115,8 @@ export function RestaurantOrderDetail({ orderId }: Props) {
     ? (new Date(order.estimated_ready_at).getTime() - now.getTime()) / 60_000
     : 0
   const canReadyEarly =
-    status === 'waiting_driver' && !order.ready_early_used && remainingMinutes > 10
+    ['waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant'].includes(status) &&
+    remainingMinutes > 0
   const isActive = !['delivered', 'cancelled'].includes(status)
   // El countdown del prep_time se muestra durante toda la fase activa hasta que
   // el driver recibe el pedido (después ya no aporta info al restaurante).
@@ -158,43 +159,140 @@ export function RestaurantOrderDetail({ orderId }: Props) {
       />
 
       <main className="pt-24 px-4 max-w-md mx-auto space-y-4">
-        {/* Header del pedido */}
-        <section className="bg-surface-container-lowest rounded-[24px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)]">
+        {/* Header dominante del pedido */}
+        <section className="bg-surface-container-lowest rounded-[24px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)] space-y-4">
+          {/* Fila 1: Cliente y Código */}
           <div className="flex items-start justify-between gap-2">
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <ColorDot color={order.restaurants?.accent_color ?? 'ab3500'} />
-                <h1 className="font-black text-base text-on-surface">
+                <h1 className="font-black text-xl text-on-surface leading-tight truncate">
                   {order.client_name ?? 'Mi pedido'}
                 </h1>
               </div>
               <p className="text-xs text-on-surface-variant font-mono">#{order.short_id}</p>
             </div>
-            <StatusChip status={status} />
-          </div>
-          <div className="mt-4 flex items-center gap-4 text-sm">
-            {Number(order.order_amount) === 0 ? (
-              <div className="flex items-center gap-1.5 font-bold" style={{ color: '#059669' }}>
-                <Icon name="verified" size={16} filled />
-                <span>No cobrar · Solo entregar</span>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-1.5 text-on-surface-variant">
-                  <Icon name="payments" size={16} />
-                  <span className="font-semibold text-on-surface">
-                    S/ {Number(order.order_amount).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-on-surface-variant">
-                  <Icon name="receipt" size={16} />
-                  <span>{paymentLabel(order.payment_status)}</span>
-                </div>
-              </>
+            {/* Teléfono */}
+            {order.customer_phone && (
+              <a
+                href={`tel:+51${order.customer_phone}`}
+                className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold text-primary px-3 py-1.5 rounded-full bg-primary/10 transition-colors hover:bg-primary/20"
+              >
+                <Icon name="call" size={14} />
+                <span className="hidden sm:inline">Llamar</span>
+              </a>
             )}
           </div>
+
+          {/* Fila 2: Dirección destacada */}
+          {(order.delivery_address || order.delivery_reference) && (
+            <div className="pt-3 border-t border-outline-variant/10 space-y-1">
+              <span className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
+                Dirección de entrega
+              </span>
+              <div className="flex items-start gap-2 text-sm text-on-surface">
+                <Icon
+                  name="location_on"
+                  size={18}
+                  className="mt-0.5 flex-shrink-0 text-primary"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-on-surface whitespace-normal break-words">
+                    {order.delivery_address ?? order.delivery_reference}
+                  </p>
+                  {order.delivery_address && order.delivery_reference && (
+                    <p className="text-xs text-on-surface-variant mt-0.5 whitespace-normal break-words">
+                      {order.delivery_reference}
+                    </p>
+                  )}
+                  {order.delivery_maps_url && (
+                    <a
+                      href={order.delivery_maps_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-primary mt-1.5 hover:underline"
+                    >
+                      <Icon name="map" size={14} />
+                      Ver en mapa
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Fila 3: Monto y Estado Grande */}
+          <div className="pt-3 border-t border-outline-variant/10 flex items-center justify-between gap-4">
+            <div>
+              <span className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">
+                Monto
+              </span>
+              {Number(order.order_amount) === 0 ? (
+                <div className="flex items-center gap-1 font-black text-emerald-600 text-lg">
+                  <Icon name="verified" size={18} filled />
+                  <span>No cobrar</span>
+                </div>
+              ) : (
+                <div className="font-black text-2xl text-on-surface tabular-nums">
+                  S/ {Number(order.order_amount).toFixed(2)}
+                </div>
+              )}
+              {order.payment_status && (
+                <div className="text-xs text-on-surface-variant font-medium mt-0.5">
+                  {paymentLabel(order.payment_status)}
+                </div>
+              )}
+            </div>
+
+            {/* Estado grande adaptado a resoluciones */}
+            <div className="text-right">
+              <span className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase block mb-1">
+                Estado
+              </span>
+              <div className="inline-block">
+                {status === 'cancelled' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-red-50 text-red-700 border border-red-200">
+                    <Icon name="cancel" size={16} filled />
+                    CANCELADO
+                  </span>
+                )}
+                {status === 'delivered' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <Icon name="check_circle" size={16} filled />
+                    ENTREGADO
+                  </span>
+                )}
+                {status === 'picked_up' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    <Icon name="delivery_dining" size={16} filled />
+                    EN ENTREGA
+                  </span>
+                )}
+                {!['cancelled', 'delivered', 'picked_up'].includes(status) && (
+                  remainingMinutes > 0 ? (
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-50 text-amber-800 border border-amber-200 shadow-xs">
+                        <Icon name="restaurant" size={14} className="text-amber-600" />
+                        EN COCINA
+                      </span>
+                      {order.estimated_ready_at && (
+                        <UrgencyBadge estimatedReadyAt={order.estimated_ready_at} now={now} variant="chip" />
+                      )}
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-500 text-white border border-emerald-600 shadow-md shadow-emerald-500/10 animate-pulse">
+                      <Icon name="shopping_bag" size={14} filled />
+                      LISTO PARA RECOGER
+                    </span>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Pago mixto detalles si aplica */}
           {order.payment_status === 'pending_mixed' && (
-            <div className="mt-3 flex items-center gap-3 text-xs">
+            <div className="pt-2 flex items-center gap-2 text-xs">
               <span
                 className="px-2.5 py-1 rounded-full font-bold font-mono tabular-nums"
                 style={{ background: 'rgba(124, 58, 237, 0.1)', color: '#5B21B6' }}
@@ -209,6 +307,8 @@ export function RestaurantOrderDetail({ orderId }: Props) {
               </span>
             </div>
           )}
+
+          {/* Banner de cambio de método */}
           {Array.isArray(order.payment_changes) && order.payment_changes.length > 0 && (
             <div
               className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold"
@@ -270,69 +370,8 @@ export function RestaurantOrderDetail({ orderId }: Props) {
           )}
         </section>
 
-        {/* Detalle del pedido del cliente (solo customer_pwa): items,
-            modificadores y notas individuales. Para pedidos manuales del
-            restaurante (restaurant_pwa) no se renderiza. */}
+        {/* Detalle del pedido del cliente */}
         <CustomerOrderItemsSection orderId={orderId} order={{ source: order.source }} />
-
-        {/* Entrega: dirección de destino para TODOS los pedidos. En pedidos
-            del restaurante (restaurant_pwa) la dirección vive en
-            delivery_reference (delivery_address es null); en los del cliente
-            (customer_pwa) en delivery_address + delivery_reference. */}
-        {(order.delivery_address || order.delivery_reference || order.customer_phone) && (
-          <section className="bg-surface-container-lowest rounded-[24px] p-5 border border-outline-variant/15 space-y-3">
-            <h3 className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant">
-              Entrega
-            </h3>
-            {order.customer_phone && (
-              <a
-                href={`tel:+51${order.customer_phone}`}
-                className="flex items-center gap-2 text-sm font-bold text-on-surface"
-              >
-                <Icon name="call" size={16} />
-                +51 {order.customer_phone}
-              </a>
-            )}
-            {(order.delivery_address || order.delivery_reference) && (
-              <div className="flex items-start gap-2 text-sm text-on-surface">
-                <Icon
-                  name="location_on"
-                  size={16}
-                  className="mt-0.5 flex-shrink-0 text-on-surface-variant"
-                />
-                <div>
-                  <p className="font-semibold">
-                    {order.delivery_address ?? order.delivery_reference}
-                  </p>
-                  {order.delivery_address && order.delivery_reference && (
-                    <p className="text-xs text-on-surface-variant mt-0.5">
-                      {order.delivery_reference}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-            {order.delivery_maps_url && (
-              <a
-                href={order.delivery_maps_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-bold text-primary"
-              >
-                <Icon name="map" size={16} />
-                Ver en mapa
-              </a>
-            )}
-          </section>
-        )}
-
-        {/* Countdown del prep_time — único timer que ve el restaurante.
-            Va del prep_time → 0 → negativo si el driver tarda en aceptar. */}
-        {showCountdown && (
-          <section>
-            <UrgencyBadge estimatedReadyAt={order.estimated_ready_at} now={now} variant="hero" />
-          </section>
-        )}
 
         {/* Timeline */}
         <section className="bg-surface-container-lowest rounded-[24px] p-5 border border-outline-variant/15 shadow-[0_4px_20px_rgba(171,53,0,0.04)]">
@@ -457,82 +496,98 @@ export function RestaurantOrderDetail({ orderId }: Props) {
       {isActive && (
         <BottomActionBar>
           <div className="flex flex-col gap-3">
-            {canEdit && (
+            {/* Primary Action Button / Element */}
+            {remainingMinutes > 0 ? (
+              // EN COCINA state: PEDIDO LISTO is the primary button
               <Button
-                variant="secondary"
+                variant="primary"
                 size="lg"
-                className="w-full"
-                onClick={() => setShowEdit(true)}
-              >
-                <Icon name="edit" />
-                Editar pedido
-              </Button>
-            )}
-            {canReadyEarly && (
-              <Button
-                variant="secondary"
-                size="lg"
-                className="w-full"
-                disabled={readyEarly.isPending}
+                className="w-full shadow-md"
+                disabled={!canReadyEarly || readyEarly.isPending}
                 onClick={() => readyEarly.mutate()}
               >
                 <Icon name="bolt" filled />
-                Pedido listo antes
+                PEDIDO LISTO
               </Button>
-            )}
-            {canExtend && (
-              <div className="flex gap-2">
-                {!showExtension ? (
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    className="w-full"
-                    onClick={() => setShowExtension(true)}
-                  >
-                    <Icon name="schedule" />
-                    Necesito más tiempo
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="lg"
-                      className="flex-1"
-                      disabled={extend.isPending}
-                      onClick={() => extend.mutate(5, { onSuccess: () => setShowExtension(false) })}
-                    >
-                      +5 min
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="lg"
-                      className="flex-1"
-                      disabled={extend.isPending}
-                      onClick={() =>
-                        extend.mutate(10, { onSuccess: () => setShowExtension(false) })
-                      }
-                    >
-                      +10 min
-                    </Button>
-                  </>
-                )}
+            ) : (
+              // LISTO PARA RECOGER state: Information block (no button)
+              <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-sm animate-pulse">
+                <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-white">
+                  <Icon name="check" size={14} />
+                </span>
+                <span className="text-xs font-semibold leading-snug">
+                  Pedido listo. El motorizado marcará la entrega cuando llegue al cliente.
+                </span>
               </div>
             )}
+
+            {/* Secondary Actions Row */}
+            <div className="flex gap-2">
+              {canEdit && (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => setShowEdit(true)}
+                >
+                  <Icon name="edit" />
+                  Editar
+                </Button>
+              )}
+              {canExtend && (
+                <div className="flex-1 flex gap-1">
+                  {!showExtension ? (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full"
+                      onClick={() => setShowExtension(true)}
+                    >
+                      <Icon name="schedule" />
+                      Más tiempo
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="lg"
+                        className="flex-1"
+                        disabled={extend.isPending}
+                        onClick={() => extend.mutate(5, { onSuccess: () => setShowExtension(false) })}
+                      >
+                        +5 min
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="lg"
+                        className="flex-1"
+                        disabled={extend.isPending}
+                        onClick={() =>
+                          extend.mutate(10, { onSuccess: () => setShowExtension(false) })
+                        }
+                      >
+                        +10 min
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Cancel link at the very bottom */}
             {canCancel && (
-              <Button
-                variant="destructive"
-                size="lg"
-                className="w-full"
+              <button
+                type="button"
                 disabled={cancel.isPending}
                 onClick={() => {
                   const reason = window.prompt('¿Por qué cancelas el pedido? (mínimo 3 caracteres)')
                   if (!reason || reason.trim().length < 3) return
                   cancel.mutate(reason.trim())
                 }}
+                className="text-xs text-on-surface-variant/60 hover:text-red-600 transition-colors font-semibold py-1.5 mx-auto hover:underline"
               >
-                <Icon name="cancel" />
                 Cancelar pedido
-              </Button>
+              </button>
             )}
           </div>
         </BottomActionBar>

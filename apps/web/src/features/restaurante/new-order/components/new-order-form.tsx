@@ -19,7 +19,8 @@ import {
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCreateOrder } from '../hooks/use-create-order'
-import { useCustomerAddresses } from '../hooks/use-customer-addresses'
+import { useCustomerHistoricalAddresses } from '../hooks/use-customer-historical-addresses'
+import { AddressSuggestionPopup } from './address-suggestion-popup'
 
 type CustomerAddress = {
   phone: string
@@ -127,9 +128,9 @@ export function NewOrderForm() {
   const [deliveryReference, setDeliveryReference] = useState<string>('')
 
   const queryClient = useQueryClient()
-  const [selectedAddress, setSelectedAddress] = useState<CustomerAddress | null>(null)
-  const [isAnotherAddress, setIsAnotherAddress] = useState<boolean>(false)
-  const [updatingDefault, setUpdatingDefault] = useState(false)
+  const [isConfirming, setIsConfirming] = useState<boolean>(false)
+  const [showSuggestionPopup, setShowSuggestionPopup] = useState<boolean>(false)
+  const [phoneWithPopupShown, setPhoneWithPopupShown] = useState<string | null>(null)
 
   // Mostrar el error solo después de que el usuario interactuó con el campo,
   // para no asustar con rojos antes de empezar a escribir.
@@ -145,17 +146,18 @@ export function NewOrderForm() {
     amount: false,
   })
   const PHONE_PE_REGEX = /^9\d{8}$/
-  const clientPhoneDigits = clientPhone.replace(/\D/g, '').slice(0, 9)
+  const clientPhoneDigits = (clientPhone || '').replace(/\D/g, '').slice(0, 9)
   const isPhoneBlacklisted = BLACKLISTED_PHONES.includes(clientPhoneDigits)
-  const clientNameTrim = clientName.trim()
-  const deliveryReferenceTrim = deliveryReference.trim()
+  const clientNameTrim = (clientName || '').trim()
+  const deliveryReferenceTrim = (deliveryReference || '').trim()
   const clientNameValid = clientNameTrim.length > 0
   const clientPhoneValid = PHONE_PE_REGEX.test(clientPhoneDigits) && !isPhoneBlacklisted
 
-  const { data: addresses = [], isFetching: addressesLoading } = useCustomerAddresses(
+  const { data: histData, isFetching: addressesLoading } = useCustomerHistoricalAddresses(
     clientPhoneDigits,
     clientPhoneValid,
   )
+  const historicalAddresses = histData?.addresses || []
 
   const lastLoggedPhoneRef = useRef<string>('')
 
@@ -164,8 +166,6 @@ export function NewOrderForm() {
     if (cleanVal !== clientPhoneDigits) {
       setClientName('')
       setDeliveryReference('')
-      setSelectedAddress(null)
-      setIsAnotherAddress(false)
       setTouched((t) => ({
         ...t,
         clientName: false,
@@ -190,15 +190,13 @@ export function NewOrderForm() {
 
   useEffect(() => {
     if (!clientPhoneValid) {
-      setSelectedAddress(null)
-      setIsAnotherAddress(false)
       lastLoggedPhoneRef.current = ''
+      setShowSuggestionPopup(false)
+      setPhoneWithPopupShown(null)
       return
     }
 
-    if (addresses.length === 0) {
-      setSelectedAddress(null)
-      setIsAnotherAddress(false)
+    if (historicalAddresses.length === 0) {
       return
     }
 
@@ -211,48 +209,86 @@ export function NewOrderForm() {
           phone: clientPhoneDigits,
           action: 'shown',
           metadata: {
-            results_count: addresses.length,
-            context: 'cashier_form',
+            results_count: historicalAddresses.length,
+            context: 'cashier_form_popup',
           },
         })
         .then(({ error }) => {
           if (error) console.error('Error logging shown telemetry:', error)
         })
 
-      const defaultAddr = addresses.find((a) => a.is_default) || addresses[0]
-      if (defaultAddr) {
-        setSelectedAddress(defaultAddr)
-        setIsAnotherAddress(false)
-        setDeliveryReference(defaultAddr.reference ?? '')
-        setClientName(defaultAddr.customer_name ?? '')
-      }
-    } else {
-      if (selectedAddress) {
-        const updated = addresses.find((a) => a.address_id === selectedAddress.address_id)
-        if (updated) {
-          setSelectedAddress(updated)
-        }
+      if (phoneWithPopupShown !== clientPhoneDigits) {
+        setShowSuggestionPopup(true)
+        setPhoneWithPopupShown(clientPhoneDigits)
       }
     }
-  }, [addresses, clientPhoneDigits, clientPhoneValid])
+  }, [historicalAddresses, clientPhoneDigits, clientPhoneValid, phoneWithPopupShown])
 
-  async function handleMarkAsDefault(addr: CustomerAddress) {
-    if (updatingDefault) return
-    setUpdatingDefault(true)
-    try {
-      const { error } = await supabase.rpc('set_customer_address_default', {
-        p_address_id: addr.address_id,
-      })
-      if (error) throw error
-      await queryClient.invalidateQueries({
-        queryKey: ['customer-addresses', clientPhoneDigits],
-      })
-    } catch (err) {
-      console.error('Error setting default address:', err)
-    } finally {
-      setUpdatingDefault(false)
+  const handleSuggestionConfirm = (
+    selected: { delivery_reference: string; client_name: string } | null
+  ) => {
+    if (selected) {
+      setClientName(selected.client_name)
+      setDeliveryReference(selected.delivery_reference)
+      supabase
+        .from('address_capture_events')
+        .insert({
+          phone: clientPhoneDigits,
+          action: 'confirmed',
+          metadata: {
+            delivery_reference: selected.delivery_reference,
+            client_name: selected.client_name,
+            context: 'cashier_form_popup',
+          },
+        })
+        .then(({ error }) => {
+          if (error) console.error('Error logging confirmed telemetry:', error)
+        })
+    } else {
+      // Keep client name if historical is available, or keep existing clientName
+      const histName = historicalAddresses[0]?.customer_name || clientName
+      setClientName(histName)
+      setDeliveryReference('')
+      supabase
+        .from('address_capture_events')
+        .insert({
+          phone: clientPhoneDigits,
+          action: 'omitted',
+          metadata: {
+            context: 'cashier_form_popup',
+          },
+        })
+        .then(({ error }) => {
+          if (error) console.error('Error logging omitted telemetry:', error)
+        })
+    }
+    setShowSuggestionPopup(false)
+  }
+
+  const handleSuggestionClose = () => {
+    setShowSuggestionPopup(false)
+    const firstAddr = historicalAddresses[0]
+    if (firstAddr) {
+      setClientName(firstAddr.customer_name || 'Cliente')
+      setDeliveryReference(firstAddr.reference)
+      supabase
+        .from('address_capture_events')
+        .insert({
+          phone: clientPhoneDigits,
+          action: 'confirmed',
+          metadata: {
+            delivery_reference: firstAddr.reference,
+            client_name: firstAddr.customer_name || 'Cliente',
+            context: 'cashier_form_popup_close_autofill',
+          },
+        })
+        .then(({ error }) => {
+          if (error) console.error('Error logging confirmed telemetry:', error)
+        })
     }
   }
+
+
 
   const showSkeletons = clientPhoneDigits.length === 9 && clientPhoneValid && addressesLoading
   const showPhoneError =
@@ -334,20 +370,8 @@ export function NewOrderForm() {
     })
   }, [prepMinutes])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function executeSubmit() {
     if (submittingRef.current) return
-    if (!canSubmit) {
-      // Marca todos los campos como tocados para revelar los
-      // mensajes de error si el usuario presionó Crear sin completarlos.
-      setTouched({
-        clientName: true,
-        clientPhone: true,
-        deliveryReference: true,
-        amount: true,
-      })
-      return
-    }
     submittingRef.current = true
     const body: Orders.CreateOrderRequest = {
       prepMinutes,
@@ -360,7 +384,7 @@ export function NewOrderForm() {
       clientName: clientNameTrim,
       clientPhone: clientPhoneDigits,
       deliveryReference: deliveryReferenceTrim,
-      customerAddressId: isAnotherAddress ? null : (selectedAddress?.address_id ?? null),
+      customerAddressId: null,
     }
     createOrder.mutate(
       { body, idempotencyKey: idem.key },
@@ -368,6 +392,7 @@ export function NewOrderForm() {
         onSuccess: () => {
           idem.consume()
           submittingRef.current = false
+          setIsConfirming(false)
           router.replace('/restaurante')
         },
         onError: (err) => {
@@ -382,6 +407,28 @@ export function NewOrderForm() {
         },
       },
     )
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!canSubmit) {
+      // Marca todos los campos como tocados para revelar los
+      // mensajes de error si el usuario presionó Crear sin completarlos.
+      setTouched({
+        clientName: true,
+        clientPhone: true,
+        deliveryReference: true,
+        amount: true,
+      })
+      return
+    }
+    
+    // CONDICIONAL: Solo mostrar el modal de confirmación si el cliente tiene direcciones históricas
+    if (historicalAddresses.length > 0) {
+      setIsConfirming(true)
+    } else {
+      executeSubmit()
+    }
   }
 
   return (
@@ -471,15 +518,7 @@ export function NewOrderForm() {
                 obligatorio
               </span>
             </div>
-            {addresses.length >= 1 &&
-              selectedAddress?.customer_name &&
-              clientNameTrim === selectedAddress.customer_name.trim() &&
-              !isAnotherAddress && (
-                <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
-                  <Icon name="check_circle" size={14} className="text-emerald-600" />
-                  Pedido anterior
-                </span>
-              )}
+
           </div>
           {showSkeletons ? (
             <div
@@ -529,69 +568,20 @@ export function NewOrderForm() {
         {/* Dirección o referencia — obligatorio */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <label htmlFor="deliveryReference" className="text-sm font-semibold text-on-surface">
-                Dirección o referencia
+                Dirección de entrega
               </label>
-              <span className="text-[10px] font-bold tracking-wider uppercase text-primary-container">
-                obligatorio
-              </span>
+              <span className="text-red-500 font-bold text-sm" title="Obligatorio">*</span>
             </div>
-            {addresses.length === 1 && !isAnotherAddress && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
-                  <Icon name="check_circle" size={14} className="text-emerald-600" />
-                  Pedido anterior
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAnotherAddress(true)
-                    setSelectedAddress(null)
-                    setDeliveryReference('')
-                  }}
-                  className="text-xs font-bold text-primary hover:underline"
-                >
-                  Otra dirección
-                </button>
-              </div>
-            )}
-            {addresses.length === 1 && isAnotherAddress && (
+            {historicalAddresses.length > 0 && (
               <button
                 type="button"
-                onClick={() => {
-                  const firstAddr = addresses[0]
-                  if (firstAddr) {
-                    setIsAnotherAddress(false)
-                    setSelectedAddress(firstAddr)
-                    setDeliveryReference(firstAddr.reference ?? '')
-                  }
-                }}
-                className="text-xs font-bold text-primary hover:underline"
+                onClick={() => setShowSuggestionPopup(true)}
+                className="text-xs font-bold text-primary hover:underline flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-full hover:bg-primary/5 transition-all animate-in fade-in duration-200"
               >
-                Usar guardada
-              </button>
-            )}
-            {addresses.length >= 2 && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (isAnotherAddress) {
-                    const def = addresses.find((a) => a.is_default) || addresses[0]
-                    if (def) {
-                      setIsAnotherAddress(false)
-                      setSelectedAddress(def)
-                      setDeliveryReference(def.reference ?? '')
-                    }
-                  } else {
-                    setIsAnotherAddress(true)
-                    setSelectedAddress(null)
-                    setDeliveryReference('')
-                  }
-                }}
-                className="text-xs font-bold text-primary hover:underline"
-              >
-                {isAnotherAddress ? 'Usar guardada' : 'Otra dirección'}
+                <Icon name="history" size={14} />
+                Direcciones guardadas ({historicalAddresses.length})
               </button>
             )}
           </div>
@@ -640,63 +630,23 @@ export function NewOrderForm() {
           ) : (
             deliveryReferenceTrim.length > 0 &&
             !referenceDisabled && (
-              <p className="text-[10px] text-on-surface-variant px-1">
-                {deliveryReferenceTrim.length}/500
-              </p>
-            )
-          )}
-
-          {addresses.length >= 2 && !isAnotherAddress && !showSkeletons && (
-            <div className="space-y-1.5 mt-2">
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none px-1">
-                {addresses.map((addr) => {
-                  const isActive =
-                    selectedAddress?.address_id === addr.address_id && !isAnotherAddress
-                  const isDefault = addr.is_default
-                  const truncatedRef =
-                    addr.reference && addr.reference.length > 30
-                      ? addr.reference.slice(0, 30) + '...'
-                      : addr.reference || ''
-
-                  return (
-                    <div
-                      key={addr.address_id}
-                      className={cn(
-                        'flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 border transition-all cursor-pointer select-none',
-                        isActive
-                          ? 'bg-primary/10 border-primary text-primary shadow-xs'
-                          : 'bg-white/70 border-outline-variant/30 text-on-surface-variant hover:bg-white hover:border-outline-variant/60',
-                      )}
-                      onClick={() => {
-                        setIsAnotherAddress(false)
-                        setSelectedAddress(addr)
-                        setDeliveryReference(addr.reference ?? '')
-                      }}
-                    >
-                      {isDefault && (
-                        <Icon name="star" size={14} filled className="text-amber-500" />
-                      )}
-                      <span>{truncatedRef}</span>
-
-                      {/* Botón marcar como principal si no es default */}
-                      {!isDefault && (
-                        <button
-                          type="button"
-                          title="Marcar como principal"
-                          onClick={async (e) => {
-                            e.stopPropagation() // Evitar seleccionar al tocar estrella
-                            await handleMarkAsDefault(addr)
-                          }}
-                          className="p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-amber-500 transition-colors"
-                        >
-                          <Icon name="star_border" size={14} />
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
+              <div className="flex items-center justify-between px-1 text-[10px] font-bold">
+                {historicalAddresses.some((a) => a.reference.trim() === deliveryReferenceTrim) ? (
+                  <span className="text-emerald-600 flex items-center gap-0.5 animate-in fade-in duration-200">
+                    <Icon name="check_circle" size={13} className="text-emerald-600" />
+                    Usando dirección registrada
+                  </span>
+                ) : (
+                  <span className="text-primary flex items-center gap-0.5 animate-in fade-in duration-200">
+                    <Icon name="edit" size={13} className="text-primary" />
+                    Escribiendo dirección nueva o modificada
+                  </span>
+                )}
+                <span className="text-on-surface-variant/70 font-mono">
+                  {deliveryReferenceTrim.length}/500
+                </span>
               </div>
-            </div>
+            )
           )}
         </section>
 
@@ -1072,6 +1022,65 @@ export function NewOrderForm() {
           <Icon name={createOrder.isPending ? 'progress_activity' : 'arrow_forward'} />
         </Button>
       </BottomActionBar>
+
+      {/* Modal de confirmación de dirección */}
+      {isConfirming && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-surface-container-lowest rounded-[24px] p-6 max-w-md w-full border border-outline-variant/15 shadow-2xl space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center gap-2 text-primary font-black">
+              <Icon name="check_circle" size={24} className="text-primary" />
+              <h3 className="text-lg">Confirmar pedido</h3>
+            </div>
+            
+            <div className="space-y-3 p-4 bg-surface-container-low rounded-2xl border border-outline-variant/10">
+              <div>
+                <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">Dirección de Entrega</span>
+                <p className="text-sm font-black text-primary mt-0.5 whitespace-pre-wrap break-words">{deliveryReferenceTrim}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-outline-variant/10">
+                <div>
+                  <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">Cliente</span>
+                  <p className="text-xs font-bold text-on-surface truncate">{clientNameTrim} ({clientPhoneDigits})</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">Monto</span>
+                  <p className="text-xs font-bold text-on-surface">S/ {amountNum.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-on-surface-variant font-medium text-center">¿Todo correcto?</p>
+
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setIsConfirming(false)}
+              >
+                Editar
+              </Button>
+              <Button
+                type="button"
+                className="flex-1"
+                disabled={createOrder.isPending}
+                onClick={executeSubmit}
+              >
+                {createOrder.isPending ? 'Creando...' : 'Sí, crear pedido'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Adaptive address suggestion popup */}
+      <AddressSuggestionPopup
+        isOpen={showSuggestionPopup}
+        phone={clientPhoneDigits}
+        addresses={historicalAddresses}
+        onConfirm={handleSuggestionConfirm}
+        onClose={handleSuggestionClose}
+      />
     </div>
   )
 }

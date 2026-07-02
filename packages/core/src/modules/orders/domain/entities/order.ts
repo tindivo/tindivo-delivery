@@ -970,14 +970,12 @@ export class Order extends AggregateRoot<OrderId> {
     return Result.okVoid()
   }
 
-  markReadyEarly(now: Date): Result<void, InvalidStateTransition | NoPrepTimeToReduce> {
-    if (this._state.status.value !== 'waiting_driver')
+  markReadyEarly(now: Date): Result<void, InvalidStateTransition> {
+    const allowedStatuses = ['waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant']
+    if (!allowedStatuses.includes(this._state.status.value))
       return Result.fail(new InvalidStateTransition(this._state.status.value, 'waiting_driver'))
 
-    const remainingMin = (this._state.estimatedReadyAt.getTime() - now.getTime()) / 60_000
-    if (remainingMin <= 10) return Result.fail(new NoPrepTimeToReduce())
-
-    const newReadyAt = new Date(now.getTime() + 10 * 60_000)
+    const newReadyAt = now
     this._state.estimatedReadyAt = newReadyAt
     this._state.appearsInQueueAt = now
     this._state.readyEarlyUsed = true

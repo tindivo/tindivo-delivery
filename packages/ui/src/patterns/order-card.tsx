@@ -231,6 +231,27 @@ export function OrderCard({
               <div className="text-xs text-on-surface-variant font-mono tracking-wider truncate">
                 #{shortId} · {restaurantName}
               </div>
+              {displayReference && (
+                <>
+                  <div
+                    title={displayReference}
+                    className="hidden md:flex items-center gap-1 text-xs text-on-surface-variant mt-1.5 font-medium truncate"
+                  >
+                    <Icon name="location_on" size={14} className="shrink-0 text-primary" />
+                    <span className="truncate">
+                      {displayReference.length > 40
+                        ? displayReference.slice(0, 40) + '...'
+                        : displayReference}
+                    </span>
+                  </div>
+                  <div
+                    className="flex md:hidden items-start gap-1 text-xs text-on-surface-variant mt-1.5 font-medium leading-tight text-left"
+                  >
+                    <Icon name="location_on" size={14} className="shrink-0 mt-0.5 text-primary" />
+                    <span className="line-clamp-2 break-words">{displayReference}</span>
+                  </div>
+                </>
+              )}
             </>
           ) : prominentCode ? (
             <>
@@ -241,6 +262,27 @@ export function OrderCard({
                 </span>
               </div>
               <div className="text-xs text-on-surface-variant truncate">{restaurantName}</div>
+              {displayReference && (
+                <>
+                  <div
+                    title={displayReference}
+                    className="hidden md:flex items-center gap-1 text-xs text-on-surface-variant mt-1.5 font-medium truncate"
+                  >
+                    <Icon name="location_on" size={14} className="shrink-0 text-primary" />
+                    <span className="truncate">
+                      {displayReference.length > 40
+                        ? displayReference.slice(0, 40) + '...'
+                        : displayReference}
+                    </span>
+                  </div>
+                  <div
+                    className="flex md:hidden items-start gap-1 text-xs text-on-surface-variant mt-1.5 font-medium leading-tight text-left"
+                  >
+                    <Icon name="location_on" size={14} className="shrink-0 mt-0.5 text-primary" />
+                    <span className="line-clamp-2 break-words">{displayReference}</span>
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -251,6 +293,27 @@ export function OrderCard({
               <div className="text-xs text-on-surface-variant font-mono tracking-wider">
                 #{shortId}
               </div>
+              {displayReference && (
+                <>
+                  <div
+                    title={displayReference}
+                    className="hidden md:flex items-center gap-1 text-xs text-on-surface-variant mt-1.5 font-medium truncate"
+                  >
+                    <Icon name="location_on" size={14} className="shrink-0 text-primary" />
+                    <span className="truncate">
+                      {displayReference.length > 40
+                        ? displayReference.slice(0, 40) + '...'
+                        : displayReference}
+                    </span>
+                  </div>
+                  <div
+                    className="flex md:hidden items-start gap-1 text-xs text-on-surface-variant mt-1.5 font-medium leading-tight text-left"
+                  >
+                    <Icon name="location_on" size={14} className="shrink-0 mt-0.5 text-primary" />
+                    <span className="line-clamp-2 break-words">{displayReference}</span>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>

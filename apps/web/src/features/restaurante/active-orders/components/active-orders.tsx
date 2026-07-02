@@ -98,6 +98,7 @@ export function ActiveOrders() {
                 paymentLabel={paymentLabel(order.payment_status)}
                 prepTimeMinutes={order.prep_minutes}
                 driverName={order.drivers?.full_name?.split(' ')[0] ?? null}
+                deliveryReference={order.delivery_address ?? order.delivery_reference}
                 // Forzamos `waiting_driver` como prop solo para activar el countdown
                 // visual del UrgencyBadge en OrderCard. El status real (status) se
                 // sigue mostrando vía StatusChip, así que la UI no miente.
