@@ -582,20 +582,22 @@ export function RestaurantOrderDetail({ orderId }: Props) {
               )}
             </div>
 
-            {/* Cancel link at the very bottom */}
+            {/* Cancel button at the very bottom */}
             {canCancel && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="md"
+                className="w-full text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border-red-200 dark:border-red-900/40 hover:bg-red-50/50 dark:hover:bg-red-950/20 mt-2 flex items-center justify-center gap-2"
                 disabled={cancel.isPending}
                 onClick={() => {
                   const reason = window.prompt('¿Por qué cancelas el pedido? (mínimo 3 caracteres)')
                   if (!reason || reason.trim().length < 3) return
                   cancel.mutate(reason.trim())
                 }}
-                className="text-xs text-on-surface-variant/60 hover:text-red-600 transition-colors font-semibold py-1.5 mx-auto hover:underline"
               >
+                <Icon name="close" size={18} className="text-red-600 dark:text-red-400" />
                 Cancelar pedido
-              </button>
+              </Button>
             )}
           </div>
         </BottomActionBar>
