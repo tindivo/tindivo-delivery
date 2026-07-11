@@ -1,0 +1,1 @@
+{"nodes": [], "edges": [], "hyperedges": [{"id": "tindivo_system", "label": "Tindivo System", "nodes": ["claude_apps_api", "claude_apps_web", "claude_apps_customer", "claude_package_core", "claude_package_supabase", "claude_package_contracts", "claude_package_ui"], "relation": "form", "confidence": "INFERRED", "confidence_score": 1.0, "source_file": "README.md"}]}

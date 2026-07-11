@@ -50,7 +50,18 @@
       "PowerShell(pnpm add *)",
       "Bash(pnpm -v)",
       "PowerShell(Get-Command *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(uv tool *)",
+      "Bash(graphify --version)",
+      "PowerShell(if \\($env:DEEPSEEK_API_KEY\\) { Write-Host \"DEEPSEEK_API_KEY: found \\(length: $\\($env:DEEPSEEK_API_KEY.Length\\)\\)\" } else { Write-Host \"DEEPSEEK_API_KEY: NOT SET\" })",
+      "Bash(graphify . --backend deepseek)",
+      "Bash(graphify cluster-only *)",
+      "Bash(graphify update *)",
+      "Bash(graphify query *)",
+      "Bash(graphify path *)",
+      "Bash(graphify explain *)",
+      "Bash(graphify hook *)",
+      "Bash(Start-Process *)"
     ]
   }
 }

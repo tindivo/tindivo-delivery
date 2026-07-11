@@ -74,11 +74,53 @@ pnpm build
 pnpm type-check       # turbo: tsc --noEmit en cada paquete (8 packages)
 pnpm check            # Biome lint + format
 pnpm --filter @tindivo/core test   # vitest run (los tests del dominio)
+pnpm graphify:update  # actualizar grafo incrementalmente (sin costo de API)
+pnpm graphify:cluster # re-agrupa y actualiza reportes del grafo existente
+pnpm graphify:query "<q>"  # consulta el grafo en lenguaje natural
+pnpm graphify:path "<A>" "<B>"  # traza ruta más corta entre dos componentes
+pnpm graphify:explain "<concepto>"  # explica un nodo específico
+pnpm graphify:hooks   # instala post-commit git hook para auto-actualizar
 ```
 
 - **Vitest solo está configurado en `packages/core`**. Las apps (`api`, `web`, `customer`) tienen scripts `lint` + `type-check` pero NO `test`.
 - Si `supabase` CLI no está instalado globalmente, regenerar tipos vía MCP de Supabase (`generate_typescript_types`) y escribir el resultado a `packages/supabase/src/types.gen.ts`.
 - Las migrations se pueden aplicar a producción vía MCP (`apply_migration`) sin necesidad de `pnpm db:push`.
+
+## Graphify — Grafo de conocimiento del codebase
+
+Graphify mapea todo el proyecto (código, docs, imágenes) a un **grafo de conocimiento**
+en `graphify-out/`. El código se parsea localmente con tree-sitter AST (gratis, sin
+LLM, nada sale de tu máquina). Los docs e imágenes pasan por DeepSeek para extracción
+semántica (~$0.02 por build completo).
+
+- **`graphify-out/graph.json`**: el grafo completo (3187 nodos, 8370 aristas, 162 comunidades).
+- **`graphify-out/graph.html`**: visualización 3D/2D interactiva en el navegador.
+- **`graphify-out/GRAPH_REPORT.md`**: reporte legible con god nodes, conexiones sorprendentes, y preguntas sugeridas.
+
+### Uso diario
+
+Para preguntas de codebase o arquitectura, **siempre consultar el grafo primero**
+en vez de hacer grep o leer archivos en crudo:
+
+```bash
+pnpm graphify:query "¿Cómo funciona la asignación de motorizados?"
+pnpm graphify:path "orders/page.tsx" "createServiceClient"
+pnpm graphify:explain "OrderAssignmentPolicy"
+```
+
+Después de modificar código, actualizar el grafo (AST-only, sin costo de API):
+```bash
+pnpm graphify:update
+```
+
+Para regeneración completa desde cero:
+```powershell
+graphify . --backend deepseek
+graphify cluster-only .
+```
+
+El agente tiene una regla `always_on` en `.agents/rules/graphify.md` que
+instruye consultar el grafo antes que hacer búsquedas crudas.
 
 ## Módulos del dominio (`packages/core/src/modules/`)
 
