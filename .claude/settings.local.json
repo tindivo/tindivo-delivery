@@ -63,7 +63,8 @@
       "Bash(graphify hook *)",
       "Bash(Start-Process *)",
       "Bash(pnpm type-check *)",
-      "Bash(pnpm --filter @tindivo/core test)"
+      "Bash(pnpm --filter @tindivo/core test)",
+      "Bash(git commit -m 'perf\\(realtime\\): adaptive polling based on WebSocket channel health *)"
     ]
   }
 }
