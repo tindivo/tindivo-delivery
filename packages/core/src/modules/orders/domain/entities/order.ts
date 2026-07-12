@@ -1025,8 +1025,11 @@ export class Order extends AggregateRoot<OrderId> {
 
     let newReadyAt = this._state.estimatedReadyAt
     if (remainingMin > 10) {
+      // Si falta más de 10 min, damos un buffer de 10 min para que el
+      // motorizado tenga margen de llegada.
       newReadyAt = new Date(now.getTime() + 10 * 60_000)
     }
+    // Si faltan ≤10 min, se mantiene la hora original estimada.
 
     this._state.estimatedReadyAt = newReadyAt
     this._state.appearsInQueueAt = now

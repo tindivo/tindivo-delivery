@@ -32,6 +32,7 @@ export function RestaurantOrderDetail({ orderId }: Props) {
   const readyEarly = useMarkReadyEarly(orderId)
   const [showExtension, setShowExtension] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
+  const [showReadyConfirm, setShowReadyConfirm] = useState(false)
 
   // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
   const order = data as any
@@ -270,12 +271,12 @@ export function RestaurantOrderDetail({ orderId }: Props) {
                       {order.ready_early_at ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-100 text-emerald-950 border border-emerald-300/20 shadow-xs animate-in fade-in duration-200">
                           <Icon name="restaurant" size={14} filled className="text-emerald-700" />
-                          COMIDA LISTA
+                          ¡LISTO ANTES!
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-amber-50 text-amber-800 border border-amber-200 shadow-xs">
                           <Icon name="restaurant" size={14} className="text-amber-600" />
-                          EN COCINA
+                          PREPARANDO
                         </span>
                       )}
                       {order.estimated_ready_at && (
@@ -504,25 +505,52 @@ export function RestaurantOrderDetail({ orderId }: Props) {
           <div className="flex flex-col gap-3">
             {/* Primary Action Button / Element */}
             {remainingMinutes > 0 && !order.ready_early_at ? (
-              // EN COCINA state: PEDIDO LISTO is the primary button
-              <Button
-                variant="primary"
-                size="lg"
-                className="w-full shadow-md"
-                disabled={!canReadyEarly || readyEarly.isPending}
-                onClick={() => readyEarly.mutate()}
-              >
-                <Icon name="bolt" filled />
-                PEDIDO LISTO
-              </Button>
+              showReadyConfirm ? (
+                // Confirmación: ¿estás seguro de marcar como listo?
+                <div className="flex gap-2 w-full">
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => setShowReadyConfirm(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="flex-1 shadow-md"
+                    disabled={readyEarly.isPending}
+                    onClick={() => {
+                      readyEarly.mutate(undefined, {
+                        onSuccess: () => setShowReadyConfirm(false),
+                      })
+                    }}
+                  >
+                    <Icon name="check_circle" filled />
+                    {readyEarly.isPending ? 'Confirmando...' : 'Sí, está listo'}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full shadow-md"
+                  disabled={!canReadyEarly || readyEarly.isPending}
+                  onClick={() => setShowReadyConfirm(true)}
+                >
+                  <Icon name="bolt" filled />
+                  ¡PEDIDO LISTO!
+                </Button>
+              )
             ) : (
-              // LISTO PARA RECOGER or COMIDA LISTA state: Information block (no button)
+              // Pedido ya listo: info block (no button)
               <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-sm animate-pulse w-full">
                 <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-white">
                   <Icon name="check" size={14} />
                 </span>
                 <span className="text-xs font-semibold leading-snug">
-                  Pedido listo. El motorizado marcará la entrega cuando llegue al cliente.
+                  Pedido listo. El motorizado llegará a recogerlo.
                 </span>
               </div>
             )}

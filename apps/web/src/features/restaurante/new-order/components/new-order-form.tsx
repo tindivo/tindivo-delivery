@@ -137,8 +137,7 @@ export function NewOrderForm() {
   // true cuando el cajero seleccionó una dirección guardada (con GPS) y luego
   // editó manualmente el texto → GPS ya no viajará → mostramos advertencia ámbar.
   const [wasAddressDeselectedByEdit, setWasAddressDeselectedByEdit] = useState<boolean>(false)
-  const [readyEarlyParam, setReadyEarlyParam] = useState<boolean>(false)
-
+  const [readyNow, setReadyNow] = useState(false)
   // Mostrar el error solo después de que el usuario interactuó con el campo,
   // para no asustar con rojos antes de empezar a escribir.
   const [touched, setTouched] = useState<{
@@ -385,12 +384,13 @@ export function NewOrderForm() {
       inline: 'center',
       block: 'nearest',
     })
+    // Resetear el toggle "listo ahora" si cambia el tiempo de prep
+    setReadyNow(false)
   }, [prepMinutes])
 
-  async function executeSubmit(readyEarlyVal?: boolean) {
+  async function executeSubmit() {
     if (submittingRef.current) return
     submittingRef.current = true
-    const isReady = readyEarlyVal !== undefined ? readyEarlyVal : readyEarlyParam
     const body: Orders.CreateOrderRequest = {
       prepMinutes,
       paymentStatus: payment,
@@ -403,7 +403,7 @@ export function NewOrderForm() {
       clientPhone: clientPhoneDigits,
       deliveryReference: deliveryReferenceTrim,
       customerAddressId: selectedAddressId,
-      readyEarly: isReady,
+      readyEarly: readyNow || undefined,
     }
     createOrder.mutate(
       { body, idempotencyKey: idem.key },
@@ -442,17 +442,13 @@ export function NewOrderForm() {
       return
     }
 
-    let isReady = false
-    if (prepMinutes === 10) {
-      isReady = window.confirm('¿El pedido ya está terminado y listo para recoger?')
-    }
-    setReadyEarlyParam(isReady)
-
-    // CONDICIONAL: Solo mostrar el modal de confirmación si el cliente tiene direcciones históricas
-    if (historicalAddresses.length > 0) {
+    // Mostrar el popup de confirmación si:
+    // - El cliente tiene direcciones históricas (para sugerir reutilizar), o
+    // - El tiempo de preparación es 10 min (para ofrecer marcar como listo)
+    if (historicalAddresses.length > 0 || prepMinutes === 10) {
       setIsConfirming(true)
     } else {
-      executeSubmit(isReady)
+      executeSubmit()
     }
   }
 
@@ -1106,6 +1102,91 @@ export function NewOrderForm() {
                 </div>
               </div>
             </div>
+
+            {/* Toggle "listo ahora" — solo cuando prep=10 min */}
+            {prepMinutes === 10 && (
+              <button
+                type="button"
+                onClick={() => setReadyNow((v) => !v)}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 cursor-pointer select-none hover:brightness-95"
+                style={{
+                  background: readyNow
+                    ? 'rgba(5, 150, 105, 0.10)'
+                    : 'rgba(249, 250, 251, 0.9)',
+                  border: readyNow
+                    ? '1.5px solid rgba(5, 150, 105, 0.40)'
+                    : '1.5px solid rgba(209, 213, 219, 0.9)',
+                  boxShadow: readyNow
+                    ? '0 0 0 3px rgba(5, 150, 105, 0.08)'
+                    : '0 1px 3px rgba(0, 0, 0, 0.04)',
+                }}
+              >
+                {/* Icono */}
+                <span
+                  className="shrink-0 inline-flex items-center justify-center transition-all duration-300"
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '11px',
+                    background: readyNow
+                      ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)'
+                      : 'rgba(156, 163, 175, 0.18)',
+                    color: readyNow ? '#ffffff' : '#6B7280',
+                    boxShadow: readyNow
+                      ? '0 4px 12px rgba(5, 150, 105, 0.35)'
+                      : 'none',
+                  }}
+                >
+                  <Icon name="check_circle" size={20} filled={readyNow} />
+                </span>
+
+                {/* Texto */}
+                <div className="flex-1 text-left">
+                  <div className="text-sm font-bold text-on-surface">
+                    {readyNow ? 'Pedido listo para recoger' : '¿Ya está listo el pedido?'}
+                  </div>
+                  <div className="text-[11px] text-on-surface-variant">
+                    {readyNow
+                      ? 'El motorizado vendrá de inmediato.'
+                      : 'Actívalo si la comida ya está terminada.'}
+                  </div>
+                </div>
+
+                {/* Toggle Switch */}
+                <span
+                  className="shrink-0 relative inline-flex items-center transition-all duration-300"
+                  style={{
+                    width: '48px',
+                    height: '28px',
+                    borderRadius: '14px',
+                    background: readyNow
+                      ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)'
+                      : 'rgba(209, 213, 219, 0.8)',
+                    boxShadow: readyNow
+                      ? '0 2px 8px rgba(5, 150, 105, 0.40), inset 0 1px 0 rgba(255,255,255,0.2)'
+                      : 'inset 0 1px 2px rgba(0, 0, 0, 0.08)',
+                  }}
+                >
+                  <span
+                    className="absolute inline-flex items-center justify-center transition-all duration-300"
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: '#ffffff',
+                      left: readyNow ? '23px' : '3px',
+                      boxShadow: readyNow
+                        ? '0 1px 3px rgba(0,0,0,0.15)'
+                        : '0 1px 2px rgba(0,0,0,0.12)',
+                    }}
+                  >
+                    {readyNow && (
+                      <Icon name="check" size={12} className="text-emerald-600" />
+                    )}
+                  </span>
+                </span>
+              </button>
+            )}
 
             <p className="text-xs text-on-surface-variant font-medium text-center">
               ¿Todo correcto?

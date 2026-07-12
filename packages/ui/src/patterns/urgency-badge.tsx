@@ -40,21 +40,21 @@ const TIER_STYLES: Record<
     color: '#065F46',
     border: 'rgba(16, 185, 129, 0.28)',
     icon: 'schedule',
-    label: 'En cocina',
+    label: 'Preparando',
   },
   pending: {
     bg: 'rgba(234, 179, 8, 0.14)',
     color: '#92400E',
     border: 'rgba(234, 179, 8, 0.32)',
     icon: 'hourglass_top',
-    label: 'Listo pronto',
+    label: 'Casi listo',
   },
   overdue: {
     bg: 'rgba(186, 26, 26, 0.14)',
     color: '#991B1B',
     border: 'rgba(186, 26, 26, 0.35)',
     icon: 'priority_high',
-    label: 'Urgente',
+    label: '¡Demorado!',
   },
 }
 

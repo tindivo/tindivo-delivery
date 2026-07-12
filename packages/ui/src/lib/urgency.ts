@@ -41,11 +41,11 @@ export function formatRemaining(estimatedReadyAt: Date | string, now: Date = new
 export function remainingLabel(estimatedReadyAt: Date | string, now: Date = new Date()): string {
   const ready = typeof estimatedReadyAt === 'string' ? new Date(estimatedReadyAt) : estimatedReadyAt
   const deltaMin = Math.round((ready.getTime() - now.getTime()) / 60000)
-  if (deltaMin > 1) return `En ${deltaMin} min`
-  if (deltaMin === 1) return 'En 1 min'
+  if (deltaMin > 1) return `Listo en ${deltaMin} min`
+  if (deltaMin === 1) return 'Listo en 1 min'
   if (deltaMin === 0) return 'Listo ahora'
-  if (deltaMin === -1) return 'Vencido 1 min'
-  return `Vencido ${Math.abs(deltaMin)} min`
+  if (deltaMin === -1) return 'Demorado 1 min'
+  return `Demorado ${Math.abs(deltaMin)} min`
 }
 
 /**
