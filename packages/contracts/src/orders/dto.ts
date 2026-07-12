@@ -252,6 +252,7 @@ export const MarkDeliveredRequest = z
         reference: z.string().optional(),
         distanceDragged: z.number().default(0),
         omitted: z.boolean().default(false),
+        customerName: z.string().optional(),
       })
       .optional(),
   })

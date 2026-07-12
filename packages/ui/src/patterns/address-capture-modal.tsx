@@ -26,6 +26,7 @@ type Props = {
     reference: string | undefined,
     distanceDragged: number,
     accuracy: number,
+    customerName?: string,
   ) => void
   onSkip: () => void
   showReferenceField?: boolean
@@ -138,8 +139,8 @@ export function AddressCaptureModal({
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 10000,
+        maximumAge: 30000,
+        timeout: 20000,
       },
     )
 
@@ -147,6 +148,32 @@ export function AddressCaptureModal({
       active = false
     }
   }, [open, initialLat, initialLng, variant])
+
+  const requestGeolocation = useCallback(() => {
+    if (!navigator.geolocation) return
+    setLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        }
+        setGpsCoords(coords)
+        setCurrentCoords(coords)
+        setAccuracy(Math.round(position.coords.accuracy))
+        setLoading(false)
+      },
+      (error) => {
+        console.error('Error obtaining GPS coordinates:', error)
+        setLoading(false)
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 30000,
+        timeout: 20000,
+      },
+    )
+  }, [])
 
   const handleConfirm = useCallback(() => {
     if (!currentCoords) return
@@ -162,8 +189,9 @@ export function AddressCaptureModal({
       const distance = getHaversineDistance(gpsCoords, currentCoords)
       const finalAccuracy = accuracy ?? 999
       const finalReference = reference.trim() !== (initialReference ?? '') ? reference : undefined
+      const finalCustomerName = customerName.trim() || undefined
 
-      onConfirm(currentCoords.lat, currentCoords.lng, finalReference, distance, finalAccuracy)
+      onConfirm(currentCoords.lat, currentCoords.lng, finalReference, distance, finalAccuracy, finalCustomerName)
     }
   }, [
     variant,
@@ -177,6 +205,8 @@ export function AddressCaptureModal({
     onConfirmAdmin,
   ])
 
+  const isAdjustment = initialLat != null && initialLng != null
+
   if (!open) return null
 
   return (
@@ -189,7 +219,11 @@ export function AddressCaptureModal({
             <div className="flex items-center gap-2">
               <Icon name="my_location" className="text-primary" />
               <Dialog.Title className="text-lg font-bold text-foreground">
-                {variant === 'admin' ? 'Curar Cliente y Ubicación' : 'Capturar Ubicación'}
+                {variant === 'admin'
+                  ? 'Curar Cliente y Ubicación'
+                  : isAdjustment
+                    ? 'Ajustar Ubicación'
+                    : 'Capturar Ubicación'}
               </Dialog.Title>
             </div>
             <Dialog.Close asChild>
@@ -225,9 +259,9 @@ export function AddressCaptureModal({
 
           {/* Bottom Panel */}
           <div className="flex flex-col gap-4 border-t border-outline-variant/30 bg-background p-6">
-            {/* GPS Accuracy */}
+            {/* GPS Accuracy + "Usar mi ubicación" */}
             {!loading && variant !== 'admin' && (
-              <div className="flex flex-col gap-1 rounded-xl bg-surface-container-low p-4">
+              <div className="flex flex-col gap-2 rounded-xl bg-surface-container-low p-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Icon name="radar" size={18} />
                   <span>
@@ -241,11 +275,20 @@ export function AddressCaptureModal({
                     Si el pin no está donde estás parado, arrástralo.
                   </p>
                 )}
+                <button
+                  type="button"
+                  onClick={requestGeolocation}
+                  disabled={loading}
+                  className="inline-flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-primary/10 text-primary text-sm font-bold active:scale-[0.98] transition-transform"
+                >
+                  <Icon name="my_location" size={16} />
+                  Usar mi ubicación actual
+                </button>
               </div>
             )}
 
-            {/* Customer Name Input (Admin only) */}
-            {variant === 'admin' && (
+            {/* Customer Name Input */}
+            {(variant === 'admin' || initialCustomerName != null) && (
               <div className="flex flex-col gap-2">
                 <label htmlFor="name-input" className="text-xs font-semibold text-muted-foreground">
                   Nombre del cliente
@@ -262,7 +305,7 @@ export function AddressCaptureModal({
             )}
 
             {/* Reference Input */}
-            {(showReferenceField || variant === 'admin') && (
+            {(showReferenceField || variant === 'admin' || isAdjustment) && (
               <div className="flex flex-col gap-2">
                 <label htmlFor="ref-input" className="text-xs font-semibold text-muted-foreground">
                   {variant === 'admin'

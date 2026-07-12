@@ -6,6 +6,7 @@ import type { Order } from '../../domain/entities/order'
 import { OrderNotFound } from '../../domain/errors/order-errors'
 import { Coordinates } from '../../domain/value-objects/coordinates'
 import { OrderId } from '../../domain/value-objects/order-id'
+import { haversineDistance } from '../../../../shared/utils/maps'
 import type { Clock } from '../ports/clock'
 import type {
   AddressCaptureEvent,
@@ -25,6 +26,7 @@ export type MarkDeliveredCommand = {
     reference?: string
     distanceDragged?: number
     omitted?: boolean
+    customerName?: string
   }
 }
 
@@ -60,9 +62,23 @@ export class MarkDeliveredUseCase
       }
     } else if (order.customerAddressId) {
       try {
-        // Caso A (o cliente antiguo sin capture): actualizar uso en background
+        // Caso A (o cliente antiguo sin capture explícito): actualizar uso
+        // y, si el order tiene coordenadas (del saveCustomerData o de la
+        // herencia del customer_address al crear), mantener actualizada la
+        // dirección guardada — cada entrega es una oportunidad de mejorar
+        // la precisión de los datos.
         const address = await this.customerAddresses.findById(order.customerAddressId)
         if (address) {
+          // Si source no es admin_curated y el order tiene coordenadas,
+          // actualizarlas en la dirección guardada (P3).
+          if (
+            address.source !== 'admin_curated' &&
+            order.props.deliveryCoordinates
+          ) {
+            address.lat = order.props.deliveryCoordinates.lat
+            address.lng = order.props.deliveryCoordinates.lng
+            // accuracy no disponible en esta rama; mantener la existente
+          }
           address.lastUsedAt = now
           address.timesUsed += 1
           if (order.props.clientName) {
@@ -117,30 +133,52 @@ export class MarkDeliveredUseCase
     let referenceEdited = false
     let oldReferenceLength = 0
     let newReferenceLength = 0
+    let distanceFromPreviousM: number | null = null
 
     // Si no está omitido, actualizamos las coordenadas finales del pedido (snapshot)
     order.updateDeliveryCoordinates(Coordinates.of(capture.lat, capture.lng))
 
+    // El nombre editado por el driver en el modal tiene prioridad sobre
+    // el que viene del pedido (clientName del restaurante).
+    const effectiveName = capture.customerName?.trim() || order.props.clientName || null
+
     if (order.customerAddressId) {
       const address = await this.customerAddresses.findById(order.customerAddressId)
       if (address) {
+
         if (address.source === 'admin_curated') {
           // Jerarquía: admin_curated no se sobreescribe. Solo actualiza stats.
           address.lastUsedAt = now
           address.timesUsed += 1
-          if (order.props.clientName) {
-            address.customerName = order.props.clientName
+          if (effectiveName) {
+            address.customerName = effectiveName
           }
         } else {
           // Actualizar dirección
+          // Validar outlier: si la coordenada nueva está a >500m de la
+          // guardada, loguear warning pero igual persistir (el driver
+          // confirmó visualmente en el mapa).
+          if (address.lat != null && address.lng != null) {
+            const jumpM = haversineDistance(
+              { lat: address.lat, lng: address.lng },
+              { lat: capture.lat, lng: capture.lng },
+            )
+            distanceFromPreviousM = jumpM
+            if (jumpM > 500) {
+              console.warn(
+                `[MarkDelivered] Large coordinate jump: ${jumpM}m ` +
+                `for address ${address.addressId} (phone ${address.phone})`,
+              )
+            }
+          }
           address.lat = capture.lat
           address.lng = capture.lng
           address.accuracyM = capture.accuracy
           address.source = 'driver_verified'
           address.lastUsedAt = now
           address.timesUsed += 1
-          if (order.props.clientName) {
-            address.customerName = order.props.clientName
+          if (effectiveName) {
+            address.customerName = effectiveName
           }
 
           // Guardar referencia si fue editada y la precisión es aceptable (<= 500m)
@@ -188,8 +226,8 @@ export class MarkDeliveredUseCase
         }
         matchingAddress.lastUsedAt = now
         matchingAddress.timesUsed += 1
-        if (order.props.clientName) {
-          matchingAddress.customerName = order.props.clientName
+        if (effectiveName) {
+          matchingAddress.customerName = effectiveName
         }
         await this.customerAddresses.update(matchingAddress)
         order.setCustomerAddressId(matchingAddress.addressId)
@@ -207,7 +245,7 @@ export class MarkDeliveredUseCase
           isDefault,
           lastUsedAt: now,
           timesUsed: 1,
-          customerName: order.props.clientName,
+          customerName: effectiveName,
         })
 
         // Enlazar orden con la nueva dirección creada
@@ -223,9 +261,12 @@ export class MarkDeliveredUseCase
       action,
       accuracyReported: capture.accuracy,
       distanceDraggedM: capture.distanceDragged ?? 0,
-      metadata: referenceEdited
-        ? { reference_edited: true, old_length: oldReferenceLength, new_length: newReferenceLength }
-        : {},
+      metadata: {
+        ...(referenceEdited
+          ? { reference_edited: true, old_length: oldReferenceLength, new_length: newReferenceLength }
+          : {}),
+        ...(distanceFromPreviousM != null ? { distance_from_previous_m: distanceFromPreviousM } : {}),
+      },
     }
     await this.customerAddresses.logEvent(event)
   }

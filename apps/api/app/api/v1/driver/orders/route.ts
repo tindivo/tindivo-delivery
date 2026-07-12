@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await auth.auth.supabase
     .from('orders')
     .select(
-      '*, restaurants!inner(name, accent_color, address, phone, yape_number, qr_url, qr_url_secondary, coordinates_lat, coordinates_lng)',
+      '*, restaurants!inner(name, accent_color, address, phone, yape_number, qr_url, qr_url_secondary, coordinates_lat, coordinates_lng), customer_addresses!orders_customer_address_id_fkey(lat, lng)',
     )
     .eq('driver_id', auth.auth.driverId)
     .in('status', ['waiting_driver', 'heading_to_restaurant', 'waiting_at_restaurant', 'picked_up'])
