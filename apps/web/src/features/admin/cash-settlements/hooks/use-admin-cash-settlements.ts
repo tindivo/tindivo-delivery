@@ -9,17 +9,16 @@ type StatusFilter = 'disputed' | 'delivered' | 'confirmed' | 'resolved' | 'all'
 export function useAdminCashSettlements(status: StatusFilter = 'disputed') {
   const qc = useQueryClient()
 
-  const query = useQuery({
-    queryKey: ['admin', 'cash-settlements', status],
-    queryFn: () => admin.listCashSettlements(status),
-    refetchInterval: 30_000,
-  })
-
-  // Admin escucha TODOS los cambios para refrescar el dashboard
-  useRealtimeChannel({
+  const { health } = useRealtimeChannel({
     channelName: 'admin:cash-settlements',
     changes: [{ event: '*', table: 'cash_settlements' }],
     onEvent: () => qc.invalidateQueries({ queryKey: ['admin', 'cash-settlements'] }),
+  })
+
+  const query = useQuery({
+    queryKey: ['admin', 'cash-settlements', status],
+    queryFn: () => admin.listCashSettlements(status),
+    refetchInterval: health === 'degraded' ? 30_000 : 60_000,
   })
 
   return query

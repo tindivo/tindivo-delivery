@@ -25,13 +25,7 @@ export function useRestaurantOrders() {
   const qc = useQueryClient()
   const { data: restaurantId } = useMyRestaurantId()
 
-  const query = useQuery({
-    queryKey: ['restaurant', 'orders'],
-    queryFn: () => orders.listRestaurantOrders(),
-    refetchInterval: 30_000,
-  })
-
-  useRealtimeChannel({
+  const { health } = useRealtimeChannel({
     channelName: `restaurant:${restaurantId ?? 'pending'}:orders`,
     changes: [
       {
@@ -44,6 +38,12 @@ export function useRestaurantOrders() {
       qc.invalidateQueries({ queryKey: ['restaurant', 'orders'] })
     },
     enabled: Boolean(restaurantId),
+  })
+
+  const query = useQuery({
+    queryKey: ['restaurant', 'orders'],
+    queryFn: () => orders.listRestaurantOrders(),
+    refetchInterval: health === 'degraded' ? 30_000 : 90_000,
   })
 
   return query

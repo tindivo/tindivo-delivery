@@ -9,6 +9,14 @@ type OrdersListResponse = { items?: OrderLike[] }
 export function useAdminActiveOrders() {
   const qc = useQueryClient()
 
+  const { health } = useRealtimeChannel({
+    channelName: 'admin:orders',
+    changes: [{ event: '*', table: 'orders' }],
+    onEvent: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
+    },
+  })
+
   const query = useQuery({
     queryKey: ['admin', 'orders', 'active'],
     queryFn: async () => {
@@ -18,15 +26,7 @@ export function useAdminActiveOrders() {
       )
       return { items: active }
     },
-    refetchInterval: 15_000,
-  })
-
-  useRealtimeChannel({
-    channelName: 'admin:orders',
-    changes: [{ event: '*', table: 'orders' }],
-    onEvent: () => {
-      qc.invalidateQueries({ queryKey: ['admin', 'orders'] })
-    },
+    refetchInterval: health === 'degraded' ? 15_000 : 30_000,
   })
 
   return query

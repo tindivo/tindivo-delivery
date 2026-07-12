@@ -14,16 +14,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 export function useTrackingPending() {
   const qc = useQueryClient()
 
-  const query = useQuery({
-    queryKey: ['admin', 'tracking-pending'],
-    queryFn: () => admin.listTrackingPending(),
-    refetchInterval: 30_000,
-  })
-
-  useRealtimeChannel({
+  const { health } = useRealtimeChannel({
     channelName: 'admin:tracking-pending',
     changes: [{ event: 'UPDATE', table: 'orders' }],
     onEvent: () => qc.invalidateQueries({ queryKey: ['admin', 'tracking-pending'] }),
+  })
+
+  const query = useQuery({
+    queryKey: ['admin', 'tracking-pending'],
+    queryFn: () => admin.listTrackingPending(),
+    refetchInterval: health === 'degraded' ? 30_000 : 60_000,
   })
 
   return query

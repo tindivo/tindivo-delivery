@@ -13,18 +13,18 @@ const QK = ['admin', 'daily-summary'] as const
 export function useAdminDailySummary() {
   const qc = useQueryClient()
 
-  const query = useQuery({
-    queryKey: QK,
-    queryFn: () => admin.getDailySummary(),
-    refetchInterval: 60_000,
-  })
-
-  useRealtimeChannel({
+  const { health } = useRealtimeChannel({
     channelName: 'admin:daily-summary',
     changes: [{ event: '*', table: 'orders' }],
     onEvent: () => {
       qc.invalidateQueries({ queryKey: QK })
     },
+  })
+
+  const query = useQuery({
+    queryKey: QK,
+    queryFn: () => admin.getDailySummary(),
+    refetchInterval: health === 'degraded' ? 60_000 : 120_000,
   })
 
   return query

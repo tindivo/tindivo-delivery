@@ -30,13 +30,7 @@ export function useRestaurantCashSettlements() {
   const qc = useQueryClient()
   const { data: restaurantId } = useMyRestaurantId()
 
-  const query = useQuery({
-    queryKey: ['restaurant', 'cash-settlements'],
-    queryFn: () => restaurant.listCashSettlements(),
-    refetchInterval: 30_000,
-  })
-
-  useRealtimeChannel({
+  const { health } = useRealtimeChannel({
     channelName: `restaurant:${restaurantId ?? 'pending'}:cash-settlements`,
     changes: [
       {
@@ -49,6 +43,12 @@ export function useRestaurantCashSettlements() {
       qc.invalidateQueries({ queryKey: ['restaurant', 'cash-settlements'] })
     },
     enabled: Boolean(restaurantId),
+  })
+
+  const query = useQuery({
+    queryKey: ['restaurant', 'cash-settlements'],
+    queryFn: () => restaurant.listCashSettlements(),
+    refetchInterval: health === 'degraded' ? 30_000 : 90_000,
   })
 
   return query

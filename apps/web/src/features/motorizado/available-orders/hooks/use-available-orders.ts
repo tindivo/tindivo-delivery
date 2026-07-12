@@ -6,18 +6,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 export function useAvailableOrders() {
   const qc = useQueryClient()
 
-  const query = useQuery({
-    queryKey: ['driver', 'available-orders'],
-    queryFn: () => orders.listAvailable(),
-    refetchInterval: 30_000,
-  })
-
-  useRealtimeChannel({
+  const { health } = useRealtimeChannel({
     channelName: 'driver:available-orders',
     changes: [{ event: '*', table: 'orders', filter: 'status=eq.waiting_driver' }],
     onEvent: () => {
       qc.invalidateQueries({ queryKey: ['driver', 'available-orders'] })
     },
+  })
+
+  const query = useQuery({
+    queryKey: ['driver', 'available-orders'],
+    queryFn: () => orders.listAvailable(),
+    refetchInterval: health === 'degraded' ? 20_000 : 90_000,
   })
 
   return query

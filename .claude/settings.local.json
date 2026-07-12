@@ -61,7 +61,9 @@
       "Bash(graphify path *)",
       "Bash(graphify explain *)",
       "Bash(graphify hook *)",
-      "Bash(Start-Process *)"
+      "Bash(Start-Process *)",
+      "Bash(pnpm type-check *)",
+      "Bash(pnpm --filter @tindivo/core test)"
     ]
   }
 }

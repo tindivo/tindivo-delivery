@@ -13,13 +13,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 export function useTeamOrders() {
   const qc = useQueryClient()
 
-  const query = useQuery({
-    queryKey: ['driver', 'team', 'orders'],
-    queryFn: () => orders.listTeamOrders(),
-    refetchInterval: 30_000,
-  })
-
-  useRealtimeChannel({
+  const { health } = useRealtimeChannel({
     channelName: 'driver:team-orders',
     changes: [{ event: 'UPDATE', table: 'orders' }],
     onEvent: () => {
@@ -36,6 +30,12 @@ export function useTeamOrders() {
     onEvent: () => {
       qc.invalidateQueries({ queryKey: ['driver', 'team', 'orders'] })
     },
+  })
+
+  const query = useQuery({
+    queryKey: ['driver', 'team', 'orders'],
+    queryFn: () => orders.listTeamOrders(),
+    refetchInterval: health === 'degraded' ? 30_000 : 90_000,
   })
 
   return query

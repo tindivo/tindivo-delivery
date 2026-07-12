@@ -12,20 +12,20 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 export function useRestaurantOrderDetail(orderId: string) {
   const qc = useQueryClient()
 
-  const query = useQuery({
-    queryKey: ['restaurant', 'order', orderId],
-    // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
-    queryFn: () => orders.getRestaurantOrder(orderId) as Promise<any>,
-    refetchInterval: 30_000,
-  })
-
-  useRealtimeChannel({
+  const { health } = useRealtimeChannel({
     channelName: `restaurant:order:${orderId}`,
     changes: [{ event: 'UPDATE', table: 'orders', filter: `id=eq.${orderId}` }],
     onEvent: () => {
       qc.invalidateQueries({ queryKey: ['restaurant', 'order', orderId] })
     },
     enabled: Boolean(orderId),
+  })
+
+  const query = useQuery({
+    queryKey: ['restaurant', 'order', orderId],
+    // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
+    queryFn: () => orders.getRestaurantOrder(orderId) as Promise<any>,
+    refetchInterval: health === 'degraded' ? 30_000 : 90_000,
   })
 
   return query

@@ -10,24 +10,24 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
  * Realtime: invalida cuando hay cambios en `order_transfer_requests` (INSERT
  * de una nueva, UPDATE a accepted/rejected, o cron expire).
  *
- * Polling cada 5s como fallback agresivo porque el countdown live necesita
- * saber pronto si la solicitud cambió de estado (por timeout del cron).
+ * Polling adaptativo: 120s cuando el WebSocket está sano, 30s cuando está
+ * degradado. El push entrega las transferencias en <1s en condiciones normales.
  */
 export function useReceivedTransferRequests() {
   const qc = useQueryClient()
 
-  const query = useQuery({
-    queryKey: ['driver', 'team', 'received-requests'],
-    queryFn: () => orders.listReceivedTransferRequests(),
-    refetchInterval: 5_000,
-  })
-
-  useRealtimeChannel({
+  const { health } = useRealtimeChannel({
     channelName: 'driver:team-received-requests',
     changes: [{ event: '*', table: 'order_transfer_requests' }],
     onEvent: () => {
       qc.invalidateQueries({ queryKey: ['driver', 'team', 'received-requests'] })
     },
+  })
+
+  const query = useQuery({
+    queryKey: ['driver', 'team', 'received-requests'],
+    queryFn: () => orders.listReceivedTransferRequests(),
+    refetchInterval: health === 'degraded' ? 30_000 : 120_000,
   })
 
   return query

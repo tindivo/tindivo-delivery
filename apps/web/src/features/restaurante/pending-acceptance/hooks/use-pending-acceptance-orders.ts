@@ -32,13 +32,7 @@ export function usePendingAcceptanceOrders() {
   const qc = useQueryClient()
   const { data: restaurantId } = useMyRestaurantId()
 
-  const query = useQuery({
-    queryKey: QK,
-    queryFn: () => restaurant.listPendingAcceptance(),
-    refetchInterval: 5_000,
-  })
-
-  useRealtimeChannel({
+  const { health } = useRealtimeChannel({
     channelName: `restaurant:${restaurantId ?? 'pending'}:pending-acceptance`,
     changes: [
       {
@@ -52,6 +46,12 @@ export function usePendingAcceptanceOrders() {
       qc.invalidateQueries({ queryKey: ['restaurant', 'orders'] })
     },
     enabled: Boolean(restaurantId),
+  })
+
+  const query = useQuery({
+    queryKey: QK,
+    queryFn: () => restaurant.listPendingAcceptance(),
+    refetchInterval: health === 'degraded' ? 5_000 : 30_000,
   })
 
   return query

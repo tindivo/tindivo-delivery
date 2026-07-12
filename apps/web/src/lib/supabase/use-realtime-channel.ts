@@ -1,6 +1,6 @@
 'use client'
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './client'
 
 type PostgresChangesEvent = 'INSERT' | 'UPDATE' | 'DELETE' | '*'
@@ -15,9 +15,13 @@ type PostgresChangesConfig = {
 type RealtimePayload = RealtimePostgresChangesPayload<Record<string, unknown>>
 type Listener = (payload: RealtimePayload) => void
 
+export type ChannelHealth = 'initializing' | 'healthy' | 'degraded'
+
 type RegistryEntry = {
   channel: RealtimeChannel
   listeners: Map<symbol, Listener>
+  health: ChannelHealth
+  healthListeners: Set<() => void>
 }
 
 /**
@@ -28,6 +32,10 @@ type RegistryEntry = {
  * último, se destruye el canal.
  */
 const registry = new Map<string, RegistryEntry>()
+
+function notifyHealthListeners(entry: RegistryEntry) {
+  entry.healthListeners.forEach((fn) => fn())
+}
 
 function subscribeToChannel(
   channelName: string,
@@ -42,7 +50,12 @@ function subscribeToChannel(
     // sigue siendo el lógico `channelName` para dedup entre hooks.
     const physicalTopic = `${channelName}#${Math.random().toString(36).slice(2, 10)}`
     const channel = supabase.channel(physicalTopic)
-    entry = { channel, listeners: new Map() }
+    entry = {
+      channel,
+      listeners: new Map(),
+      health: 'initializing',
+      healthListeners: new Set(),
+    }
 
     try {
       for (const cfg of changes) {
@@ -59,8 +72,19 @@ function subscribeToChannel(
       }
 
       channel.subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[realtime]', channelName, status)
+        if (status === 'SUBSCRIBED') {
+          entry!.health = 'healthy'
+          notifyHealthListeners(entry!)
+        } else if (
+          status === 'CHANNEL_ERROR' ||
+          status === 'TIMED_OUT' ||
+          status === 'CLOSED'
+        ) {
+          entry!.health = 'degraded'
+          notifyHealthListeners(entry!)
+          if (status !== 'CLOSED') {
+            console.warn('[realtime]', channelName, status)
+          }
         }
       })
 
@@ -117,12 +141,37 @@ type Options = {
  *  - Reconexión al volver del background en iOS PWA via `realtime.connect()`.
  *  - Propagación de JWT fresh via `realtime.setAuth()` en TOKEN_REFRESHED.
  *  - Callback por ref — actualizar `onEvent` no re-suscribe.
+ *  - Salud del canal expuesta para polling adaptativo.
  */
-export function useRealtimeChannel({ channelName, changes, onEvent, enabled = true }: Options) {
+export function useRealtimeChannel({
+  channelName,
+  changes,
+  onEvent,
+  enabled = true,
+}: Options): { health: ChannelHealth } {
   const callbackRef = useRef(onEvent)
   callbackRef.current = onEvent
 
   const changesKey = JSON.stringify(changes)
+  const [health, setHealth] = useState<ChannelHealth>(() => {
+    return registry.get(channelName)?.health ?? 'initializing'
+  })
+
+  // Suscribirse a cambios de salud del canal en el registry
+  useEffect(() => {
+    if (!enabled) return
+    const entry = registry.get(channelName)
+    if (!entry) return
+
+    const onHealthChange = () => setHealth(entry.health)
+    entry.healthListeners.add(onHealthChange)
+    // Sincronizar con el estado actual por si ya cambió antes de montar
+    setHealth(entry.health)
+
+    return () => {
+      entry.healthListeners.delete(onHealthChange)
+    }
+  }, [channelName, enabled])
 
   useEffect(() => {
     if (!enabled) return
@@ -135,8 +184,14 @@ export function useRealtimeChannel({ channelName, changes, onEvent, enabled = tr
     // iOS PWA: al volver del background, el WebSocket puede estar muerto.
     // `connect()` es idempotente; revive el transport y los channels
     // existentes auto-resubscriben.
+    // Marcar como degradado hasta que el nuevo SUBSCRIBED confirme salud.
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
+        const entry = registry.get(channelName)
+        if (entry && entry.health === 'healthy') {
+          entry.health = 'degraded'
+          notifyHealthListeners(entry)
+        }
         try {
           supabase.realtime.connect()
         } catch {
@@ -160,4 +215,37 @@ export function useRealtimeChannel({ channelName, changes, onEvent, enabled = tr
       unsubscribe()
     }
   }, [channelName, changesKey, enabled])
+
+  return { health }
+}
+
+/**
+ * Hook ligero para consumidores que solo necesitan la salud del canal,
+ * sin crear ni suscribirse a eventos. Lee del registry singleton.
+ *
+ * Útil para hooks de polling que no tienen su propio useRealtimeChannel
+ * pero quieren adaptar su refetchInterval al estado del WebSocket.
+ */
+export function useChannelHealth(channelName: string): ChannelHealth {
+  const [health, setHealth] = useState<ChannelHealth>(() => {
+    return registry.get(channelName)?.health ?? 'initializing'
+  })
+
+  useEffect(() => {
+    const entry = registry.get(channelName)
+    if (!entry) {
+      setHealth('initializing')
+      return
+    }
+
+    const onHealthChange = () => setHealth(entry.health)
+    entry.healthListeners.add(onHealthChange)
+    setHealth(entry.health)
+
+    return () => {
+      entry.healthListeners.delete(onHealthChange)
+    }
+  }, [channelName])
+
+  return health
 }
