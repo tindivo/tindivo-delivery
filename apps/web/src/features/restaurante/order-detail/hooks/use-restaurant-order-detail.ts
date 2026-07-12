@@ -25,7 +25,7 @@ export function useRestaurantOrderDetail(orderId: string) {
     queryKey: ['restaurant', 'order', orderId],
     // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
     queryFn: () => orders.getRestaurantOrder(orderId) as Promise<any>,
-    refetchInterval: health === 'degraded' ? 30_000 : 90_000,
+    refetchInterval: health === 'healthy' ? 90_000 : 30_000,
   })
 
   return query

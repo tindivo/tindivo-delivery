@@ -19,7 +19,7 @@ export function useAdminOrderDetail(orderId: string) {
     queryKey: ['admin', 'orders', orderId],
     // biome-ignore lint/suspicious/noExplicitAny: payload dinámico con columnas anidadas
     queryFn: () => orders.getAdminOrder(orderId) as Promise<any>,
-    refetchInterval: health === 'degraded' ? 10_000 : 20_000,
+    refetchInterval: health === 'healthy' ? 20_000 : 10_000,
   })
 
   return query

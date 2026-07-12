@@ -18,7 +18,7 @@ export function useAdminCashSettlements(status: StatusFilter = 'disputed') {
   const query = useQuery({
     queryKey: ['admin', 'cash-settlements', status],
     queryFn: () => admin.listCashSettlements(status),
-    refetchInterval: health === 'degraded' ? 30_000 : 60_000,
+    refetchInterval: health === 'healthy' ? 60_000 : 30_000,
   })
 
   return query

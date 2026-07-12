@@ -3,6 +3,11 @@ import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './client'
 
+const RT_DEBUG = process.env.NEXT_PUBLIC_RT_DEBUG === 'true'
+const rtLog = (...args: unknown[]) => {
+  if (RT_DEBUG) console.log(...args)
+}
+
 type PostgresChangesEvent = 'INSERT' | 'UPDATE' | 'DELETE' | '*'
 
 type PostgresChangesConfig = {
@@ -19,23 +24,177 @@ export type ChannelHealth = 'initializing' | 'healthy' | 'degraded'
 
 type RegistryEntry = {
   channel: RealtimeChannel
+  /** Configs originales para poder recrear el canal en recovery. */
+  changes: PostgresChangesConfig[]
   listeners: Map<symbol, Listener>
   health: ChannelHealth
   healthListeners: Set<() => void>
+  subscribeCallback: (status: string, err?: Error) => void
+  /** Flag para evitar reintentos simultáneos sobre el mismo canal. */
+  recovering: boolean
+  /** Backoff progresivo para reintentos de recovery (ms). */
+  retryDelayMs: number
 }
 
-/**
- * Registry singleton de canales. Permite que múltiples componentes se
- * suscriban al mismo channel name sin chocar en supabase-js (que rechaza
- * `.on()` después de `.subscribe()`). El primero crea el canal físico;
- * subsiguientes solo agregan listeners al fan-out. Al desuscribirse el
- * último, se destruye el canal.
- */
 const registry = new Map<string, RegistryEntry>()
 
 function notifyHealthListeners(entry: RegistryEntry) {
   entry.healthListeners.forEach((fn) => fn())
 }
+
+// ─── Creación y recuperación de canales ──────────────────────────────
+
+/**
+ * Crea una instancia NUEVA de RealtimeChannel y registra los bindings
+ * de postgres_changes + el callback de subscribe. No llama a .subscribe().
+ *
+ * Se usa tanto en el montaje inicial como en la recuperación de canales
+ * muertos (donde la instancia vieja ya fue removida).
+ */
+function createChannelInstance(
+  entry: Pick<RegistryEntry, 'changes'>,
+  channelName: string,
+): { channel: RealtimeChannel; subscribeCallback: (status: string, err?: Error) => void } {
+  // Nonce en el topic físico para HMR (mismo patrón original)
+  const physicalTopic = `${channelName}#${Math.random().toString(36).slice(2, 10)}`
+  const channel = supabase.channel(physicalTopic)
+
+  const subscribeCallback = (status: string, err?: Error) => {
+    rtLog('[rt-status]', channelName, status, err ?? '')
+    if (status === 'SUBSCRIBED') {
+      const e = registry.get(channelName)
+      if (e) {
+        e.health = 'healthy'
+        e.recovering = false
+        e.retryDelayMs = 1000
+        notifyHealthListeners(e)
+      }
+    } else if (
+      status === 'CHANNEL_ERROR' ||
+      status === 'TIMED_OUT' ||
+      status === 'CLOSED'
+    ) {
+      const e = registry.get(channelName)
+      if (e) {
+        e.health = 'degraded'
+        e.recovering = false
+        notifyHealthListeners(e)
+      }
+      if (status !== 'CLOSED') {
+        console.warn('[realtime]', channelName, status)
+      }
+    }
+  }
+
+  // Re-registrar todos los bindings de postgres_changes
+  for (const cfg of entry.changes) {
+    // biome-ignore lint/suspicious/noExplicitAny: supabase-js .on overload no inferable
+    const onMethod = channel.on as any
+    onMethod.call(
+      channel,
+      'postgres_changes',
+      { schema: 'public', ...cfg },
+      (payload: RealtimePayload) => {
+        const e = registry.get(channelName)
+        e?.listeners.forEach((l) => l(payload))
+      },
+    )
+  }
+
+  return { channel, subscribeCallback }
+}
+
+/**
+ * Recrea un canal que está muerto (closed/errored).
+ * - Remueve la instancia vieja de supabase
+ * - Crea una instancia NUEVA (única forma de volver a hacer join)
+ * - Re-registra todos los listeners
+ * - Subscribe → el nuevo SUBSCRIBED devuelve health a 'healthy'
+ */
+function recoverChannel(channelName: string, entry: RegistryEntry) {
+  if (entry.recovering) {
+    rtLog('[rt-recover]', channelName, 'already recovering, skipping')
+    return
+  }
+
+  rtLog('[rt-recover]', channelName, 'recreating channel')
+
+  // Limpiar la instancia muerta
+  try {
+    supabase.removeChannel(entry.channel)
+  } catch {
+    /* noop */
+  }
+
+  // Crear instancia nueva con los mismos cambios
+  const { channel, subscribeCallback } = createChannelInstance(entry, channelName)
+  entry.channel = channel
+  entry.subscribeCallback = subscribeCallback
+  entry.recovering = true
+
+  // Suscribir la nueva instancia
+  channel.subscribe(subscribeCallback)
+}
+
+// ─── Visibility change global (un solo listener) ────────────────────
+
+let visibilityHandlerInstalled = false
+
+function installVisibilityHandler() {
+  if (visibilityHandlerInstalled) return
+  visibilityHandlerInstalled = true
+
+  let wasHidden = false
+
+  const onHide = () => {
+    if (document.visibilityState === 'hidden') {
+      wasHidden = true
+      rtLog('[rt-visibility] page hidden')
+    }
+  }
+
+  const onVisible = () => {
+    if (document.visibilityState !== 'visible') return
+    if (!wasHidden) {
+      rtLog('[rt-visibility] initial visible, skipping')
+      return
+    }
+    wasHidden = false
+
+    rtLog('[rt-visibility] returning from background, checking channels')
+    const socketConnected = supabase.realtime.isConnected()
+
+    // Un solo realtime.connect() global
+    if (!socketConnected) {
+      try {
+        supabase.realtime.connect()
+        rtLog('[rt-visibility] realtime.connect() called')
+      } catch {
+        /* noop */
+      }
+    }
+
+    // Evaluar cada canal
+    for (const [name, entry] of registry) {
+      const state = entry.channel.state
+      rtLog('[rt-visibility]', name, 'state:', state, 'socketConnected:', socketConnected)
+
+      if (state === 'joined' && socketConnected) {
+        // Canal sano, socket vivo. No tocar.
+        continue
+      }
+
+      // Canal roto o socket caído: recrear el canal
+      recoverChannel(name, entry)
+    }
+  }
+
+  document.addEventListener('visibilitychange', onHide)
+  document.addEventListener('visibilitychange', onVisible)
+  window.addEventListener('pageshow', onVisible)
+}
+
+// ─── Subscribe inicial ──────────────────────────────────────────────
 
 function subscribeToChannel(
   channelName: string,
@@ -45,60 +204,33 @@ function subscribeToChannel(
   let entry = registry.get(channelName)
 
   if (!entry) {
-    // Nonce en el topic físico para evitar que Supabase/HMR reciclen un
-    // channel ya subscribed (en cuyo caso `.on()` tiraría). El registry key
-    // sigue siendo el lógico `channelName` para dedup entre hooks.
-    const physicalTopic = `${channelName}#${Math.random().toString(36).slice(2, 10)}`
-    const channel = supabase.channel(physicalTopic)
+    const { channel, subscribeCallback } = createChannelInstance({ changes }, channelName)
+
     entry = {
       channel,
+      changes,
       listeners: new Map(),
       health: 'initializing',
       healthListeners: new Set(),
+      subscribeCallback,
+      recovering: false,
+      retryDelayMs: 1000,
     }
 
     try {
-      for (const cfg of changes) {
-        // biome-ignore lint/suspicious/noExplicitAny: supabase-js .on overload no inferable aquí
-        const onMethod = channel.on as any
-        onMethod.call(
-          channel,
-          'postgres_changes',
-          { schema: 'public', ...cfg },
-          (payload: RealtimePayload) => {
-            entry?.listeners.forEach((l) => l(payload))
-          },
-        )
-      }
+      channel.subscribe(subscribeCallback)
 
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          entry!.health = 'healthy'
-          notifyHealthListeners(entry!)
-        } else if (
-          status === 'CHANNEL_ERROR' ||
-          status === 'TIMED_OUT' ||
-          status === 'CLOSED'
-        ) {
-          entry!.health = 'degraded'
-          notifyHealthListeners(entry!)
-          if (status !== 'CLOSED') {
-            console.warn('[realtime]', channelName, status)
-          }
-        }
-      })
+      // Instalar el handler global de visibility UNA sola vez
+      installVisibilityHandler()
 
       registry.set(channelName, entry)
     } catch (err) {
-      // Puede ocurrir en dev con HMR cuando supabase-js recicla channels
-      // internamente. No crashea la app; el next render recrea el canal.
       console.warn('[realtime] channel init failed for', channelName, err)
       try {
         supabase.removeChannel(channel)
       } catch {
         /* noop */
       }
-      // Devolver noop — el próximo render (post HMR) lo reintentará.
       return () => {
         /* noop */
       }
@@ -119,30 +251,15 @@ function subscribeToChannel(
   }
 }
 
+// ─── Hooks públicos ─────────────────────────────────────────────────
+
 type Options = {
-  /**
-   * Nombre único del canal. Múltiples hooks con el mismo nombre comparten un
-   * canal físico (fan-out) — deben declarar los mismos `changes`.
-   */
   channelName: string
-  /** Configs de postgres_changes a registrar. */
   changes: PostgresChangesConfig[]
-  /** Callback por evento. */
   onEvent: (payload: RealtimePayload) => void
-  /**
-   * Si `false`, no se monta. Útil cuando el nombre depende de un id async.
-   */
   enabled?: boolean
 }
 
-/**
- * Wrapper de supabase realtime para PWAs con:
- *  - Registry singleton por channel name → múltiples hooks pueden co-existir.
- *  - Reconexión al volver del background en iOS PWA via `realtime.connect()`.
- *  - Propagación de JWT fresh via `realtime.setAuth()` en TOKEN_REFRESHED.
- *  - Callback por ref — actualizar `onEvent` no re-suscribe.
- *  - Salud del canal expuesta para polling adaptativo.
- */
 export function useRealtimeChannel({
   channelName,
   changes,
@@ -157,7 +274,6 @@ export function useRealtimeChannel({
     return registry.get(channelName)?.health ?? 'initializing'
   })
 
-  // Suscribirse a cambios de salud del canal en el registry
   useEffect(() => {
     if (!enabled) return
     const entry = registry.get(channelName)
@@ -165,7 +281,6 @@ export function useRealtimeChannel({
 
     const onHealthChange = () => setHealth(entry.health)
     entry.healthListeners.add(onHealthChange)
-    // Sincronizar con el estado actual por si ya cambió antes de montar
     setHealth(entry.health)
 
     return () => {
@@ -181,27 +296,6 @@ export function useRealtimeChannel({
       callbackRef.current(payload)
     })
 
-    // iOS PWA: al volver del background, el WebSocket puede estar muerto.
-    // `connect()` es idempotente; revive el transport y los channels
-    // existentes auto-resubscriben.
-    // Marcar como degradado hasta que el nuevo SUBSCRIBED confirme salud.
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        const entry = registry.get(channelName)
-        if (entry && entry.health === 'healthy') {
-          entry.health = 'degraded'
-          notifyHealthListeners(entry)
-        }
-        try {
-          supabase.realtime.connect()
-        } catch {
-          /* noop */
-        }
-      }
-    }
-    document.addEventListener('visibilitychange', onVisibility)
-    window.addEventListener('pageshow', onVisibility)
-
     const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.access_token && (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN')) {
         supabase.realtime.setAuth(session.access_token)
@@ -209,8 +303,6 @@ export function useRealtimeChannel({
     })
 
     return () => {
-      document.removeEventListener('visibilitychange', onVisibility)
-      window.removeEventListener('pageshow', onVisibility)
       authSub.subscription.unsubscribe()
       unsubscribe()
     }
@@ -219,19 +311,22 @@ export function useRealtimeChannel({
   return { health }
 }
 
-/**
- * Hook ligero para consumidores que solo necesitan la salud del canal,
- * sin crear ni suscribirse a eventos. Lee del registry singleton.
- *
- * Útil para hooks de polling que no tienen su propio useRealtimeChannel
- * pero quieren adaptar su refetchInterval al estado del WebSocket.
- */
-export function useChannelHealth(channelName: string): ChannelHealth {
+export function useChannelHealth(
+  channelName: string,
+  opts?: { enabled?: boolean },
+): ChannelHealth {
+  const enabled = opts?.enabled ?? true
+
   const [health, setHealth] = useState<ChannelHealth>(() => {
+    if (!enabled) return 'initializing'
     return registry.get(channelName)?.health ?? 'initializing'
   })
 
   useEffect(() => {
+    if (!enabled) {
+      setHealth('initializing')
+      return
+    }
     const entry = registry.get(channelName)
     if (!entry) {
       setHealth('initializing')
@@ -245,7 +340,7 @@ export function useChannelHealth(channelName: string): ChannelHealth {
     return () => {
       entry.healthListeners.delete(onHealthChange)
     }
-  }, [channelName])
+  }, [channelName, enabled])
 
   return health
 }

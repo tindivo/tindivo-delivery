@@ -43,7 +43,7 @@ export function useRestaurantOrders() {
   const query = useQuery({
     queryKey: ['restaurant', 'orders'],
     queryFn: () => orders.listRestaurantOrders(),
-    refetchInterval: health === 'degraded' ? 30_000 : 90_000,
+    refetchInterval: health === 'healthy' ? 90_000 : 30_000,
   })
 
   return query

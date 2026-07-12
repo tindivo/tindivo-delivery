@@ -51,7 +51,7 @@ export function usePendingAcceptanceOrders() {
   const query = useQuery({
     queryKey: QK,
     queryFn: () => restaurant.listPendingAcceptance(),
-    refetchInterval: health === 'degraded' ? 5_000 : 30_000,
+    refetchInterval: health === 'healthy' ? 30_000 : 5_000,
   })
 
   return query

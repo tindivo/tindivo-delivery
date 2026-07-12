@@ -26,7 +26,7 @@ export function useAdminActiveOrders() {
       )
       return { items: active }
     },
-    refetchInterval: health === 'degraded' ? 15_000 : 30_000,
+    refetchInterval: health === 'healthy' ? 30_000 : 15_000,
   })
 
   return query

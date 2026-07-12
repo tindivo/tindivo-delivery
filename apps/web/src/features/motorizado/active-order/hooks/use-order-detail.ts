@@ -15,7 +15,7 @@ export function useOrderDetail(orderId: string) {
   })
 
   const channelName = `driver:events:${uid ?? 'pending'}`
-  const health = useChannelHealth(channelName)
+  const health = useChannelHealth(channelName, { enabled: Boolean(uid) })
 
   return useQuery({
     queryKey: ['driver', 'orders', orderId],
@@ -24,6 +24,6 @@ export function useOrderDetail(orderId: string) {
       // biome-ignore lint/suspicious/noExplicitAny: items dinámicos del backend
       return list.items?.find((o: any) => o.id === orderId) ?? null
     },
-    refetchInterval: health === 'degraded' ? 15_000 : 60_000,
+    refetchInterval: health === 'healthy' ? 60_000 : 15_000,
   })
 }

@@ -27,7 +27,7 @@ export function useReceivedTransferRequests() {
   const query = useQuery({
     queryKey: ['driver', 'team', 'received-requests'],
     queryFn: () => orders.listReceivedTransferRequests(),
-    refetchInterval: health === 'degraded' ? 30_000 : 120_000,
+    refetchInterval: health === 'healthy' ? 120_000 : 30_000,
   })
 
   return query

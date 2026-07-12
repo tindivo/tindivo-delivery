@@ -35,7 +35,7 @@ export function useTeamOrders() {
   const query = useQuery({
     queryKey: ['driver', 'team', 'orders'],
     queryFn: () => orders.listTeamOrders(),
-    refetchInterval: health === 'degraded' ? 30_000 : 90_000,
+    refetchInterval: health === 'healthy' ? 90_000 : 30_000,
   })
 
   return query

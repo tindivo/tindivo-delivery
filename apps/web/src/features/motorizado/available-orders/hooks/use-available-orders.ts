@@ -17,7 +17,7 @@ export function useAvailableOrders() {
   const query = useQuery({
     queryKey: ['driver', 'available-orders'],
     queryFn: () => orders.listAvailable(),
-    refetchInterval: health === 'degraded' ? 20_000 : 90_000,
+    refetchInterval: health === 'healthy' ? 90_000 : 20_000,
   })
 
   return query

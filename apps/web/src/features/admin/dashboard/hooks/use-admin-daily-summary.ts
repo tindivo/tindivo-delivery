@@ -24,7 +24,7 @@ export function useAdminDailySummary() {
   const query = useQuery({
     queryKey: QK,
     queryFn: () => admin.getDailySummary(),
-    refetchInterval: health === 'degraded' ? 60_000 : 120_000,
+    refetchInterval: health === 'healthy' ? 120_000 : 60_000,
   })
 
   return query

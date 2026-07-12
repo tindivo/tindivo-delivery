@@ -32,12 +32,12 @@ function driverChannelName(uid: string | null | undefined) {
  */
 export function useDriverActiveOrders() {
   const { data: uid } = useCurrentUserId()
-  const health = useChannelHealth(driverChannelName(uid))
+  const health = useChannelHealth(driverChannelName(uid), { enabled: Boolean(uid) })
 
   return useQuery({
     queryKey: ['driver', 'orders'],
     queryFn: () => orders.listDriverOrders(),
-    refetchInterval: health === 'degraded' ? 30_000 : 120_000,
+    refetchInterval: health === 'healthy' ? 120_000 : 30_000,
   })
 }
 

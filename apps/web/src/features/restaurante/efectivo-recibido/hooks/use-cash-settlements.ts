@@ -48,7 +48,7 @@ export function useRestaurantCashSettlements() {
   const query = useQuery({
     queryKey: ['restaurant', 'cash-settlements'],
     queryFn: () => restaurant.listCashSettlements(),
-    refetchInterval: health === 'degraded' ? 30_000 : 90_000,
+    refetchInterval: health === 'healthy' ? 90_000 : 30_000,
   })
 
   return query

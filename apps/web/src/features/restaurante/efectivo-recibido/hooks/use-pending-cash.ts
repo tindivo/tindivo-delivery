@@ -50,7 +50,7 @@ export function useRestaurantPendingCash() {
   const query = useQuery({
     queryKey: ['restaurant', 'cash-pending'],
     queryFn: () => restaurant.listPendingCash(),
-    refetchInterval: health === 'degraded' ? 30_000 : 90_000,
+    refetchInterval: health === 'healthy' ? 90_000 : 30_000,
   })
 
   return query
